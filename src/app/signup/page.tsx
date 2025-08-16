@@ -20,6 +20,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from '@/components/ui/progress';
 import { Upload } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { auth, db, storage } from '@/lib/firebase';
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useRouter } from 'next/navigation';
 
 const individualSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
@@ -65,6 +71,9 @@ const PasswordStrength = ({ password = '' }) => {
 
 export default function SignUpPage() {
   const [accountType, setAccountType] = useState('individual');
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const router = useRouter();
   
   const individualForm = useForm<z.infer<typeof individualSchema>>({
     resolver: zodResolver(individualSchema),
@@ -76,14 +85,94 @@ export default function SignUpPage() {
     defaultValues: { companyName: "", contactPerson: "", email: "", password: "", industry: "", website: "" },
   });
 
-  const onIndividualSubmit = (values: z.infer<typeof individualSchema>) => {
-    console.log("Individual Account:", values);
-    // TODO: Handle individual signup logic
+  const onIndividualSubmit = async (values: z.infer<typeof individualSchema>) => {
+    setIsLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+      
+      await sendEmailVerification(user);
+      
+      let profilePictureUrl = '';
+      if (values.profilePicture && values.profilePicture.length > 0) {
+        const file = values.profilePicture[0];
+        const storageRef = ref(storage, `profile_pictures/${user.uid}`);
+        await uploadBytes(storageRef, file);
+        profilePictureUrl = await getDownloadURL(storageRef);
+      }
+
+      await updateProfile(user, { displayName: values.fullName, photoURL: profilePictureUrl });
+      
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        fullName: values.fullName,
+        email: values.email,
+        skills: values.skills?.split(',').map(s => s.trim()) || [],
+        profilePictureUrl,
+        accountType: 'individual'
+      });
+      
+      toast({
+        title: "Account Created",
+        description: "A verification email has been sent. Please check your inbox.",
+      });
+      router.push('/login');
+
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Sign-up failed",
+        description: error.message,
+      });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
-  const onCompanySubmit = (values: z.infer<typeof companySchema>) => {
-    console.log("Company Account:", values);
-    // TODO: Handle company signup logic
+  const onCompanySubmit = async (values: z.infer<typeof companySchema>) => {
+    setIsLoading(true);
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        const user = userCredential.user;
+
+        await sendEmailVerification(user);
+        
+        let companyLogoUrl = '';
+        if (values.companyLogo && values.companyLogo.length > 0) {
+            const file = values.companyLogo[0];
+            const storageRef = ref(storage, `company_logos/${user.uid}`);
+            await uploadBytes(storageRef, file);
+            companyLogoUrl = await getDownloadURL(storageRef);
+        }
+
+        await updateProfile(user, { displayName: values.contactPerson, photoURL: companyLogoUrl });
+
+        await setDoc(doc(db, "users", user.uid), {
+            uid: user.uid,
+            companyName: values.companyName,
+            contactPerson: values.contactPerson,
+            email: values.email,
+            industry: values.industry,
+            website: values.website,
+            companyLogoUrl,
+            accountType: 'company',
+        });
+        
+        toast({
+            title: "Company Account Created",
+            description: "A verification email has been sent. Please check your inbox.",
+        });
+        router.push('/login');
+
+    } catch (error: any) {
+         toast({
+            variant: "destructive",
+            title: "Sign-up failed",
+            description: error.message,
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const individualPassword = individualForm.watch('password');
@@ -111,7 +200,7 @@ export default function SignUpPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Full Name</FormLabel>
-                        <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
+                        <FormControl><Input placeholder="John Doe" {...field} disabled={isLoading} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -122,7 +211,7 @@ export default function SignUpPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Email</FormLabel>
-                        <FormControl><Input placeholder="you@example.com" {...field} /></FormControl>
+                        <FormControl><Input placeholder="you@example.com" {...field} disabled={isLoading} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -133,7 +222,7 @@ export default function SignUpPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Password</FormLabel>
-                        <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
+                        <FormControl><Input type="password" placeholder="••••••••" {...field} disabled={isLoading} /></FormControl>
                          <PasswordStrength password={individualPassword} />
                         <FormMessage />
                       </FormItem>
@@ -145,7 +234,7 @@ export default function SignUpPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Skills / Categories <span className="text-muted-foreground">(Optional)</span></FormLabel>
-                        <FormControl><Input placeholder="e.g., Manual Testing, Cypress, Mobile Testing" {...field} /></FormControl>
+                        <FormControl><Input placeholder="e.g., Manual Testing, Cypress, Mobile Testing" {...field} disabled={isLoading} /></FormControl>
                         <FormDescription>Separate skills with commas.</FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -162,7 +251,7 @@ export default function SignUpPage() {
                             <div>
                                 <Upload className="mr-2 h-4 w-4" />
                                 Upload Image
-                                <Input type="file" className="hidden" onChange={(e) => field.onChange(e.target.files)} />
+                                <Input type="file" className="hidden" accept="image/*" onChange={(e) => field.onChange(e.target.files)} disabled={isLoading} />
                             </div>
                           </Button>
                         </FormControl>
@@ -170,7 +259,7 @@ export default function SignUpPage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" size="lg">Create Individual Account</Button>
+                  <Button type="submit" className="w-full" size="lg" disabled={isLoading}>{isLoading ? 'Creating Account...' : 'Create Individual Account'}</Button>
                 </form>
               </Form>
             </TabsContent>
@@ -183,7 +272,7 @@ export default function SignUpPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Company Name</FormLabel>
-                        <FormControl><Input placeholder="Acme Inc." {...field} /></FormControl>
+                        <FormControl><Input placeholder="Acme Inc." {...field} disabled={isLoading} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -194,7 +283,7 @@ export default function SignUpPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Contact Person Name</FormLabel>
-                        <FormControl><Input placeholder="Jane Smith" {...field} /></FormControl>
+                        <FormControl><Input placeholder="Jane Smith" {...field} disabled={isLoading} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -204,8 +293,8 @@ export default function SignUpPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl><Input placeholder="contact@acme.com" {...field} /></FormControl>
+                        <FormLabel>Email</Label>
+                        <FormControl><Input placeholder="contact@acme.com" {...field} disabled={isLoading} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -216,7 +305,7 @@ export default function SignUpPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Password</FormLabel>
-                        <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
+                        <FormControl><Input type="password" placeholder="••••••••" {...field} disabled={isLoading} /></FormControl>
                         <PasswordStrength password={companyPassword} />
                         <FormMessage />
                       </FormItem>
@@ -228,7 +317,7 @@ export default function SignUpPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Industry / Business Sector</FormLabel>
-                        <FormControl><Input placeholder="e.g., Technology, E-commerce" {...field} /></FormControl>
+                        <FormControl><Input placeholder="e.g., Technology, E-commerce" {...field} disabled={isLoading} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -239,7 +328,7 @@ export default function SignUpPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Company Website <span className="text-muted-foreground">(Optional)</span></FormLabel>
-                        <FormControl><Input placeholder="https://www.acme.com" {...field} /></FormControl>
+                        <FormControl><Input placeholder="https://www.acme.com" {...field} disabled={isLoading} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -255,7 +344,7 @@ export default function SignUpPage() {
                                 <div>
                                     <Upload className="mr-2 h-4 w-4" />
                                     Upload Logo
-                                    <Input type="file" className="hidden" onChange={(e) => field.onChange(e.target.files)} />
+                                    <Input type="file" className="hidden" accept="image/*" onChange={(e) => field.onChange(e.target.files)} disabled={isLoading} />
                                 </div>
                           </Button>
                         </FormControl>
@@ -263,7 +352,7 @@ export default function SignUpPage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" size="lg">Create Company Account</Button>
+                  <Button type="submit" className="w-full" size="lg" disabled={isLoading}>{isLoading ? 'Creating Account...' : 'Create Company Account'}</Button>
                 </form>
               </Form>
             </TabsContent>
