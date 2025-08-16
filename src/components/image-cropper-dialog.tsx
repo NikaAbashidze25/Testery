@@ -86,6 +86,7 @@ export function ImageCropperDialog({
     // Translate and rotate around the center of the canvas
     ctx.translate(centerX, centerY);
     ctx.rotate(rotate * Math.PI / 180);
+    ctx.scale(scale, scale);
     ctx.translate(-centerX, -centerY);
     
     ctx.drawImage(
@@ -120,7 +121,7 @@ export function ImageCropperDialog({
           <DialogTitle>Crop and Edit Your Image</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 items-start overflow-y-auto p-6 pr-2">
-            <div className="flex justify-center items-center bg-muted/30 rounded-md p-4 h-full w-full overflow-auto">
+            <div className="flex justify-center items-center bg-muted/30 rounded-md p-4 h-full w-full">
               <ReactCrop
                 crop={crop}
                 onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -135,7 +136,6 @@ export function ImageCropperDialog({
                   ref={imgRef}
                   alt="Crop me"
                   src={imageSrc}
-                  style={{ transform: `scale(${scale}) rotate(${rotate}deg)` }}
                   onLoad={onImageLoad}
                   className="max-h-[calc(80vh-200px)]"
                 />
@@ -151,7 +151,7 @@ export function ImageCropperDialog({
                         id="scale-slider"
                         defaultValue={[1]}
                         value={[scale]}
-                        min={0.5}
+                        min={1}
                         max={3}
                         step={0.01}
                         onValueChange={(value) => setScale(value[0])}
