@@ -83,10 +83,8 @@ export function ImageCropperDialog({
     const centerY = canvas.height / 2;
 
     ctx.save();
-    // Translate and rotate around the center of the canvas
     ctx.translate(centerX, centerY);
     ctx.rotate(rotate * Math.PI / 180);
-    ctx.scale(scale, scale);
     ctx.translate(-centerX, -centerY);
     
     ctx.drawImage(
@@ -137,6 +135,7 @@ export function ImageCropperDialog({
                   alt="Crop me"
                   src={imageSrc}
                   onLoad={onImageLoad}
+                  style={{ transform: `scale(${scale}) rotate(${rotate}deg)` }}
                   className="max-h-[calc(80vh-200px)]"
                 />
               </ReactCrop>
@@ -151,7 +150,7 @@ export function ImageCropperDialog({
                         id="scale-slider"
                         defaultValue={[1]}
                         value={[scale]}
-                        min={1}
+                        min={0.5}
                         max={3}
                         step={0.01}
                         onValueChange={(value) => setScale(value[0])}
