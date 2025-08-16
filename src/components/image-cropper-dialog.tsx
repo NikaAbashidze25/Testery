@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import {
   Dialog,
@@ -48,6 +48,13 @@ export function ImageCropperDialog({
   const [rotate, setRotate] = useState(0);
   const [aspect, setAspect] = useState<number | undefined>(1);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setScale(1);
+      setRotate(0);
+    }
+  }, [isOpen, imageSrc]);
   
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     if (aspect) {
@@ -88,7 +95,7 @@ export function ImageCropperDialog({
     ctx.closePath();
     ctx.clip();
   
-    // Apply transforms here (NOT in <img style>)
+    // Apply transforms here
     ctx.save();
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate((rotate * Math.PI) / 180);
@@ -145,8 +152,6 @@ export function ImageCropperDialog({
                 aspect={aspect}
                 circularCrop={true}
                 keepSelection={true}
-                scale={scale}
-                rotate={rotate}
               >
                 <img
                   ref={imgRef}
@@ -154,6 +159,9 @@ export function ImageCropperDialog({
                   src={imageSrc}
                   onLoad={onImageLoad}
                   className="max-h-[calc(80vh-200px)] object-contain"
+                  style={{
+                    transform: `scale(${scale}) rotate(${rotate}deg)`,
+                  }}
                 />
               </ReactCrop>
             </div>
@@ -165,7 +173,6 @@ export function ImageCropperDialog({
                     </div>
                     <Slider
                         id="scale-slider"
-                        defaultValue={[1]}
                         value={[scale]}
                         min={0.5}
                         max={3}
@@ -180,7 +187,6 @@ export function ImageCropperDialog({
                     </div>
                     <Slider
                         id="rotate-slider"
-                        defaultValue={[0]}
                         value={[rotate]}
                         min={-180}
                         max={180}
