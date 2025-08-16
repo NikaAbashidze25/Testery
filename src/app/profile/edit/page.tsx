@@ -221,35 +221,49 @@ export default function EditProfilePage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {userProfile.accountType === 'individual' && (
                 <>
-                  <div className="flex items-center gap-6">
-                    <Avatar className="h-20 w-20">
-                        <AvatarImage src={croppedImage ? URL.createObjectURL(croppedImage) : userProfile.profilePictureUrl} alt="Profile Picture" />
-                        <AvatarFallback className="text-3xl">
-                        {getInitials(userProfile.fullName)}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-grow space-y-2">
-                      <FormLabel>Profile Picture</FormLabel>
-                       <Input
-                        ref={fileInputRef}
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        disabled={isSubmitting}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isSubmitting}
-                      >
-                        <Upload className="mr-2 h-4 w-4" />
-                        Change Image
-                      </Button>
-                      <FormDescription>Maximum file size: 2.5MB.</FormDescription>
-                    </div>
-                  </div>
+                   <FormField
+                    control={form.control}
+                    name="profilePicture"
+                    render={({ field }) => (
+                      <FormItem>
+                         <div className="flex items-center gap-8">
+                            <Avatar className="h-24 w-24">
+                                <AvatarImage src={croppedImage ? URL.createObjectURL(croppedImage) : userProfile.profilePictureUrl} alt="Profile Picture" />
+                                <AvatarFallback className="text-3xl">
+                                {getInitials(userProfile.fullName)}
+                                </AvatarFallback>
+                            </Avatar>
+                             <div className="flex-grow space-y-2">
+                                <FormLabel>Profile Picture</FormLabel>
+                                <FormControl>
+                                    <>
+                                        <Input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleFileChange}
+                                            disabled={isSubmitting}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={isSubmitting}
+                                        >
+                                            <Upload className="mr-2 h-4 w-4" />
+                                            Change Image
+                                        </Button>
+                                    </>
+                                </FormControl>
+                                <FormDescription>Maximum file size: 2.5MB.</FormDescription>
+                                <FormMessage />
+                            </div>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="fullName"
@@ -278,35 +292,48 @@ export default function EditProfilePage() {
 
               {userProfile.accountType === 'company' && (
                 <>
-                  <div className="flex items-center gap-6">
-                     <Avatar className="h-20 w-20">
-                        <AvatarImage src={croppedImage ? URL.createObjectURL(croppedImage) : userProfile.companyLogoUrl} alt="Company Logo" />
-                        <AvatarFallback className="text-3xl">
-                        {getInitials(userProfile.companyName)}
-                        </AvatarFallback>
-                    </Avatar>
-                     <div className="flex-grow space-y-2">
-                      <FormLabel>Company Logo</FormLabel>
-                      <Input
-                        ref={fileInputRef}
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        disabled={isSubmitting}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isSubmitting}
-                      >
-                        <Upload className="mr-2 h-4 w-4" />
-                        Change Logo
-                      </Button>
-                       <FormDescription>Maximum file size: 2.5MB.</FormDescription>
-                    </div>
-                  </div>
+                   <FormField
+                    control={form.control}
+                    name="companyLogo"
+                    render={({ field }) => (
+                      <FormItem>
+                         <div className="flex items-center gap-8">
+                           <Avatar className="h-24 w-24">
+                              <AvatarImage src={croppedImage ? URL.createObjectURL(croppedImage) : userProfile.companyLogoUrl} alt="Company Logo" />
+                              <AvatarFallback className="text-3xl">
+                              {getInitials(userProfile.companyName)}
+                              </AvatarFallback>
+                          </Avatar>
+                           <div className="flex-grow space-y-2">
+                            <FormLabel>Company Logo</FormLabel>
+                             <FormControl>
+                                <>
+                                    <Input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={handleFileChange}
+                                        disabled={isSubmitting}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isSubmitting}
+                                    >
+                                        <Upload className="mr-2 h-4 w-4" />
+                                        Change Logo
+                                    </Button>
+                                </>
+                            </FormControl>
+                             <FormDescription>Maximum file size: 2.5MB.</FormDescription>
+                             <FormMessage />
+                          </div>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="companyName"
