@@ -1,6 +1,6 @@
-# TestLink
+# Testery
 
-This is a Next.js application for TestLink, a platform to connect clients and software testers.
+This is a Next.js application for Testery, a platform to connect clients and software testers.
 
 To get started:
 1. Run `npm install`

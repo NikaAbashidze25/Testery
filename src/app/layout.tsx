@@ -5,7 +5,7 @@ import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'TestLink',
+  title: 'Testery',
   description: 'Connect with skilled testers for your projects.',
 };
 

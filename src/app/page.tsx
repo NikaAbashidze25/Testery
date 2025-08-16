@@ -17,7 +17,7 @@ export default function Home() {
                   Quality Testing, On Demand.
                 </h1>
                 <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                  TestLink connects you with a global network of skilled software testers to ensure your product is bug-free and user-ready.
+                  Testery connects you with a global network of skilled software testers to ensure your product is bug-free and user-ready.
                 </p>
               </div>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
@@ -90,7 +90,7 @@ export default function Home() {
         <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
                 <div className="space-y-2">
-                    <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Why Choose TestLink?</h2>
+                    <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Why Choose Testery?</h2>
                     <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                         We provide the tools and community to make software testing seamless and effective for everyone.
                     </p>
