@@ -72,47 +72,49 @@ export function ImageCropperDialog({
     
     canvas.width = completedCrop.width * scaleX;
     canvas.height = completedCrop.height * scaleY;
-
+    
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       throw new Error('No 2d context');
     }
 
-    const cropX = completedCrop.x * scaleX;
-    const cropY = completedCrop.y * scaleY;
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Create a circular clipping path
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2, 0, Math.PI * 2, true);
-    ctx.closePath();
-    ctx.clip();
-
-
-    // Move the coordinate system to the center of the canvas
+    ctx.save();
     ctx.translate(canvas.width / 2, canvas.height / 2);
-    // Rotate and scale from the center
     ctx.rotate((rotate * Math.PI) / 180);
     ctx.scale(scale, scale);
-    // Move the coordinate system back
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
-    
-    // Draw the image
+
     ctx.drawImage(
       image,
-      cropX,
-      cropY,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
       completedCrop.width * scaleX,
       completedCrop.height * scaleY,
       0,
       0,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY
+      canvas.width,
+      canvas.height
     );
-    
+    ctx.restore();
+
+    // Create a circular clipping path on a new canvas
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = canvas.width;
+    finalCanvas.height = canvas.height;
+    const finalCtx = finalCanvas.getContext('2d');
+
+    if (!finalCtx) {
+      throw new Error('No 2d context for final canvas');
+    }
+
+    finalCtx.beginPath();
+    finalCtx.arc(finalCanvas.width / 2, finalCanvas.height / 2, Math.min(finalCanvas.width, finalCanvas.height) / 2, 0, Math.PI * 2, true);
+    finalCtx.closePath();
+    finalCtx.clip();
+    finalCtx.drawImage(canvas, 0, 0);
+
     const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, 'image/png');
+      finalCanvas.toBlob(resolve, 'image/png');
     });
 
     if (!blob) {
