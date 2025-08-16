@@ -61,8 +61,15 @@ export function ImageCropperDialog({
   async function handleSaveCrop() {
     const image = imgRef.current;
     const canvas = previewCanvasRef.current;
+
     if (!image || !canvas || !completedCrop) {
-      throw new Error('Crop details not available');
+      console.error('Crop details not available');
+      return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        throw new Error('No 2d context');
     }
 
     const scaleX = image.naturalWidth / image.width;
@@ -70,24 +77,25 @@ export function ImageCropperDialog({
     
     canvas.width = completedCrop.width * scaleX;
     canvas.height = completedCrop.height * scaleY;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-        throw new Error('No 2d context');
-    }
     
     const cropX = completedCrop.x * scaleX;
     const cropY = completedCrop.y * scaleY;
-
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-
-    ctx.save();
-    ctx.translate(centerX, centerY);
-    ctx.rotate(rotate * Math.PI / 180);
-    ctx.translate(-centerX, -centerY);
     
-    ctx.drawImage(
+    const saveCtx = canvas.getContext('2d');
+    if (!saveCtx) {
+        throw new Error('No 2d context for saving');
+    }
+
+    // Move the coordinate system to the center of the canvas
+    saveCtx.translate(canvas.width / 2, canvas.height / 2);
+    // Rotate the canvas
+    saveCtx.rotate(rotate * (Math.PI / 180));
+     // Scale the canvas
+    saveCtx.scale(scale, scale);
+    // Move the coordinate system back
+    saveCtx.translate(-canvas.width / 2, -canvas.height / 2);
+
+    saveCtx.drawImage(
       image,
       cropX,
       cropY,
@@ -95,12 +103,10 @@ export function ImageCropperDialog({
       completedCrop.height * scaleY,
       0,
       0,
-      canvas.width,
-      canvas.height
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY
     );
-
-    ctx.restore();
-
+    
     canvas.toBlob((blob) => {
         if (!blob) {
             console.error('Canvas is empty');
@@ -114,12 +120,12 @@ export function ImageCropperDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl grid-rows-[auto_1fr_auto] h-[90vh] p-0 gap-0">
+      <DialogContent className="max-w-4xl grid-rows-[auto_minmax(0,1fr)_auto] h-[90vh] p-0 gap-0">
         <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle>Crop and Edit Your Image</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 items-start overflow-y-auto p-6 pr-2">
-            <div className="flex justify-center items-center bg-muted/30 rounded-md p-4 h-full w-full">
+        <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 items-start overflow-y-auto p-6">
+            <div className="flex justify-center items-center bg-muted/30 rounded-md h-full w-full">
               <ReactCrop
                 crop={crop}
                 onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -127,8 +133,6 @@ export function ImageCropperDialog({
                 aspect={aspect}
                 circularCrop={true}
                 keepSelection={true}
-                minHeight={100}
-                minWidth={100}
               >
                 <img
                   ref={imgRef}
@@ -136,11 +140,11 @@ export function ImageCropperDialog({
                   src={imageSrc}
                   onLoad={onImageLoad}
                   style={{ transform: `scale(${scale}) rotate(${rotate}deg)` }}
-                  className="max-h-[calc(80vh-200px)]"
+                  className="max-h-[calc(80vh-200px)] object-contain"
                 />
               </ReactCrop>
             </div>
-            <div className="space-y-8 md:pt-4 pr-4">
+            <div className="space-y-8 md:pt-4">
                 <div className="space-y-4">
                     <div className="flex justify-between items-center">
                         <label htmlFor="scale-slider" className="text-sm font-medium">Zoom</label>
@@ -168,7 +172,7 @@ export function ImageCropperDialog({
                         min={-180}
                         max={180}
                         step={1}
-                        onValueChange={(value) => setRotate(value[0])}
+                        onValueCodeChange={(value) => setRotate(value[0])}
                     />
                 </div>
             </div>
