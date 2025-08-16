@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef } from 'react';
@@ -113,12 +114,12 @@ export function ImageCropperDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl grid-rows-[auto_1fr_auto] h-[90vh] p-0 gap-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>Crop and Edit Your Image</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 items-start max-h-[75vh]">
-            <div className="flex justify-center items-center bg-muted/30 rounded-md p-4 h-[calc(75vh-100px)] overflow-auto">
+        <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 items-start overflow-y-auto p-6 pr-2">
+            <div className="flex justify-center items-center bg-muted/30 rounded-md p-4 h-full w-full overflow-auto">
               <ReactCrop
                 crop={crop}
                 onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -135,11 +136,11 @@ export function ImageCropperDialog({
                   src={imageSrc}
                   style={{ transform: `scale(${scale}) rotate(${rotate}deg)` }}
                   onLoad={onImageLoad}
-                  className="max-w-full max-h-[calc(75vh-150px)] object-contain"
+                  className="max-h-[calc(80vh-200px)]"
                 />
               </ReactCrop>
             </div>
-            <div className="space-y-8 md:pt-4">
+            <div className="space-y-8 md:pt-4 pr-4">
                 <div className="space-y-2">
                     <label htmlFor="scale-slider" className="text-sm font-medium">Zoom</label>
                     <Slider
@@ -176,7 +177,7 @@ export function ImageCropperDialog({
               }}
             />
         )}
-        <DialogFooter>
+        <DialogFooter className="p-6 pt-4 border-t">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSaveCrop}>Save and Continue</Button>
         </DialogFooter>
