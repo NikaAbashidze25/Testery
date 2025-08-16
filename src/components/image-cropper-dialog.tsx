@@ -89,17 +89,25 @@ export function ImageCropperDialog({
     ctx.scale(scale, scale);
     ctx.translate(-centerX, -centerY);
     ctx.drawImage(image, 0, 0, image.naturalWidth, image.naturalHeight);
+
+    // Draw circular clipping path
     ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(canvas.width / (2 * pixelRatio) , canvas.height / (2 * pixelRatio), canvas.width / (2*pixelRatio), 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(canvas, 0, 0);
+
 
     canvas.toBlob((blob) => {
         if (!blob) {
             console.error('Canvas is empty');
             return;
         }
-        const file = new File([blob], 'cropped-image.jpeg', { type: 'image/jpeg' });
+        const file = new File([blob], 'cropped-image.png', { type: 'image/png' });
         onSave(file);
         onClose();
-    }, 'image/jpeg');
+    }, 'image/png');
   }
 
   return (
@@ -117,6 +125,7 @@ export function ImageCropperDialog({
                 aspect={aspect}
                 minHeight={100}
                 minWidth={100}
+                circularCrop={true}
               >
                 <img
                   ref={imgRef}
