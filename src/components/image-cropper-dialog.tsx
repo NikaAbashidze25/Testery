@@ -26,7 +26,7 @@ function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: numbe
     makeAspectCrop(
       {
         unit: '%',
-        width: 50, // Changed from 90 to 50 for a smaller initial crop
+        width: 50,
       },
       aspect,
       mediaWidth,
@@ -143,8 +143,11 @@ export function ImageCropperDialog({
               </ReactCrop>
             </div>
             <div className="space-y-8 md:pt-4 pr-4">
-                <div className="space-y-2">
-                    <label htmlFor="scale-slider" className="text-sm font-medium">Zoom</label>
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <label htmlFor="scale-slider" className="text-sm font-medium">Zoom</label>
+                        <span className="text-sm text-muted-foreground w-12 text-right">{(scale * 100).toFixed(0)}%</span>
+                    </div>
                     <Slider
                         id="scale-slider"
                         defaultValue={[1]}
@@ -155,8 +158,11 @@ export function ImageCropperDialog({
                         onValueChange={(value) => setScale(value[0])}
                     />
                 </div>
-                 <div className="space-y-2">
-                    <label htmlFor="rotate-slider" className="text-sm font-medium">Rotate</label>
+                 <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <label htmlFor="rotate-slider" className="text-sm font-medium">Rotate</label>
+                         <span className="text-sm text-muted-foreground w-12 text-right">{rotate.toFixed(0)}°</span>
+                    </div>
                     <Slider
                         id="rotate-slider"
                         defaultValue={[0]}
