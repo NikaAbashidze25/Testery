@@ -60,70 +60,60 @@ export function ImageCropperDialog({
   }
 
   async function handleSaveCrop() {
-    const image = imgRef.current
-    const canvas = previewCanvasRef.current
+    const image = imgRef.current;
+    const canvas = previewCanvasRef.current;
 
     if (!image || !canvas || !completedCrop) {
-      throw new Error('Crop canvas does not exist')
+      throw new Error('Crop canvas does not exist');
     }
 
-    const scaleX = image.naturalWidth / image.width
-    const scaleY = image.naturalHeight / image.height
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
     
-    const offscreen = new OffscreenCanvas(
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY,
-    )
-
-    const ctx = offscreen.getContext('2d')
-    if (!ctx) {
-      throw new Error('No 2d context')
-    }
-
-    ctx.drawImage(
-      image,
-      0,
-      0,
-      image.naturalWidth,
-      image.naturalHeight,
-    )
-
-    // Move the center of the image to the center of the canvas.
     canvas.width = completedCrop.width * scaleX;
     canvas.height = completedCrop.height * scaleY;
 
-    const TO_RADIANS = Math.PI / 180
-    const canvasCtx = canvas.getContext('2d')
-    if (!canvasCtx) {
-      throw new Error('No 2d context')
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('No 2d context');
     }
 
-    const  {x: cropX, y: cropY, width: cropWidth, height: cropHeight } = {
-        x: completedCrop.x * scaleX,
-        y: completedCrop.y * scaleY,
-        width: completedCrop.width * scaleX,
-        height: completedCrop.height * scaleY,
-    }
+    const cropX = completedCrop.x * scaleX;
+    const cropY = completedCrop.y * scaleY;
+    
+    const centerX = image.naturalWidth / 2;
+    const centerY = image.naturalHeight / 2;
+    
+    ctx.save();
+    
+    // Create a circular clipping path
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2, true);
+    ctx.closePath();
+    ctx.clip();
 
 
-    // Move the center of the crop to the center of the canvas.
-    canvasCtx.translate(cropWidth / 2, cropHeight / 2)
-    canvasCtx.rotate(rotate * TO_RADIANS)
-    canvasCtx.scale(scale, scale)
-    canvasCtx.translate(-cropWidth / 2, -cropHeight / 2)
+    // Translate and rotate around the center of the canvas
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((rotate * Math.PI) / 180);
+    ctx.scale(scale, scale);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    
+    // Draw the image centered on the canvas
+    ctx.drawImage(
+      image,
+      cropX,
+      cropY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY
+    );
+    
+    ctx.restore();
 
-
-    canvasCtx.drawImage(
-        image, 
-        cropX, 
-        cropY, 
-        cropWidth,
-        cropHeight,
-        0,
-        0,
-        cropWidth,
-        cropHeight
-    )
 
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, 'image/png');
@@ -207,8 +197,8 @@ export function ImageCropperDialog({
         <canvas
             ref={previewCanvasRef}
             style={{
-            display: 'none',
-            objectFit: 'contain',
+              display: 'none',
+              objectFit: 'contain',
             }}
         />
         
