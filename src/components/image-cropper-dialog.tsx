@@ -76,24 +76,20 @@ export function ImageCropperDialog({
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
 
-    canvas.width = completedCrop.width * scaleX;
-    canvas.height = completedCrop.height * scaleY;
-    
+    canvas.width = Math.floor(completedCrop.width * scaleX);
+    canvas.height = Math.floor(completedCrop.height * scaleY);
+
+    ctx.save();
+
     const cropX = completedCrop.x * scaleX;
     const cropY = completedCrop.y * scaleY;
 
     const centerX = image.naturalWidth / 2;
     const centerY = image.naturalHeight / 2;
-    
-    ctx.save();
-    
-    // Move canvas registration point to the center of the cropped area
+
     ctx.translate(canvas.width / 2, canvas.height / 2);
-    // Rotate around the new center
-    ctx.rotate(rotate * (Math.PI / 180));
-     // Scale around the new center
+    ctx.rotate((rotate * Math.PI) / 180);
     ctx.scale(scale, scale);
-    // Move the registration point back to the top-left corner of canvas
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
     
     ctx.drawImage(
