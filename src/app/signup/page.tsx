@@ -354,6 +354,7 @@ export default function SignUpPage() {
                           </FormControl>
                           <p className="text-sm text-muted-foreground">{profilePictureName || 'No file selected.'}</p>
                         </div>
+                        <FormDescription>Maximum file size: 2.5MB.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -483,6 +484,7 @@ export default function SignUpPage() {
                         </FormControl>
                         <p className="text-sm text-muted-foreground">{companyLogoName || 'No file selected.'}</p>
                         </div>
+                        <FormDescription>Maximum file size: 2.5MB.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -497,5 +499,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-
-    

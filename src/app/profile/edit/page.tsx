@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -229,19 +230,7 @@ export default function EditProfilePage() {
                     </Avatar>
                     <div className="flex-grow space-y-2">
                       <FormLabel>Profile Picture</FormLabel>
-                      <div className="flex items-center gap-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isSubmitting}
-                        >
-                          <Upload className="mr-2 h-4 w-4" />
-                          Change Image
-                        </Button>
-                        <p className="text-sm text-muted-foreground">{croppedImage?.name || 'No file selected.'}</p>
-                      </div>
-                      <Input
+                       <Input
                         ref={fileInputRef}
                         type="file"
                         className="hidden"
@@ -249,6 +238,16 @@ export default function EditProfilePage() {
                         onChange={handleFileChange}
                         disabled={isSubmitting}
                       />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isSubmitting}
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        Change Image
+                      </Button>
+                      <FormDescription>Maximum file size: 2.5MB.</FormDescription>
                     </div>
                   </div>
                   <FormField
@@ -288,18 +287,6 @@ export default function EditProfilePage() {
                     </Avatar>
                      <div className="flex-grow space-y-2">
                       <FormLabel>Company Logo</FormLabel>
-                      <div className="flex items-center gap-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isSubmitting}
-                        >
-                          <Upload className="mr-2 h-4 w-4" />
-                          Change Logo
-                        </Button>
-                        <p className="text-sm text-muted-foreground">{croppedImage?.name || 'No file selected.'}</p>
-                      </div>
                       <Input
                         ref={fileInputRef}
                         type="file"
@@ -308,6 +295,16 @@ export default function EditProfilePage() {
                         onChange={handleFileChange}
                         disabled={isSubmitting}
                       />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isSubmitting}
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        Change Logo
+                      </Button>
+                       <FormDescription>Maximum file size: 2.5MB.</FormDescription>
                     </div>
                   </div>
                   <FormField
