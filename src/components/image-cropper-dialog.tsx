@@ -81,25 +81,24 @@ export function ImageCropperDialog({
     const cropX = completedCrop.x * scaleX;
     const cropY = completedCrop.y * scaleY;
     
-    const centerX = image.naturalWidth / 2;
-    const centerY = image.naturalHeight / 2;
-    
-    ctx.save();
-    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     // Create a circular clipping path
     ctx.beginPath();
-    ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2, true);
+    ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2, 0, Math.PI * 2, true);
     ctx.closePath();
     ctx.clip();
 
 
-    // Translate and rotate around the center of the canvas
+    // Move the coordinate system to the center of the canvas
     ctx.translate(canvas.width / 2, canvas.height / 2);
+    // Rotate and scale from the center
     ctx.rotate((rotate * Math.PI) / 180);
     ctx.scale(scale, scale);
+    // Move the coordinate system back
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
     
-    // Draw the image centered on the canvas
+    // Draw the image
     ctx.drawImage(
       image,
       cropX,
@@ -112,9 +111,6 @@ export function ImageCropperDialog({
       completedCrop.height * scaleY
     );
     
-    ctx.restore();
-
-
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, 'image/png');
     });
