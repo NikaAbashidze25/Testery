@@ -20,6 +20,65 @@ interface ImageCropperDialogProps {
   onSave: (file: File) => void;
 }
 
+
+// This is a utility function to create a new image file from the crop data.
+// It's more robust than the previous inline implementation.
+async function getCroppedImg(
+  imageSrc: string,
+  pixelCrop: Crop,
+  rotation = 0
+): Promise<File | null> {
+  const image = new Image();
+  image.src = imageSrc;
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = reject;
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    return null;
+  }
+
+  const TO_RADIANS = Math.PI / 180;
+  const rad = rotation * TO_RADIANS;
+  
+  // translate canvas context to a central location to allow rotating and scaling around center
+  ctx.translate(pixelCrop.width / 2, pixelCrop.height / 2);
+  ctx.rotate(rad);
+  ctx.scale(1, 1);
+  ctx.translate(-pixelCrop.width / 2, -pixelCrop.height / 2);
+  
+  // draw rotated image
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        console.error('Canvas is empty');
+        resolve(null);
+        return;
+      }
+      resolve(new File([blob], 'cropped-image.png', { type: 'image/png' }));
+    }, 'image/png');
+  });
+}
+
+
 function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number) {
   return centerCrop(
     makeAspectCrop(
@@ -48,8 +107,7 @@ export function ImageCropperDialog({
   const [rotate, setRotate] = useState(0);
   const [aspect, setAspect] = useState<number | undefined>(1);
   const imgRef = useRef<HTMLImageElement>(null);
-  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
-
+  
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     if (aspect) {
       const { width, height } = e.currentTarget;
@@ -60,13 +118,13 @@ export function ImageCropperDialog({
   }
 
   async function handleSaveCrop() {
-    const image = imgRef.current;
-    const canvas = previewCanvasRef.current;
-
-    if (!image || !canvas || !completedCrop) {
-      throw new Error('Crop canvas does not exist');
+    if (!completedCrop || !imgRef.current) {
+        console.error("Crop or image not available");
+        return;
     }
 
+    const image = imgRef.current;
+    const canvas = document.createElement('canvas');
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
     
@@ -75,15 +133,22 @@ export function ImageCropperDialog({
     
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-      throw new Error('No 2d context');
+        throw new Error('No 2d context');
     }
 
+    // Create a circular clipping path
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2, 0, Math.PI * 2, true);
+    ctx.closePath();
+    ctx.clip();
+    
+    // Draw the image with transformations
     ctx.save();
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate((rotate * Math.PI) / 180);
     ctx.scale(scale, scale);
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
-
+    
     ctx.drawImage(
       image,
       completedCrop.x * scaleX,
@@ -95,26 +160,11 @@ export function ImageCropperDialog({
       canvas.width,
       canvas.height
     );
+
     ctx.restore();
 
-    // Create a circular clipping path on a new canvas
-    const finalCanvas = document.createElement('canvas');
-    finalCanvas.width = canvas.width;
-    finalCanvas.height = canvas.height;
-    const finalCtx = finalCanvas.getContext('2d');
-
-    if (!finalCtx) {
-      throw new Error('No 2d context for final canvas');
-    }
-
-    finalCtx.beginPath();
-    finalCtx.arc(finalCanvas.width / 2, finalCanvas.height / 2, Math.min(finalCanvas.width, finalCanvas.height) / 2, 0, Math.PI * 2, true);
-    finalCtx.closePath();
-    finalCtx.clip();
-    finalCtx.drawImage(canvas, 0, 0);
-
     const blob = await new Promise<Blob | null>((resolve) => {
-      finalCanvas.toBlob(resolve, 'image/png');
+      canvas.toBlob(resolve, 'image/png');
     });
 
     if (!blob) {
@@ -127,7 +177,7 @@ export function ImageCropperDialog({
   }
   
    const handleCropChange = (newCrop: Crop, percentCrop: Crop) => {
-    setCrop(percentCrop);
+    setCrop(newCrop);
   };
 
 
@@ -190,15 +240,6 @@ export function ImageCropperDialog({
                 </div>
             </div>
         </div>
-
-        
-        <canvas
-            ref={previewCanvasRef}
-            style={{
-              display: 'none',
-              objectFit: 'contain',
-            }}
-        />
         
         <DialogFooter className="p-6 pt-4 border-t">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
