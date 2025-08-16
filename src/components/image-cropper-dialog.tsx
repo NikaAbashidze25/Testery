@@ -115,7 +115,7 @@ export function ImageCropperDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl grid-rows-[auto_1fr_auto] h-[90vh] p-0 gap-0">
-        <DialogHeader className="p-6 pb-4">
+        <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle>Crop and Edit Your Image</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 items-start overflow-y-auto p-6 pr-2">
