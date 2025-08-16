@@ -45,8 +45,7 @@ const companySchema = z.object({
   companyLogo: z.any().optional(),
 });
 
-
-const PasswordStrength = ({ password = '' }) => {
+const PasswordStrength = ({ password = '' }: { password?: string }) => {
     let strength = 0;
     if (password.length > 7) strength++;
     if (password.match(/[A-Z]/)) strength++;
@@ -65,7 +64,7 @@ const PasswordStrength = ({ password = '' }) => {
                 {strength === 4 && "Password is strong."}
             </p>
         </>
-    )
+    );
 };
 
 
@@ -293,7 +292,7 @@ export default function SignUpPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</Label>
+                        <FormLabel>Email</FormLabel>
                         <FormControl><Input placeholder="contact@acme.com" {...field} disabled={isLoading} /></FormControl>
                         <FormMessage />
                       </FormItem>
