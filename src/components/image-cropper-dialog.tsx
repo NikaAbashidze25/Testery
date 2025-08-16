@@ -109,7 +109,7 @@ export function ImageCropperDialog({
           <DialogTitle>Edit Image</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-            <div className="flex justify-center">
+            <div className="flex justify-center w-full">
               <ReactCrop
                 crop={crop}
                 onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -124,6 +124,7 @@ export function ImageCropperDialog({
                   src={imageSrc}
                   style={{ transform: `scale(${scale}) rotate(${rotate}deg)` }}
                   onLoad={onImageLoad}
+                  className="max-w-full max-h-[60vh] object-contain"
                 />
               </ReactCrop>
             </div>
