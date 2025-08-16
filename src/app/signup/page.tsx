@@ -19,51 +19,82 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from '@/components/ui/progress';
-import { Upload } from 'lucide-react';
+import { Upload, Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, storage } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
+
+
+const passwordSchema = z.string().min(8, { message: "Password must be at least 8 characters." })
+  .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter." })
+  .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter." })
+  .regex(/[0-9]/, { message: "Password must contain at least one number." })
+  .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character." });
 
 const individualSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+  password: passwordSchema,
+  confirmPassword: z.string(),
   skills: z.string().optional(),
   profilePicture: z.any().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
 });
 
 const companySchema = z.object({
   companyName: z.string().min(2, { message: "Company name must be at least 2 characters." }),
   contactPerson: z.string().min(2, { message: "Contact person name must be at least 2 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+  password: passwordSchema,
+  confirmPassword: z.string(),
   industry: z.string().min(2, { message: "Industry must be at least 2 characters." }),
   website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   companyLogo: z.any().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
 });
 
 const PasswordStrength = ({ password = '' }: { password?: string }) => {
-    let strength = 0;
-    if (password.length > 7) strength++;
-    if (password.match(/[A-Z]/)) strength++;
-    if (password.match(/[0-9]/)) strength++;
-    if (password.match(/[^A-Za-z0-9]/)) strength++;
-    
-    const strengthPercentage = (strength / 4) * 100;
+    const criteria = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /[0-9]/.test(password),
+        specialChar: /[^A-Za-z0-9]/.test(password),
+    };
+
+    const strength = Object.values(criteria).filter(Boolean).length;
+    const strengthPercentage = (strength / 5) * 100;
+
+    const CriteriaItem = ({ label, met }: { label: string; met: boolean }) => (
+        <div className="flex items-center text-xs">
+            {met ? (
+                <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+            ) : (
+                <Circle className="mr-2 h-4 w-4 text-muted-foreground" />
+            )}
+            <span className={cn(met ? "text-foreground" : "text-muted-foreground")}>{label}</span>
+        </div>
+    );
 
     return (
-        <>
+        <div className="space-y-2">
             <Progress value={strengthPercentage} className="h-2" />
-            <p className="text-xs text-muted-foreground mt-2">
-                {strength < 2 && "Password is weak."}
-                {strength === 2 && "Password is okay."}
-                {strength === 3 && "Password is good."}
-                {strength === 4 && "Password is strong."}
-            </p>
-        </>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                <CriteriaItem label="8+ characters" met={criteria.length} />
+                <CriteriaItem label="One uppercase letter" met={criteria.uppercase} />
+                <CriteriaItem label="One lowercase letter" met={criteria.lowercase} />
+                <CriteriaItem label="One number" met={criteria.number} />
+                <CriteriaItem label="One special character" met={criteria.specialChar} />
+            </div>
+        </div>
     );
 };
 
@@ -73,15 +104,20 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+
+  const [showIndividualPassword, setShowIndividualPassword] = useState(false);
+  const [showIndividualConfirmPassword, setShowIndividualConfirmPassword] = useState(false);
+  const [showCompanyPassword, setShowCompanyPassword] = useState(false);
+  const [showCompanyConfirmPassword, setShowCompanyConfirmPassword] = useState(false);
   
   const individualForm = useForm<z.infer<typeof individualSchema>>({
     resolver: zodResolver(individualSchema),
-    defaultValues: { fullName: "", email: "", password: "", skills: "" },
+    defaultValues: { fullName: "", email: "", password: "", confirmPassword: "", skills: "" },
   });
 
   const companyForm = useForm<z.infer<typeof companySchema>>({
     resolver: zodResolver(companySchema),
-    defaultValues: { companyName: "", contactPerson: "", email: "", password: "", industry: "", website: "" },
+    defaultValues: { companyName: "", contactPerson: "", email: "", password: "", confirmPassword: "", industry: "", website: "" },
   });
 
   const onIndividualSubmit = async (values: z.infer<typeof individualSchema>) => {
@@ -221,12 +257,39 @@ export default function SignUpPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Password</FormLabel>
-                        <FormControl><Input type="password" placeholder="••••••••" {...field} disabled={isLoading} /></FormControl>
-                         <PasswordStrength password={individualPassword} />
+                        <div className="relative">
+                            <FormControl>
+                                <Input type={showIndividualPassword ? "text" : "password"} placeholder="••••••••" {...field} disabled={isLoading} />
+                            </FormControl>
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground" onClick={() => setShowIndividualPassword(!showIndividualPassword)}>
+                                {showIndividualPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={individualForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm Password</FormLabel>
+                         <div className="relative">
+                            <FormControl>
+                                <Input type={showIndividualConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} disabled={isLoading} />
+                            </FormControl>
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground" onClick={() => setShowIndividualConfirmPassword(!showIndividualConfirmPassword)}>
+                                {showIndividualConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                    
+                  <PasswordStrength password={individualPassword} />
+
                   <FormField
                     control={individualForm.control}
                     name="skills"
@@ -304,12 +367,39 @@ export default function SignUpPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Password</FormLabel>
-                        <FormControl><Input type="password" placeholder="••••••••" {...field} disabled={isLoading} /></FormControl>
-                        <PasswordStrength password={companyPassword} />
+                         <div className="relative">
+                            <FormControl>
+                                <Input type={showCompanyPassword ? "text" : "password"} placeholder="••••••••" {...field} disabled={isLoading} />
+                            </FormControl>
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground" onClick={() => setShowCompanyPassword(!showCompanyPassword)}>
+                                {showCompanyPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                   <FormField
+                    control={companyForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm Password</FormLabel>
+                        <div className="relative">
+                            <FormControl>
+                                <Input type={showCompanyConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} disabled={isLoading} />
+                            </FormControl>
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground" onClick={() => setShowCompanyConfirmPassword(!showCompanyConfirmPassword)}>
+                                {showCompanyConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <PasswordStrength password={companyPassword} />
+
                   <FormField
                     control={companyForm.control}
                     name="industry"
@@ -361,3 +451,5 @@ export default function SignUpPage() {
     </div>
   );
 }
+
+    
