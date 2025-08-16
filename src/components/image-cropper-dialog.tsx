@@ -26,7 +26,7 @@ function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: numbe
     makeAspectCrop(
       {
         unit: '%',
-        width: 90,
+        width: 50, // Changed from 90 to 50 for a smaller initial crop
       },
       aspect,
       mediaWidth,
@@ -79,14 +79,16 @@ export function ImageCropperDialog({
     const cropX = completedCrop.x * scaleX;
     const cropY = completedCrop.y * scaleY;
 
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
     ctx.save();
-    // Move the rotation point to the center of the cropped area
-    ctx.translate(canvas.width / 2, canvas.height / 2);
+    // Translate and rotate around the center of the canvas
+    ctx.translate(centerX, centerY);
     ctx.rotate(rotate * Math.PI / 180);
     ctx.scale(scale, scale);
-    // Move the origin back to the top-left of the canvas
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
-
+    ctx.translate(-centerX, -centerY);
+    
     ctx.drawImage(
       image,
       cropX,
@@ -95,8 +97,8 @@ export function ImageCropperDialog({
       completedCrop.height * scaleY,
       0,
       0,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY
+      canvas.width,
+      canvas.height
     );
 
     ctx.restore();
@@ -146,6 +148,7 @@ export function ImageCropperDialog({
                     <Slider
                         id="scale-slider"
                         defaultValue={[1]}
+                        value={[scale]}
                         min={0.5}
                         max={3}
                         step={0.01}
@@ -157,6 +160,7 @@ export function ImageCropperDialog({
                     <Slider
                         id="rotate-slider"
                         defaultValue={[0]}
+                        value={[rotate]}
                         min={-180}
                         max={180}
                         step={1}
