@@ -67,51 +67,38 @@ export function ImageCropperDialog({
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
     
-    const offscreen = new OffscreenCanvas(
-        completedCrop.width * scaleX,
-        completedCrop.height * scaleY
-    );
-    const ctx = offscreen.getContext('2d');
-    if (!ctx) {
-        throw new Error('No 2d context');
-    }
-
-    ctx.drawImage(
-        image,
-        0,
-        0,
-        image.naturalWidth,
-        image.naturalHeight
-    );
-    
-    // Set the destination canvas size
     canvas.width = completedCrop.width * scaleX;
     canvas.height = completedCrop.height * scaleY;
-    const finalCtx = canvas.getContext('2d');
-    if (!finalCtx) {
-        throw new Error('No 2d context for final canvas');
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        throw new Error('No 2d context');
     }
     
     const cropX = completedCrop.x * scaleX;
     const cropY = completedCrop.y * scaleY;
-    
-    finalCtx.save();
-    finalCtx.translate(canvas.width / 2, canvas.height / 2);
-    finalCtx.rotate(rotate * Math.PI / 180);
-    finalCtx.scale(scale, scale);
-    finalCtx.translate(-canvas.width / 2, -canvas.height / 2);
-    finalCtx.drawImage(
-        image,
-        cropX,
-        cropY,
-        completedCrop.width * scaleX,
-        completedCrop.height * scaleY,
-        0,
-        0,
-        completedCrop.width * scaleX,
-        completedCrop.height * scaleY
+
+    ctx.save();
+    // Move the rotation point to the center of the cropped area
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(rotate * Math.PI / 180);
+    ctx.scale(scale, scale);
+    // Move the origin back to the top-left of the canvas
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+    ctx.drawImage(
+      image,
+      cropX,
+      cropY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY
     );
-    finalCtx.restore();
+
+    ctx.restore();
 
     canvas.toBlob((blob) => {
         if (!blob) {
