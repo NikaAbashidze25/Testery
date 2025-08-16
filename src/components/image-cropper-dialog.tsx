@@ -19,6 +19,7 @@ interface ImageCropperDialogProps {
   onSave: (file: File) => void;
 }
 
+// Helper to center the crop area
 function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number) {
   return centerCrop(
     makeAspectCrop(
@@ -65,33 +66,53 @@ export function ImageCropperDialog({
 
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('No 2d context');
-    }
     
-    const pixelRatio = window.devicePixelRatio;
-    canvas.width = Math.floor(completedCrop.width * scaleX * pixelRatio);
-    canvas.height = Math.floor(completedCrop.height * scaleY * pixelRatio);
+    const offscreen = new OffscreenCanvas(
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY
+    );
+    const ctx = offscreen.getContext('2d');
+    if (!ctx) {
+        throw new Error('No 2d context');
+    }
 
-    ctx.scale(pixelRatio, pixelRatio);
-    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(
+        image,
+        0,
+        0,
+        image.naturalWidth,
+        image.naturalHeight
+    );
+    
+    // Set the destination canvas size
+    canvas.width = completedCrop.width * scaleX;
+    canvas.height = completedCrop.height * scaleY;
+    const finalCtx = canvas.getContext('2d');
+    if (!finalCtx) {
+        throw new Error('No 2d context for final canvas');
+    }
     
     const cropX = completedCrop.x * scaleX;
     const cropY = completedCrop.y * scaleY;
-    const centerX = image.naturalWidth / 2;
-    const centerY = image.naturalHeight / 2;
     
-    ctx.save();
-    ctx.translate(-cropX, -cropY);
-    ctx.translate(centerX, centerY);
-    ctx.rotate((rotate * Math.PI) / 180);
-    ctx.scale(scale, scale);
-    ctx.translate(-centerX, -centerY);
-    ctx.drawImage(image, 0, 0, image.naturalWidth, image.naturalHeight);
+    finalCtx.save();
+    finalCtx.translate(canvas.width / 2, canvas.height / 2);
+    finalCtx.rotate(rotate * Math.PI / 180);
+    finalCtx.scale(scale, scale);
+    finalCtx.translate(-canvas.width / 2, -canvas.height / 2);
+    finalCtx.drawImage(
+        image,
+        cropX,
+        cropY,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY,
+        0,
+        0,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY
+    );
+    finalCtx.restore();
 
-    ctx.restore();
-    
     canvas.toBlob((blob) => {
         if (!blob) {
             console.error('Canvas is empty');
@@ -105,20 +126,21 @@ export function ImageCropperDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Edit Image</DialogTitle>
+          <DialogTitle>Crop and Edit Your Image</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-start overflow-y-auto max-h-[70vh] p-1">
-            <div className="flex justify-center w-full bg-muted/30 rounded-md p-4">
+        <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 items-start max-h-[75vh]">
+            <div className="flex justify-center items-center bg-muted/30 rounded-md p-4 h-[calc(75vh-100px)] overflow-auto">
               <ReactCrop
                 crop={crop}
                 onChange={(_, percentCrop) => setCrop(percentCrop)}
                 onComplete={(c) => setCompletedCrop(c)}
                 aspect={aspect}
+                circularCrop={true}
+                keepSelection={true}
                 minHeight={100}
                 minWidth={100}
-                circularCrop={true}
               >
                 <img
                   ref={imgRef}
@@ -126,18 +148,18 @@ export function ImageCropperDialog({
                   src={imageSrc}
                   style={{ transform: `scale(${scale}) rotate(${rotate}deg)` }}
                   onLoad={onImageLoad}
-                  className="max-w-full object-contain"
+                  className="max-w-full max-h-[calc(75vh-150px)] object-contain"
                 />
               </ReactCrop>
             </div>
-            <div className="space-y-6 md:pt-4">
+            <div className="space-y-8 md:pt-4">
                 <div className="space-y-2">
                     <label htmlFor="scale-slider" className="text-sm font-medium">Zoom</label>
                     <Slider
                         id="scale-slider"
                         defaultValue={[1]}
-                        min={1}
-                        max={2}
+                        min={0.5}
+                        max={3}
                         step={0.01}
                         onValueChange={(value) => setScale(value[0])}
                     />
