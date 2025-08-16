@@ -314,7 +314,7 @@ export default function SignUpPage() {
                         <div className="flex items-center gap-4">
                           <FormControl>
                             <Button asChild variant="outline" className="w-auto">
-                              <label>
+                              <label className="cursor-pointer">
                                 <Upload className="mr-2 h-4 w-4" />
                                 Upload Image
                                 <Input
@@ -447,7 +447,7 @@ export default function SignUpPage() {
                         <div className="flex items-center gap-4">
                            <FormControl>
                             <Button asChild variant="outline" className="w-auto">
-                                <label>
+                                <label className="cursor-pointer">
                                     <Upload className="mr-2 h-4 w-4" />
                                     Upload Logo
                                     <Input
@@ -480,3 +480,5 @@ export default function SignUpPage() {
     </div>
   );
 }
+
+    
