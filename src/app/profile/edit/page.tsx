@@ -25,6 +25,7 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Upload } from 'lucide-react';
 import Link from 'next/link';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const individualSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
@@ -89,6 +90,16 @@ export default function EditProfilePage() {
     });
     return () => unsubscribe();
   }, [router, form]);
+  
+  const getInitials = (name: string | undefined) => {
+    if (!name) return 'U';
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return names[0][0] + names[names.length - 1][0];
+    }
+    return name[0];
+  };
+
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!auth.currentUser || !userProfile) return;
@@ -174,6 +185,45 @@ export default function EditProfilePage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {userProfile.accountType === 'individual' && (
                 <>
+                  <div className="flex items-center gap-6">
+                    <Avatar className="h-20 w-20">
+                        <AvatarImage src={userProfile.profilePictureUrl} alt="Profile Picture" />
+                        <AvatarFallback className="text-3xl">
+                        {getInitials(userProfile.fullName)}
+                        </AvatarFallback>
+                    </Avatar>
+                    <FormField
+                        control={form.control}
+                        name="profilePicture"
+                        render={({ field }) => (
+                        <FormItem className="flex-grow">
+                            <FormLabel>Profile Picture</FormLabel>
+                            <div className="flex items-center gap-4">
+                            <FormControl>
+                                <Button asChild variant="outline" className="w-auto">
+                                <label className="cursor-pointer">
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Change Image
+                                    <Input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        field.onChange(e.target.files);
+                                        setImageName(e.target.files?.[0]?.name || 'No file selected');
+                                    }}
+                                    disabled={isSubmitting}
+                                    />
+                                </label>
+                                </Button>
+                            </FormControl>
+                            <p className="text-sm text-muted-foreground">{imageName || 'No file selected.'}</p>
+                            </div>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                  </div>
                   <FormField
                     control={form.control}
                     name="fullName"
@@ -197,42 +247,50 @@ export default function EditProfilePage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="profilePicture"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Profile Picture</FormLabel>
-                        <div className="flex items-center gap-4">
-                          <FormControl>
-                            <Button asChild variant="outline" className="w-auto">
-                              <label className="cursor-pointer">
-                                <Upload className="mr-2 h-4 w-4" />
-                                Change Image
-                                <Input
-                                  type="file"
-                                  className="hidden"
-                                  accept="image/*"
-                                  onChange={(e) => {
-                                    field.onChange(e.target.files);
-                                    setImageName(e.target.files?.[0]?.name || 'No file selected');
-                                  }}
-                                  disabled={isSubmitting}
-                                />
-                              </label>
-                            </Button>
-                          </FormControl>
-                          <p className="text-sm text-muted-foreground">{imageName || 'No file selected.'}</p>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </>
               )}
 
               {userProfile.accountType === 'company' && (
                 <>
+                  <div className="flex items-center gap-6">
+                     <Avatar className="h-20 w-20">
+                        <AvatarImage src={userProfile.companyLogoUrl} alt="Company Logo" />
+                        <AvatarFallback className="text-3xl">
+                        {getInitials(userProfile.companyName)}
+                        </AvatarFallback>
+                    </Avatar>
+                    <FormField
+                        control={form.control}
+                        name="companyLogo"
+                        render={({ field }) => (
+                        <FormItem className="flex-grow">
+                            <FormLabel>Company Logo</FormLabel>
+                            <div className="flex items-center gap-4">
+                            <FormControl>
+                                <Button asChild variant="outline" className="w-auto">
+                                <label className="cursor-pointer">
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Change Logo
+                                    <Input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        field.onChange(e.target.files);
+                                        setImageName(e.target.files?.[0]?.name || 'No file selected');
+                                    }}
+                                    disabled={isSubmitting}
+                                    />
+                                </label>
+                                </Button>
+                            </FormControl>
+                            <p className="text-sm text-muted-foreground">{imageName || 'No file selected.'}</p>
+                            </div>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                  </div>
                   <FormField
                     control={form.control}
                     name="companyName"
@@ -273,37 +331,6 @@ export default function EditProfilePage() {
                       <FormItem>
                         <FormLabel>Company Website</FormLabel>
                         <FormControl><Input {...field} disabled={isSubmitting} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="companyLogo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company Logo</FormLabel>
-                        <div className="flex items-center gap-4">
-                          <FormControl>
-                            <Button asChild variant="outline" className="w-auto">
-                              <label className="cursor-pointer">
-                                <Upload className="mr-2 h-4 w-4" />
-                                Change Logo
-                                <Input
-                                  type="file"
-                                  className="hidden"
-                                  accept="image/*"
-                                  onChange={(e) => {
-                                    field.onChange(e.target.files);
-                                    setImageName(e.target.files?.[0]?.name || 'No file selected');
-                                  }}
-                                  disabled={isSubmitting}
-                                />
-                              </label>
-                            </Button>
-                          </FormControl>
-                          <p className="text-sm text-muted-foreground">{imageName || 'No file selected.'}</p>
-                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
