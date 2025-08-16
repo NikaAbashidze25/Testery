@@ -118,12 +118,11 @@ export default function EditProfilePage() {
         imageUrl = await getDownloadURL(storageRef);
       }
       
-      const dataToUpdate: any = {
-        ...values,
-      };
+      const dataToUpdate: any = { ...values };
+      delete dataToUpdate[fileField];
 
       if (userProfile.accountType === 'individual') {
-        dataToUpdate.skills = values.skills?.split(',').map((s:string) => s.trim()) || [];
+        dataToUpdate.skills = (values.skills || '').split(',').map((s:string) => s.trim());
         dataToUpdate.profilePictureUrl = imageUrl;
         await updateProfile(auth.currentUser, { displayName: values.fullName, photoURL: imageUrl });
       } else {
