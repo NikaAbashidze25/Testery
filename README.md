@@ -11,4 +11,3 @@ To get started:
 
 - **Job Posting**: Clients can post testing jobs.
 - **Job Browsing**: Testers can browse and search for jobs.
-- **AI-Assisted Job Descriptions**: An AI tool helps clients write better job descriptions.

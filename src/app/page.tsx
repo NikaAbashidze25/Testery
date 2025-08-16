@@ -60,7 +60,7 @@ export default function Home() {
               </div>
               <h3 className="text-lg font-bold">1. Post a Job</h3>
               <p className="text-sm text-muted-foreground">
-                Clients define the scope, tasks, and compensation for their testing needs. Our AI assistant helps create clear acceptance criteria.
+                Clients define the scope, tasks, and compensation for their testing needs.
               </p>
             </div>
             <div className="grid gap-1 text-center">
@@ -96,7 +96,7 @@ export default function Home() {
                     </p>
                 </div>
             </div>
-            <div className="mx-auto grid max-w-sm items-start gap-8 sm:max-w-4xl sm:grid-cols-2 md:gap-12 lg:max-w-5xl lg:grid-cols-3 mt-12">
+            <div className="mx-auto grid max-w-sm items-start gap-8 sm:max-w-4xl sm:grid-cols-2 md:gap-12 lg:max-w-5xl lg:grid-cols-2 mt-12">
                 <Card>
                     <CardHeader className="flex flex-row items-center gap-4">
                         <div className="flex items-center justify-center rounded-full bg-primary/10 p-2">
@@ -106,17 +106,6 @@ export default function Home() {
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground">Easily post testing jobs and allow our community of testers to find and apply for them with advanced filtering.</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center gap-4">
-                        <div className="flex items-center justify-center rounded-full bg-primary/10 p-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
-                        </div>
-                        <CardTitle>AI-Powered Assistance</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground">Our GenAI tool helps clients write clear, specific, and measurable acceptance criteria for better outcomes.</p>
                     </CardContent>
                 </Card>
                 <Card>

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -17,9 +16,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { analyzeJobDetails } from '@/ai/flows/job-detail-check';
-import { Loader2 } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const jobFormSchema = z.object({
   title: z.string().min(10, 'Title must be at least 10 characters.'),
@@ -31,10 +27,6 @@ const jobFormSchema = z.object({
 type JobFormValues = z.infer<typeof jobFormSchema>;
 
 export default function PostJobPage() {
-  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobFormSchema),
     defaultValues: {
@@ -44,26 +36,6 @@ export default function PostJobPage() {
       compensation: 0,
     },
   });
-  
-  const jobDescription = form.watch('description');
-
-  const handleAnalyze = async () => {
-    setError(null);
-    setAnalysisResult(null);
-    if (!jobDescription || jobDescription.length < 50) {
-        setError('Please provide a job description of at least 50 characters before analyzing.');
-        return;
-    }
-    setIsAnalyzing(true);
-    try {
-      const result = await analyzeJobDetails({ jobDescription });
-      setAnalysisResult(result.feedback);
-    } catch (e) {
-      setError('An error occurred while analyzing the job description. Please try again.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
 
   const onSubmit = (data: JobFormValues) => {
     console.log(data);
@@ -107,33 +79,12 @@ export default function PostJobPage() {
                       />
                     </FormControl>
                      <FormDescription>
-                      Clearly define the acceptance criteria for your job. Use our AI assistant to get feedback.
+                      Clearly define the acceptance criteria for your job.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
-              <div className="space-y-4">
-                <Button type="button" variant="outline" onClick={handleAnalyze} disabled={isAnalyzing || !jobDescription || jobDescription.length < 50}>
-                  {isAnalyzing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Analyze Acceptance Criteria
-                </Button>
-                {error && (
-                    <Alert variant="destructive">
-                        <AlertTitle>Error</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                )}
-                {analysisResult && (
-                  <Alert>
-                    <AlertTitle>AI Analysis Feedback</AlertTitle>
-                    <AlertDescription>
-                      <p className="whitespace-pre-wrap">{analysisResult}</p>
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
 
               <FormField
                 control={form.control}
