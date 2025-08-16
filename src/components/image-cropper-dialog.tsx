@@ -150,7 +150,6 @@ export function ImageCropperDialog({
                     </div>
                     <Slider
                         id="scale-slider"
-                        defaultValue={[1]}
                         value={[scale]}
                         min={0.5}
                         max={3}
@@ -165,7 +164,6 @@ export function ImageCropperDialog({
                     </div>
                     <Slider
                         id="rotate-slider"
-                        defaultValue={[0]}
                         value={[rotate]}
                         min={-180}
                         max={180}
