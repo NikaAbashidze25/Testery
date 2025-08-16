@@ -86,7 +86,6 @@ export function ImageCropperDialog({
     // Translate and rotate around the center of the canvas
     ctx.translate(centerX, centerY);
     ctx.rotate(rotate * Math.PI / 180);
-    ctx.scale(scale, scale);
     ctx.translate(-centerX, -centerY);
     
     ctx.drawImage(
@@ -150,6 +149,7 @@ export function ImageCropperDialog({
                     </div>
                     <Slider
                         id="scale-slider"
+                        defaultValue={[1]}
                         value={[scale]}
                         min={0.5}
                         max={3}
@@ -164,6 +164,7 @@ export function ImageCropperDialog({
                     </div>
                     <Slider
                         id="rotate-slider"
+                        defaultValue={[0]}
                         value={[rotate]}
                         min={-180}
                         max={180}
