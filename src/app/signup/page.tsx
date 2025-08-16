@@ -110,6 +110,9 @@ export default function SignUpPage() {
   const [showCompanyPassword, setShowCompanyPassword] = useState(false);
   const [showCompanyConfirmPassword, setShowCompanyConfirmPassword] = useState(false);
   
+  const [profilePictureName, setProfilePictureName] = useState('');
+  const [companyLogoName, setCompanyLogoName] = useState('');
+
   const individualForm = useForm<z.infer<typeof individualSchema>>({
     resolver: zodResolver(individualSchema),
     defaultValues: { fullName: "", email: "", password: "", confirmPassword: "", skills: "" },
@@ -306,17 +309,30 @@ export default function SignUpPage() {
                     control={individualForm.control}
                     name="profilePicture"
                     render={({ field }) => (
-                        <FormItem>
+                      <FormItem>
                         <FormLabel>Profile Picture <span className="text-muted-foreground">(Optional)</span></FormLabel>
-                        <FormControl>
-                          <Button asChild variant="outline" className="w-full">
-                            <div>
+                        <div className="flex items-center gap-4">
+                          <FormControl>
+                            <Button asChild variant="outline" className="w-auto">
+                              <label>
                                 <Upload className="mr-2 h-4 w-4" />
                                 Upload Image
-                                <Input type="file" className="hidden" accept="image/*" onChange={(e) => field.onChange(e.target.files)} disabled={isLoading} />
-                            </div>
-                          </Button>
-                        </FormControl>
+                                <Input
+                                  type="file"
+                                  className="hidden"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    field.onChange(e.target.files);
+                                    setProfilePictureName(file ? file.name : 'No file selected');
+                                  }}
+                                  disabled={isLoading}
+                                />
+                              </label>
+                            </Button>
+                          </FormControl>
+                          <p className="text-sm text-muted-foreground">{profilePictureName || 'No file selected.'}</p>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -428,15 +444,28 @@ export default function SignUpPage() {
                     render={({ field }) => (
                        <FormItem>
                         <FormLabel>Company Logo <span className="text-muted-foreground">(Optional)</span></FormLabel>
-                        <FormControl>
-                            <Button asChild variant="outline" className="w-full">
-                                <div>
+                        <div className="flex items-center gap-4">
+                           <FormControl>
+                            <Button asChild variant="outline" className="w-auto">
+                                <label>
                                     <Upload className="mr-2 h-4 w-4" />
                                     Upload Logo
-                                    <Input type="file" className="hidden" accept="image/*" onChange={(e) => field.onChange(e.target.files)} disabled={isLoading} />
-                                </div>
+                                    <Input
+                                      type="file"
+                                      className="hidden"
+                                      accept="image/*"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        field.onChange(e.target.files);
+                                        setCompanyLogoName(file ? file.name : 'No file selected');
+                                      }}
+                                      disabled={isLoading}
+                                    />
+                                </label>
                           </Button>
                         </FormControl>
+                        <p className="text-sm text-muted-foreground">{companyLogoName || 'No file selected.'}</p>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -451,5 +480,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-
-    
