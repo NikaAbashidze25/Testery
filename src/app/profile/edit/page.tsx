@@ -56,6 +56,8 @@ type UserProfile = {
   companyLogoUrl?: string;
 };
 
+const MAX_FILE_SIZE = 2.5 * 1024 * 1024; // 2.5MB
+
 export default function EditProfilePage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,6 +111,18 @@ export default function EditProfilePage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE) {
+        toast({
+            variant: 'destructive',
+            title: 'File Too Large',
+            description: `The selected image must be smaller than ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
+        });
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = () => {
         setImageToCrop(reader.result as string);

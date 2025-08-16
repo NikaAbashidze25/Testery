@@ -98,6 +98,7 @@ const PasswordStrength = ({ password = '' }: { password?: string }) => {
     );
 };
 
+const MAX_FILE_SIZE = 2.5 * 1024 * 1024; // 2.5MB
 
 export default function SignUpPage() {
   const [accountType, setAccountType] = useState('individual');
@@ -122,6 +123,30 @@ export default function SignUpPage() {
     resolver: zodResolver(companySchema),
     defaultValues: { companyName: "", contactPerson: "", email: "", password: "", confirmPassword: "", industry: "", website: "" },
   });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: any, setName: (name: string) => void) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      field.onChange(null);
+      setName('No file selected');
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+        toast({
+            variant: 'destructive',
+            title: 'File Too Large',
+            description: `The selected image must be smaller than ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
+        });
+        e.target.value = ''; // Reset the file input
+        field.onChange(null);
+        setName('No file selected');
+        return;
+    }
+
+    field.onChange(e.target.files);
+    setName(file.name);
+  };
 
   const onIndividualSubmit = async (values: z.infer<typeof individualSchema>) => {
     setIsLoading(true);
@@ -321,11 +346,7 @@ export default function SignUpPage() {
                                   type="file"
                                   className="hidden"
                                   accept="image/*"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    field.onChange(e.target.files);
-                                    setProfilePictureName(file ? file.name : 'No file selected');
-                                  }}
+                                  onChange={(e) => handleFileChange(e, field, setProfilePictureName)}
                                   disabled={isLoading}
                                 />
                               </label>
@@ -454,11 +475,7 @@ export default function SignUpPage() {
                                       type="file"
                                       className="hidden"
                                       accept="image/*"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        field.onChange(e.target.files);
-                                        setCompanyLogoName(file ? file.name : 'No file selected');
-                                      }}
+                                      onChange={(e) => handleFileChange(e, field, setCompanyLogoName)}
                                       disabled={isLoading}
                                     />
                                 </label>
