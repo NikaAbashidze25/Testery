@@ -55,66 +55,87 @@ export function ImageCropperDialog({
       const { width, height } = e.currentTarget;
       const initialCrop = centerAspectCrop(width, height, aspect);
       setCrop(initialCrop);
-      setCompletedCrop(initialCrop); // Also set completed crop initially
+      setCompletedCrop(initialCrop);
     }
   }
 
   async function handleSaveCrop() {
-    const image = imgRef.current;
-    const canvas = previewCanvasRef.current;
+    const image = imgRef.current
+    const canvas = previewCanvasRef.current
 
     if (!image || !canvas || !completedCrop) {
-      console.error('Crop details not available');
-      return;
+      throw new Error('Crop canvas does not exist')
     }
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('No 2d context');
-    }
-
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-
-    canvas.width = Math.floor(completedCrop.width * scaleX);
-    canvas.height = Math.floor(completedCrop.height * scaleY);
-
-    ctx.save();
-
-    const cropX = completedCrop.x * scaleX;
-    const cropY = completedCrop.y * scaleY;
-
-    const centerX = image.naturalWidth / 2;
-    const centerY = image.naturalHeight / 2;
-
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate((rotate * Math.PI) / 180);
-    ctx.scale(scale, scale);
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    const scaleX = image.naturalWidth / image.width
+    const scaleY = image.naturalHeight / image.height
     
-    ctx.drawImage(
-      image,
-      cropX,
-      cropY,
+    const offscreen = new OffscreenCanvas(
       completedCrop.width * scaleX,
       completedCrop.height * scaleY,
-      0,
-      0,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY
-    );
-    
-    ctx.restore();
+    )
 
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        console.error('Canvas is empty');
-        return;
-      }
-      const file = new File([blob], 'cropped-image.png', { type: 'image/png' });
-      onSave(file);
-      onClose();
-    }, 'image/png');
+    const ctx = offscreen.getContext('2d')
+    if (!ctx) {
+      throw new Error('No 2d context')
+    }
+
+    ctx.drawImage(
+      image,
+      0,
+      0,
+      image.naturalWidth,
+      image.naturalHeight,
+    )
+
+    // Move the center of the image to the center of the canvas.
+    canvas.width = completedCrop.width * scaleX;
+    canvas.height = completedCrop.height * scaleY;
+
+    const TO_RADIANS = Math.PI / 180
+    const canvasCtx = canvas.getContext('2d')
+    if (!canvasCtx) {
+      throw new Error('No 2d context')
+    }
+
+    const  {x: cropX, y: cropY, width: cropWidth, height: cropHeight } = {
+        x: completedCrop.x * scaleX,
+        y: completedCrop.y * scaleY,
+        width: completedCrop.width * scaleX,
+        height: completedCrop.height * scaleY,
+    }
+
+
+    // Move the center of the crop to the center of the canvas.
+    canvasCtx.translate(cropWidth / 2, cropHeight / 2)
+    canvasCtx.rotate(rotate * TO_RADIANS)
+    canvasCtx.scale(scale, scale)
+    canvasCtx.translate(-cropWidth / 2, -cropHeight / 2)
+
+
+    canvasCtx.drawImage(
+        image, 
+        cropX, 
+        cropY, 
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        cropWidth,
+        cropHeight
+    )
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/png');
+    });
+
+    if (!blob) {
+      console.error('Canvas is empty');
+      return;
+    }
+    const file = new File([blob], 'cropped-image.png', { type: 'image/png' });
+    onSave(file);
+    onClose();
   }
   
    const handleCropChange = (newCrop: Crop, percentCrop: Crop) => {
@@ -182,17 +203,15 @@ export function ImageCropperDialog({
             </div>
         </div>
 
-        {!!completedCrop && (
-            <canvas
-              ref={previewCanvasRef}
-              style={{
-                display: 'none',
-                objectFit: 'contain',
-                width: completedCrop.width,
-                height: completedCrop.height,
-              }}
-            />
-        )}
+        
+        <canvas
+            ref={previewCanvasRef}
+            style={{
+            display: 'none',
+            objectFit: 'contain',
+            }}
+        />
+        
         <DialogFooter className="p-6 pt-4 border-t">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSaveCrop}>Save and Continue</Button>
