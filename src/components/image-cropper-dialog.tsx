@@ -90,15 +90,8 @@ export function ImageCropperDialog({
     ctx.translate(-centerX, -centerY);
     ctx.drawImage(image, 0, 0, image.naturalWidth, image.naturalHeight);
 
-    // Draw circular clipping path
     ctx.restore();
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(canvas.width / (2 * pixelRatio) , canvas.height / (2 * pixelRatio), canvas.width / (2*pixelRatio), 0, Math.PI * 2);
-    ctx.clip();
-    ctx.drawImage(canvas, 0, 0);
-
-
+    
     canvas.toBlob((blob) => {
         if (!blob) {
             console.error('Canvas is empty');
@@ -112,12 +105,12 @@ export function ImageCropperDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Image</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 overflow-y-auto max-h-[70vh] p-1">
-            <div className="flex justify-center w-full">
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-start overflow-y-auto max-h-[70vh] p-1">
+            <div className="flex justify-center w-full bg-muted/30 rounded-md p-4">
               <ReactCrop
                 crop={crop}
                 onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -137,27 +130,29 @@ export function ImageCropperDialog({
                 />
               </ReactCrop>
             </div>
-            <div className="space-y-2 px-2">
-                <label htmlFor="scale-slider" className="text-sm font-medium">Zoom</label>
-                <Slider
-                    id="scale-slider"
-                    defaultValue={[1]}
-                    min={1}
-                    max={2}
-                    step={0.01}
-                    onValueChange={(value) => setScale(value[0])}
-                />
-            </div>
-             <div className="space-y-2 px-2">
-                <label htmlFor="rotate-slider" className="text-sm font-medium">Rotate</label>
-                <Slider
-                    id="rotate-slider"
-                    defaultValue={[0]}
-                    min={-180}
-                    max={180}
-                    step={1}
-                    onValueChange={(value) => setRotate(value[0])}
-                />
+            <div className="space-y-6 md:pt-4">
+                <div className="space-y-2">
+                    <label htmlFor="scale-slider" className="text-sm font-medium">Zoom</label>
+                    <Slider
+                        id="scale-slider"
+                        defaultValue={[1]}
+                        min={1}
+                        max={2}
+                        step={0.01}
+                        onValueChange={(value) => setScale(value[0])}
+                    />
+                </div>
+                 <div className="space-y-2">
+                    <label htmlFor="rotate-slider" className="text-sm font-medium">Rotate</label>
+                    <Slider
+                        id="rotate-slider"
+                        defaultValue={[0]}
+                        min={-180}
+                        max={180}
+                        step={1}
+                        onValueChange={(value) => setRotate(value[0])}
+                    />
+                </div>
             </div>
         </div>
 
@@ -174,7 +169,7 @@ export function ImageCropperDialog({
         )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSaveCrop}>Save</Button>
+          <Button onClick={handleSaveCrop}>Save and Continue</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
