@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Upload } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ImageCropperDialog } from '@/components/image-cropper-dialog';
 
 const individualSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
@@ -59,7 +60,12 @@ export default function EditProfilePage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageName, setImageName] = useState('');
+  const [croppedImage, setCroppedImage] = useState<File | null>(null);
+  const [imageToCrop, setImageToCrop] = useState<string | undefined>(undefined);
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { toast } = useToast();
   const router = useRouter();
 
@@ -100,6 +106,24 @@ export default function EditProfilePage() {
     return name[0];
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImageToCrop(reader.result as string);
+        setIsCropperOpen(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCroppedImageSave = (imageFile: File) => {
+    setCroppedImage(imageFile);
+    const fileField = userProfile?.accountType === 'individual' ? 'profilePicture' : 'companyLogo';
+    form.setValue(fileField, imageFile.name);
+  };
+
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!auth.currentUser || !userProfile) return;
@@ -107,18 +131,16 @@ export default function EditProfilePage() {
 
     try {
       let imageUrl = userProfile.accountType === 'individual' ? userProfile.profilePictureUrl : userProfile.companyLogoUrl;
-      const fileField = userProfile.accountType === 'individual' ? 'profilePicture' : 'companyLogo';
       const storagePath = userProfile.accountType === 'individual' ? 'profile_pictures' : 'company_logos';
 
-      const fileList = values[fileField as keyof typeof values];
-      if (fileList && fileList.length > 0) {
-        const file = fileList[0];
+      if (croppedImage) {
         const storageRef = ref(storage, `${storagePath}/${auth.currentUser.uid}`);
-        await uploadBytes(storageRef, file);
+        await uploadBytes(storageRef, croppedImage);
         imageUrl = await getDownloadURL(storageRef);
       }
       
       const dataToUpdate: any = { ...values };
+      const fileField = userProfile.accountType === 'individual' ? 'profilePicture' : 'companyLogo';
       delete dataToUpdate[fileField];
 
       if (userProfile.accountType === 'individual') {
@@ -186,42 +208,34 @@ export default function EditProfilePage() {
                 <>
                   <div className="flex items-center gap-6">
                     <Avatar className="h-20 w-20">
-                        <AvatarImage src={userProfile.profilePictureUrl} alt="Profile Picture" />
+                        <AvatarImage src={croppedImage ? URL.createObjectURL(croppedImage) : userProfile.profilePictureUrl} alt="Profile Picture" />
                         <AvatarFallback className="text-3xl">
                         {getInitials(userProfile.fullName)}
                         </AvatarFallback>
                     </Avatar>
-                    <FormField
-                        control={form.control}
-                        name="profilePicture"
-                        render={({ field }) => (
-                        <FormItem className="flex-grow">
-                            <FormLabel>Profile Picture</FormLabel>
-                            <div className="flex items-center gap-4">
-                            <FormControl>
-                                <Button asChild variant="outline" className="w-auto">
-                                <label className="cursor-pointer">
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    Change Image
-                                    <Input
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                        field.onChange(e.target.files);
-                                        setImageName(e.target.files?.[0]?.name || 'No file selected');
-                                    }}
-                                    disabled={isSubmitting}
-                                    />
-                                </label>
-                                </Button>
-                            </FormControl>
-                            <p className="text-sm text-muted-foreground">{imageName || 'No file selected.'}</p>
-                            </div>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
+                    <div className="flex-grow space-y-2">
+                      <FormLabel>Profile Picture</FormLabel>
+                      <div className="flex items-center gap-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isSubmitting}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Change Image
+                        </Button>
+                        <p className="text-sm text-muted-foreground">{croppedImage?.name || 'No file selected.'}</p>
+                      </div>
+                      <Input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        disabled={isSubmitting}
+                      />
+                    </div>
                   </div>
                   <FormField
                     control={form.control}
@@ -253,42 +267,34 @@ export default function EditProfilePage() {
                 <>
                   <div className="flex items-center gap-6">
                      <Avatar className="h-20 w-20">
-                        <AvatarImage src={userProfile.companyLogoUrl} alt="Company Logo" />
+                        <AvatarImage src={croppedImage ? URL.createObjectURL(croppedImage) : userProfile.companyLogoUrl} alt="Company Logo" />
                         <AvatarFallback className="text-3xl">
                         {getInitials(userProfile.companyName)}
                         </AvatarFallback>
                     </Avatar>
-                    <FormField
-                        control={form.control}
-                        name="companyLogo"
-                        render={({ field }) => (
-                        <FormItem className="flex-grow">
-                            <FormLabel>Company Logo</FormLabel>
-                            <div className="flex items-center gap-4">
-                            <FormControl>
-                                <Button asChild variant="outline" className="w-auto">
-                                <label className="cursor-pointer">
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    Change Logo
-                                    <Input
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                        field.onChange(e.target.files);
-                                        setImageName(e.target.files?.[0]?.name || 'No file selected');
-                                    }}
-                                    disabled={isSubmitting}
-                                    />
-                                </label>
-                                </Button>
-                            </FormControl>
-                            <p className="text-sm text-muted-foreground">{imageName || 'No file selected.'}</p>
-                            </div>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
+                     <div className="flex-grow space-y-2">
+                      <FormLabel>Company Logo</FormLabel>
+                      <div className="flex items-center gap-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isSubmitting}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Change Logo
+                        </Button>
+                        <p className="text-sm text-muted-foreground">{croppedImage?.name || 'No file selected.'}</p>
+                      </div>
+                      <Input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        disabled={isSubmitting}
+                      />
+                    </div>
                   </div>
                   <FormField
                     control={form.control}
@@ -348,6 +354,14 @@ export default function EditProfilePage() {
           </Form>
         </CardContent>
       </Card>
+      {imageToCrop && (
+        <ImageCropperDialog
+            isOpen={isCropperOpen}
+            onClose={() => setIsCropperOpen(false)}
+            imageSrc={imageToCrop}
+            onSave={handleCroppedImageSave}
+        />
+       )}
     </div>
   );
 }
