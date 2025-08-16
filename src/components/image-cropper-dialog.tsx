@@ -20,7 +20,6 @@ interface ImageCropperDialogProps {
   onSave: (file: File) => void;
 }
 
-// Helper to center the crop area
 function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number) {
   return centerCrop(
     makeAspectCrop(
@@ -54,7 +53,9 @@ export function ImageCropperDialog({
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     if (aspect) {
       const { width, height } = e.currentTarget;
-      setCrop(centerAspectCrop(width, height, aspect));
+      const initialCrop = centerAspectCrop(width, height, aspect);
+      setCrop(initialCrop);
+      setCompletedCrop(initialCrop); // Also set completed crop initially
     }
   }
 
@@ -66,36 +67,36 @@ export function ImageCropperDialog({
       console.error('Crop details not available');
       return;
     }
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-        throw new Error('No 2d context');
+      throw new Error('No 2d context');
     }
 
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-    
+
     canvas.width = completedCrop.width * scaleX;
     canvas.height = completedCrop.height * scaleY;
     
     const cropX = completedCrop.x * scaleX;
     const cropY = completedCrop.y * scaleY;
+
+    const centerX = image.naturalWidth / 2;
+    const centerY = image.naturalHeight / 2;
     
-    const saveCtx = canvas.getContext('2d');
-    if (!saveCtx) {
-        throw new Error('No 2d context for saving');
-    }
-
-    // Move the coordinate system to the center of the canvas
-    saveCtx.translate(canvas.width / 2, canvas.height / 2);
-    // Rotate the canvas
-    saveCtx.rotate(rotate * (Math.PI / 180));
-     // Scale the canvas
-    saveCtx.scale(scale, scale);
-    // Move the coordinate system back
-    saveCtx.translate(-canvas.width / 2, -canvas.height / 2);
-
-    saveCtx.drawImage(
+    ctx.save();
+    
+    // Move canvas registration point to the center of the cropped area
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    // Rotate around the new center
+    ctx.rotate(rotate * (Math.PI / 180));
+     // Scale around the new center
+    ctx.scale(scale, scale);
+    // Move the registration point back to the top-left corner of canvas
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    
+    ctx.drawImage(
       image,
       cropX,
       cropY,
@@ -107,16 +108,23 @@ export function ImageCropperDialog({
       completedCrop.height * scaleY
     );
     
+    ctx.restore();
+
     canvas.toBlob((blob) => {
-        if (!blob) {
-            console.error('Canvas is empty');
-            return;
-        }
-        const file = new File([blob], 'cropped-image.png', { type: 'image/png' });
-        onSave(file);
-        onClose();
+      if (!blob) {
+        console.error('Canvas is empty');
+        return;
+      }
+      const file = new File([blob], 'cropped-image.png', { type: 'image/png' });
+      onSave(file);
+      onClose();
     }, 'image/png');
   }
+  
+   const handleCropChange = (newCrop: Crop, percentCrop: Crop) => {
+    setCrop(percentCrop);
+  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -128,7 +136,7 @@ export function ImageCropperDialog({
             <div className="flex justify-center items-center bg-muted/30 rounded-md h-full w-full">
               <ReactCrop
                 crop={crop}
-                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onChange={handleCropChange}
                 onComplete={(c) => setCompletedCrop(c)}
                 aspect={aspect}
                 circularCrop={true}
@@ -172,7 +180,7 @@ export function ImageCropperDialog({
                         min={-180}
                         max={180}
                         step={1}
-                        onValueCodeChange={(value) => setRotate(value[0])}
+                        onValueChange={(value) => setRotate(value[0])}
                     />
                 </div>
             </div>
