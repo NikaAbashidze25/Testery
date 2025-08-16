@@ -236,7 +236,7 @@ export default function EditProfilePage() {
                              <div className="flex-grow space-y-2">
                                 <FormLabel>Profile Picture</FormLabel>
                                 <FormControl>
-                                    <>
+                                    <div>
                                         <Input
                                             ref={fileInputRef}
                                             type="file"
@@ -254,7 +254,7 @@ export default function EditProfilePage() {
                                             <Upload className="mr-2 h-4 w-4" />
                                             Change Image
                                         </Button>
-                                    </>
+                                    </div>
                                 </FormControl>
                                 <FormDescription>Maximum file size: 2.5MB.</FormDescription>
                                 <FormMessage />
@@ -307,7 +307,7 @@ export default function EditProfilePage() {
                            <div className="flex-grow space-y-2">
                             <FormLabel>Company Logo</FormLabel>
                              <FormControl>
-                                <>
+                                <div>
                                     <Input
                                         ref={fileInputRef}
                                         type="file"
@@ -325,7 +325,7 @@ export default function EditProfilePage() {
                                         <Upload className="mr-2 h-4 w-4" />
                                         Change Logo
                                     </Button>
-                                </>
+                                </div>
                             </FormControl>
                              <FormDescription>Maximum file size: 2.5MB.</FormDescription>
                              <FormMessage />
@@ -403,3 +403,5 @@ export default function EditProfilePage() {
     </div>
   );
 }
+
+    
