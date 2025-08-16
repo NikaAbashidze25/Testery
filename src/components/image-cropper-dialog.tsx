@@ -59,65 +59,71 @@ export function ImageCropperDialog({
   }
 
   async function handleSaveCrop() {
-    if (!completedCrop || !imgRef.current || !completedCrop.width || !completedCrop.height) {
-        console.error("Crop or image not available");
-        return;
+    if (!completedCrop || !imgRef.current) {
+      console.error("Crop or image not available");
+      return;
     }
-
+  
     const image = imgRef.current;
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-
+  
+    // Create canvas at cropped size
     const canvas = document.createElement("canvas");
-    const outputWidth = completedCrop.width * scaleX;
-    const outputHeight = completedCrop.height * scaleY;
-
-    canvas.width = outputWidth;
-    canvas.height = outputHeight;
-
+    canvas.width = completedCrop.width * scaleX;
+    canvas.height = completedCrop.height * scaleY;
+  
     const ctx = canvas.getContext("2d");
-    if (!ctx) {
-        throw new Error("No 2D context");
-    }
-
+    if (!ctx) return;
+  
+    // Apply circular clipping
     ctx.beginPath();
-    ctx.arc(outputWidth / 2, outputHeight / 2, Math.min(outputWidth, outputHeight) / 2, 0, Math.PI * 2);
+    ctx.arc(
+      canvas.width / 2,
+      canvas.height / 2,
+      Math.min(canvas.width, canvas.height) / 2,
+      0,
+      Math.PI * 2
+    );
     ctx.closePath();
     ctx.clip();
-
+  
+    // Apply transforms here (NOT in <img style>)
     ctx.save();
-    ctx.translate(outputWidth / 2, outputHeight / 2);
+    ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate((rotate * Math.PI) / 180);
     ctx.scale(scale, scale);
-    ctx.translate(-outputWidth / 2, -outputHeight / 2);
-
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+  
+    // Draw image portion
     ctx.drawImage(
-        image,
-        completedCrop.x * scaleX,
-        completedCrop.y * scaleY,
-        completedCrop.width * scaleX,
-        completedCrop.height * scaleY,
-        0,
-        0,
-        outputWidth,
-        outputHeight
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      canvas.width,
+      canvas.height
     );
-
+  
     ctx.restore();
-
+  
+    // Convert to File
     const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/png")
+      canvas.toBlob(resolve, "image/png")
     );
-
+  
     if (!blob) {
-        console.error("Canvas is empty");
-        return;
+      console.error("Canvas is empty");
+      return;
     }
-
+  
     const file = new File([blob], "cropped-image.png", { type: "image/png" });
     onSave(file);
     onClose();
-}
+  }
   
    const handleCropChange = (newCrop: Crop, percentCrop: Crop) => {
     setCrop(newCrop);
@@ -139,13 +145,14 @@ export function ImageCropperDialog({
                 aspect={aspect}
                 circularCrop={true}
                 keepSelection={true}
+                scale={scale}
+                rotate={rotate}
               >
                 <img
                   ref={imgRef}
                   alt="Crop me"
                   src={imageSrc}
                   onLoad={onImageLoad}
-                  style={{ transform: `scale(${scale}) rotate(${rotate}deg)` }}
                   className="max-h-[calc(80vh-200px)] object-contain"
                 />
               </ReactCrop>
