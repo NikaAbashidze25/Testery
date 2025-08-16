@@ -108,7 +108,7 @@ export function ImageCropperDialog({
         <DialogHeader>
           <DialogTitle>Edit Image</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="grid gap-4 overflow-y-auto max-h-[70vh] p-1">
             <div className="flex justify-center w-full">
               <ReactCrop
                 crop={crop}
@@ -124,11 +124,11 @@ export function ImageCropperDialog({
                   src={imageSrc}
                   style={{ transform: `scale(${scale}) rotate(${rotate}deg)` }}
                   onLoad={onImageLoad}
-                  className="max-w-full max-h-[60vh] object-contain"
+                  className="max-w-full object-contain"
                 />
               </ReactCrop>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 px-2">
                 <label htmlFor="scale-slider" className="text-sm font-medium">Zoom</label>
                 <Slider
                     id="scale-slider"
@@ -139,7 +139,7 @@ export function ImageCropperDialog({
                     onValueChange={(value) => setScale(value[0])}
                 />
             </div>
-             <div className="space-y-2">
+             <div className="space-y-2 px-2">
                 <label htmlFor="rotate-slider" className="text-sm font-medium">Rotate</label>
                 <Slider
                     id="rotate-slider"
