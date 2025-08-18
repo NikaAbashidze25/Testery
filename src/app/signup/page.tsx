@@ -179,12 +179,18 @@ export default function SignUpPage() {
             accountType: 'individual',
             skills: []
         });
-         toast({
+        toast({
           title: "Account Created",
           description: "Your account has been successfully created with Google.",
         });
       } else {
-         toast({
+        // Existing user, ensure their profile in Firebase Auth is consistent with Firestore
+        const existingData = userDocSnap.data();
+        await updateProfile(user, {
+          displayName: existingData.fullName || existingData.companyName,
+          photoURL: existingData.profilePictureUrl || existingData.companyLogoUrl,
+        });
+        toast({
           title: "Login Successful",
           description: `Welcome back, ${user.displayName}!`,
         });
