@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import {
   Dialog,
@@ -49,13 +49,6 @@ export function ImageCropperDialog({
   const [aspect, setAspect] = useState<number | undefined>(1);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      setScale(1);
-      setRotate(0);
-    }
-  }, [isOpen]);
-  
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     if (aspect) {
       const { width, height } = e.currentTarget;
@@ -170,7 +163,15 @@ export function ImageCropperDialog({
 
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open) {
+            setScale(1);
+            setRotate(0);
+            setCrop(undefined);
+            setCompletedCrop(undefined);
+        }
+        onClose();
+    }}>
       <DialogContent className="max-w-4xl grid-rows-[auto_minmax(0,1fr)_auto] h-[90vh] p-0 gap-0">
         <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle>Crop and Edit Your Image</DialogTitle>
