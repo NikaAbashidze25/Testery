@@ -73,7 +73,7 @@ export function ImageCropperDialog({
       throw new Error('Crop or image not available');
     }
 
-    if (completedCrop.width === 0 || completedCrop.height === 0) {
+     if (completedCrop.width === 0 || completedCrop.height === 0) {
         console.error("Invalid crop dimensions, aborting save.");
         return;
     }
@@ -84,47 +84,36 @@ export function ImageCropperDialog({
     if (!ctx) {
       throw new Error('No 2d context');
     }
-
+    
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
+
+    canvas.width = completedCrop.width * scaleX;
+    canvas.height = completedCrop.height * scaleY;
     
-    const pixelRatio = window.devicePixelRatio;
-
-    canvas.width = Math.floor(completedCrop.width * scaleX * pixelRatio);
-    canvas.height = Math.floor(completedCrop.height * scaleY * pixelRatio);
-
-    ctx.scale(pixelRatio, pixelRatio);
-    ctx.imageSmoothingQuality = 'high';
-
     const cropX = completedCrop.x * scaleX;
     const cropY = completedCrop.y * scaleY;
-
+    
     const rotateRads = (rotate * Math.PI) / 180;
-    const centerX = image.naturalWidth / 2;
-    const centerY = image.naturalHeight / 2;
     
     ctx.save();
-    
-    // 5) Move the crop origin to the canvas origin (0,0)
-    ctx.translate(-cropX, -cropY);
-    // 4) Move the origin to the center of the original position
-    ctx.translate(centerX, centerY);
-    // 3) Rotate around the origin
+    ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate(rotateRads);
-    // 2) Scale the image
     ctx.scale(scale, scale);
-    // 1) Move the center of the image to the origin (0,0)
-    ctx.translate(-centerX, -centerY);
-
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
     ctx.drawImage(
-        image,
-        0,
-        0,
-        image.naturalWidth,
-        image.naturalHeight,
+      image,
+      cropX,
+      cropY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY
     );
-
     ctx.restore();
+
 
     // Convert the canvas to a blob and then to a file.
     const blob = await new Promise<Blob | null>((resolve) => {
