@@ -1,3 +1,4 @@
+
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -8,7 +9,7 @@ const firebaseConfig = {
   "appId": "1:244990408299:web:57e873acb156eeb2a1232e",
   "storageBucket": "testlink-gjo72.firebasestorage.app",
   "apiKey": "AIzaSyAm-xOuRqzq5aut7ptsAWwp8Q8riB--kAY",
-  "authDomain": ["testlink-gjo72.firebaseapp.com", "localhost"],
+  "authDomain": "testlink-gjo72.firebaseapp.com",
   "measurementId": "",
   "messagingSenderId": "244990408299"
 };
