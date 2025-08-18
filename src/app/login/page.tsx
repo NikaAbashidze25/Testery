@@ -81,7 +81,6 @@ export default function LoginPage() {
           description: "Your account has been successfully created with Google.",
         });
       } else {
-        // Existing user, ensure their profile in Firebase Auth is consistent with Firestore
         const existingData = userDocSnap.data();
         await updateProfile(user, {
           displayName: existingData.fullName || existingData.companyName,
@@ -94,6 +93,7 @@ export default function LoginPage() {
       }
       
       router.push('/projects');
+      router.refresh();
 
     } catch (error: any) {
       toast({
