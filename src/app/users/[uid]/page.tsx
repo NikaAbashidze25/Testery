@@ -58,9 +58,11 @@ export default function UserProfilePage() {
                 setUserProfile(userDocSnap.data() as UserProfile);
                 
                 const projectsCollection = collection(db, 'projects');
-                const q = query(projectsCollection, where('authorId', '==', uid), orderBy('postedAt', 'desc'));
+                const q = query(projectsCollection, where('authorId', '==', uid));
                 const querySnapshot = await getDocs(q);
-                const projectsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+                const projectsData = querySnapshot.docs
+                  .map(doc => ({ id: doc.id, ...doc.data() } as Project))
+                  .sort((a, b) => b.postedAt.seconds - a.postedAt.seconds);
                 setProjects(projectsData);
 
             } else {
