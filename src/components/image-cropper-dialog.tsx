@@ -80,12 +80,10 @@ export function ImageCropperDialog({
 
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-    const pixelRatio = window.devicePixelRatio || 1;
+    
+    canvas.width = Math.floor(completedCrop.width * scaleX);
+    canvas.height = Math.floor(completedCrop.height * scaleY);
 
-    canvas.width = Math.floor(completedCrop.width * scaleX * pixelRatio);
-    canvas.height = Math.floor(completedCrop.height * scaleY * pixelRatio);
-
-    ctx.scale(pixelRatio, pixelRatio);
     ctx.imageSmoothingQuality = 'high';
 
     const cropX = completedCrop.x * scaleX;
@@ -97,15 +95,10 @@ export function ImageCropperDialog({
     
     ctx.save();
     
-    // 5) Move the crop origin to the canvas origin (0,0)
     ctx.translate(-cropX, -cropY);
-    // 4) Move the origin to the center of the original position
     ctx.translate(centerX, centerY);
-    // 3) Rotate around the origin
     ctx.rotate(rotateRads);
-    // 2) Scale the image
     ctx.scale(scale, scale);
-    // 1) Move the center of the image to the origin (0,0)
     ctx.translate(-centerX, -centerY);
     
     ctx.drawImage(
