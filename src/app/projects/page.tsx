@@ -48,24 +48,14 @@ export default function ProjectsPage() {
         setIsLoading(true);
         try {
             const projectsCollection = collection(db, 'projects');
-            let q;
-            // Firestore doesn't allow inequality filters (`!=`) on a field different from the `orderBy` field.
-            // So we query with a more basic sort and then filter/sort client-side.
-            if (user) {
-                // We order by authorId first to satisfy Firestore's query constraints,
-                // then by postedAt.
-                q = query(projectsCollection, orderBy('authorId'), orderBy('postedAt', 'desc'));
-            } else {
-                q = query(projectsCollection, orderBy('postedAt', 'desc'));
-            }
+            const q = query(projectsCollection, orderBy('postedAt', 'desc'));
             
             const querySnapshot = await getDocs(q);
             
-            // Manually filter out projects by the current user and re-sort by date.
+            // Manually filter out projects by the current user
             const projectsData = querySnapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Project))
-                .filter(project => user ? project.authorId !== user.uid : true)
-                .sort((a, b) => b.postedAt.seconds - a.postedAt.seconds);
+                .filter(project => user ? project.authorId !== user.uid : true);
 
             setProjects(projectsData);
         } catch (error) {

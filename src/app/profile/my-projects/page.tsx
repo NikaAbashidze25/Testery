@@ -50,9 +50,11 @@ export default function MyProjectsPage() {
         setIsLoading(true);
         try {
           const projectsCollection = collection(db, 'projects');
-          const q = query(projectsCollection, where('authorId', '==', user.uid), orderBy('postedAt', 'desc'));
+          const q = query(projectsCollection, where('authorId', '==', user.uid));
           const querySnapshot = await getDocs(q);
-          const projectsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+          const projectsData = querySnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Project))
+            .sort((a, b) => b.postedAt.seconds - a.postedAt.seconds);
           setProjects(projectsData);
         } catch (error) {
           console.error("Error fetching user's projects: ", error);
