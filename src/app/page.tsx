@@ -17,15 +17,15 @@ export default function Home() {
                   Quality Testing, On Demand.
                 </h1>
                 <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                  Testery connects you with a global network of skilled software testers to ensure your product is bug-free and user-ready.
+                  TestLink connects you with a global network of skilled software testers to ensure your product is bug-free and user-ready.
                 </p>
               </div>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
                 <Button asChild size="lg">
-                  <Link href="/jobs">Find a Job</Link>
+                  <Link href="/projects">Find a Project</Link>
                 </Button>
                 <Button asChild size="lg" variant="secondary">
-                  <Link href="/jobs/post">Post a Project</Link>
+                  <Link href="/projects/post">Post a Project</Link>
                 </Button>
               </div>
             </div>
@@ -49,7 +49,7 @@ export default function Home() {
               <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm">How It Works</div>
               <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">A Simple Process to Perfection</h2>
               <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Our streamlined platform makes it easy for clients to post jobs and for testers to find and complete them.
+                Our streamlined platform makes it easy for clients to post projects and for testers to find and complete them.
               </p>
             </div>
           </div>
@@ -58,7 +58,7 @@ export default function Home() {
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
                 <Search className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-bold">1. Post a Job</h3>
+              <h3 className="text-lg font-bold">1. Post a Project</h3>
               <p className="text-sm text-muted-foreground">
                 Clients define the scope, tasks, and compensation for their testing needs.
               </p>
@@ -69,7 +69,7 @@ export default function Home() {
               </div>
               <h3 className="text-lg font-bold">2. Testers Apply & Work</h3>
               <p className="text-sm text-muted-foreground">
-                Skilled testers browse jobs, apply for those matching their skills, and get to work delivering high-quality feedback.
+                Skilled testers browse projects, apply for those matching their skills, and get to work delivering high-quality feedback.
               </p>
             </div>
             <div className="grid gap-1 text-center">
@@ -90,7 +90,7 @@ export default function Home() {
         <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
                 <div className="space-y-2">
-                    <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Why Choose Testery?</h2>
+                    <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Why Choose TestLink?</h2>
                     <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                         We provide the tools and community to make software testing seamless and effective for everyone.
                     </p>
@@ -102,10 +102,10 @@ export default function Home() {
                         <div className="flex items-center justify-center rounded-full bg-primary/10 p-2">
                             <Search className="h-6 w-6 text-primary" />
                         </div>
-                        <CardTitle>Job Posting & Search</CardTitle>
+                        <CardTitle>Project Posting & Search</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground">Easily post testing jobs and allow our community of testers to find and apply for them with advanced filtering.</p>
+                        <p className="text-sm text-muted-foreground">Easily post testing projects and allow our community of testers to find and apply for them with advanced filtering.</p>
                     </CardContent>
                 </Card>
                 <Card>

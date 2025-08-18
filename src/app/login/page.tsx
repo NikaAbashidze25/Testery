@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -63,7 +62,7 @@ export default function LoginPage() {
         title: "Login Successful",
         description: "Welcome back!",
       });
-      router.push('/jobs');
+      router.push('/projects');
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -80,7 +79,7 @@ export default function LoginPage() {
       <Card className="max-w-md mx-auto">
         <CardHeader className="text-center">
           <CardTitle>Welcome Back</CardTitle>
-          <CardDescription>Log in to your Testery account.</CardDescription>
+          <CardDescription>Log in to your TestLink account.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -106,14 +105,14 @@ export function Header() {
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <TestTube2 className="h-6 w-6 text-primary" />
-            <span className="hidden font-bold sm:inline-block">Testery</span>
+            <span className="hidden font-bold sm:inline-block">TestLink</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
-            <Link href="/jobs" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              Find a Job
+            <Link href="/projects" className="transition-colors hover:text-foreground/80 text-foreground/60">
+              Find a Project
             </Link>
-            <Link href="/jobs/post" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              Post a Job
+            <Link href="/projects/post" className="transition-colors hover:text-foreground/80 text-foreground/60">
+              Post a Project
             </Link>
             <Link href="/#features" className="transition-colors hover:text-foreground/80 text-foreground/60">
               Features
@@ -124,13 +123,13 @@ export function Header() {
         <div className="flex-1 md:hidden">
           <Link href="/" className="flex items-center space-x-2">
             <TestTube2 className="h-6 w-6 text-primary" />
-            <span className="font-bold">Testery</span>
+            <span className="font-bold">TestLink</span>
           </Link>
         </div>
 
         {/* Mobile Menu */}
-        {isMounted && (
-          <div className="md:hidden">
+        <div className="md:hidden">
+          {isMounted && (
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -144,15 +143,15 @@ export function Header() {
                     <span className="font-bold">Navigation</span>
                   </Link>
                   <nav className="flex flex-col space-y-3">
-                    <Link href="/jobs" className="text-lg">Find a Job</Link>
-                    <Link href="/jobs/post" className="text-lg">Post a Job</Link>
+                    <Link href="/projects" className="text-lg">Find a Project</Link>
+                    <Link href="/projects/post" className="text-lg">Post a Project</Link>
                     <Link href="/#features" className="text-lg">Features</Link>
                   </nav>
                 </div>
               </SheetContent>
             </Sheet>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="hidden flex-1 items-center justify-end space-x-4 md:flex">
           {isMounted && <nav className="flex items-center space-x-2">{renderUserControls()}</nav>}

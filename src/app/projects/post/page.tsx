@@ -17,18 +17,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
-const jobFormSchema = z.object({
+const projectFormSchema = z.object({
   title: z.string().min(10, 'Title must be at least 10 characters.'),
   description: z.string().min(50, 'Description must be at least 50 characters.'),
   skills: z.string().min(3, 'Please list at least one skill.'),
   compensation: z.coerce.number().min(1, 'Compensation must be a positive number.'),
 });
 
-type JobFormValues = z.infer<typeof jobFormSchema>;
+type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
-export default function PostJobPage() {
-  const form = useForm<JobFormValues>({
-    resolver: zodResolver(jobFormSchema),
+export default function PostProjectPage() {
+  const form = useForm<ProjectFormValues>({
+    resolver: zodResolver(projectFormSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -37,7 +37,7 @@ export default function PostJobPage() {
     },
   });
 
-  const onSubmit = (data: JobFormValues) => {
+  const onSubmit = (data: ProjectFormValues) => {
     console.log(data);
     // Handle form submission
   };
@@ -46,7 +46,7 @@ export default function PostJobPage() {
     <div className="container py-12">
       <Card className="max-w-3xl mx-auto">
         <CardHeader>
-          <CardTitle>Post a New Testing Job</CardTitle>
+          <CardTitle>Post a New Testing Project</CardTitle>
           <CardDescription>Fill out the details below to find the perfect tester for your project.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -57,7 +57,7 @@ export default function PostJobPage() {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Job Title</FormLabel>
+                    <FormLabel>Project Title</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., QA Tester for Mobile App" {...field} />
                     </FormControl>
@@ -70,7 +70,7 @@ export default function PostJobPage() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Job Description & Acceptance Criteria</FormLabel>
+                    <FormLabel>Project Description & Acceptance Criteria</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Describe the project, tasks, and what defines a successful test..."
@@ -79,7 +79,7 @@ export default function PostJobPage() {
                       />
                     </FormControl>
                      <FormDescription>
-                      Clearly define the acceptance criteria for your job.
+                      Clearly define the acceptance criteria for your project.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -118,7 +118,7 @@ export default function PostJobPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" size="lg">Post Job</Button>
+              <Button type="submit" size="lg">Post Project</Button>
             </form>
           </Form>
         </CardContent>
