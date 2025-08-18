@@ -49,7 +49,7 @@ export function Header() {
   };
 
   const renderUserControls = () => {
-    if (isLoading) {
+    if (!isMounted || isLoading) {
       return <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />;
     }
 
@@ -106,7 +106,7 @@ export function Header() {
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <TestTube2 className="h-6 w-6 text-primary" />
-            <span className="hidden font-bold sm:inline-block">TestLink</span>
+            <span className="hidden font-bold sm:inline-block">Testery</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             <Link href="/projects" className="transition-colors hover:text-foreground/80 text-foreground/60">
@@ -124,7 +124,7 @@ export function Header() {
         <div className="flex-1 md:hidden">
           <Link href="/" className="flex items-center space-x-2">
             <TestTube2 className="h-6 w-6 text-primary" />
-            <span className="font-bold">TestLink</span>
+            <span className="font-bold">Testery</span>
           </Link>
         </div>
 
@@ -155,7 +155,7 @@ export function Header() {
         </div>
 
         <div className="hidden flex-1 items-center justify-end space-x-4 md:flex">
-          {isMounted && <nav className="flex items-center space-x-2">{renderUserControls()}</nav>}
+          <nav className="flex items-center space-x-2">{renderUserControls()}</nav>
         </div>
       </div>
     </header>

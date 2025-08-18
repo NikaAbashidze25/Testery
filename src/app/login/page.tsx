@@ -80,7 +80,7 @@ export default function LoginPage() {
       <Card className="max-w-md mx-auto">
         <CardHeader className="text-center">
           <CardTitle>Welcome Back</CardTitle>
-          <CardDescription>Log in to your TestLink account.</CardDescription>
+          <CardDescription>Log in to your Testery account.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
