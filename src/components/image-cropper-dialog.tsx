@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -66,42 +65,54 @@ export function ImageCropperDialog({
   }
 
   async function handleSaveCrop() {
-    if (!completedCrop || !imgRef.current) {
-      console.error("Crop or image not available");
-      return;
+    const image = imgRef.current;
+    if (!image || !completedCrop || !completedCrop.width || !completedCrop.height) {
+        console.error("Crop or image not available or crop area is invalid");
+        return;
     }
 
-    const image = imgRef.current;
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
 
     if (!ctx) {
-      throw new Error("No 2d context");
+        throw new Error('No 2d context');
     }
 
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
+    
+    const
+     pixelRatio = window.devicePixelRatio;
 
-    const pixelRatio = window.devicePixelRatio;
     canvas.width = Math.floor(completedCrop.width * scaleX * pixelRatio);
     canvas.height = Math.floor(completedCrop.height * scaleY * pixelRatio);
 
     ctx.scale(pixelRatio, pixelRatio);
-    
+    ctx.imageSmoothingQuality = 'high';
+
     const cropX = completedCrop.x * scaleX;
     const cropY = completedCrop.y * scaleY;
 
-    const rotateRads = (rotate * Math.PI) / 180;
     const centerX = image.naturalWidth / 2;
     const centerY = image.naturalHeight / 2;
 
     ctx.save();
-    
-    ctx.translate(-cropX, -cropY);
+
+    // The order of operations is important here: translate, rotate, scale, then draw.
+    // 1. Move the canvas origin to the center of the scaled crop area.
+    ctx.translate(
+      -cropX,
+      -cropY
+    );
+     // 2. Move canvas origin to the center of the image to rotate around the center.
     ctx.translate(centerX, centerY);
-    ctx.rotate(rotateRads);
+    // 3. Rotate the canvas.
+    ctx.rotate((rotate * Math.PI) / 180);
+    // 4. Scale the canvas.
     ctx.scale(scale, scale);
+    // 5. Move the canvas origin back.
     ctx.translate(-centerX, -centerY);
+    // 6. Draw the image.
     ctx.drawImage(
       image,
       0,
@@ -115,46 +126,37 @@ export function ImageCropperDialog({
     );
 
     ctx.restore();
-
-    const croppedCanvas = document.createElement('canvas');
-    const croppedCtx = croppedCanvas.getContext('2d');
-
-    if (!croppedCtx) {
-      throw new Error('No 2d context');
-    }
-
-    croppedCanvas.width = canvas.width;
-    croppedCanvas.height = canvas.height;
-
-    croppedCtx.drawImage(canvas, 0, 0);
-
+    
+    // Now create the final circular image
     const finalCanvas = document.createElement('canvas');
     const finalCtx = finalCanvas.getContext('2d');
-    
+
     if (!finalCtx) {
-        throw new Error('No 2d context');
+        throw new Error('No 2d context for final canvas');
     }
+    
+    finalCanvas.width = canvas.width;
+    finalCanvas.height = canvas.height;
 
-    finalCanvas.width = croppedCanvas.width;
-    finalCanvas.height = croppedCanvas.height;
-
+    // Create a circular clipping path.
     finalCtx.beginPath();
     finalCtx.arc(finalCanvas.width / 2, finalCanvas.height / 2, Math.min(finalCanvas.width, finalCanvas.height) / 2, 0, Math.PI * 2);
     finalCtx.closePath();
     finalCtx.clip();
-    finalCtx.drawImage(croppedCanvas, 0, 0);
 
+    // Draw the (potentially rotated and scaled) cropped image onto the final canvas.
+    finalCtx.drawImage(canvas, 0, 0);
 
     const blob = await new Promise<Blob | null>((resolve) =>
-        finalCanvas.toBlob(resolve, "image/png", 1)
+        finalCanvas.toBlob(resolve, 'image/png', 1)
     );
 
     if (!blob) {
-      console.error("Canvas is empty");
-      return;
+        console.error('Canvas is empty');
+        return;
     }
 
-    const file = new File([blob], "cropped-image.png", { type: "image/png" });
+    const file = new File([blob], 'cropped-image.png', { type: 'image/png' });
     onSave(file);
     onClose();
 }
