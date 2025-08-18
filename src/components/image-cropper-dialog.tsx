@@ -49,6 +49,13 @@ export function ImageCropperDialog({
   const [aspect, setAspect] = useState<number | undefined>(1);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setScale(1);
+      setRotate(0);
+    }
+  }, [isOpen]);
+  
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     if (aspect) {
       const { width, height } = e.currentTarget;
@@ -58,77 +65,99 @@ export function ImageCropperDialog({
     }
   }
 
-  useEffect(() => {
-    if (imgRef.current && aspect) {
-        const { width, height } = imgRef.current;
-        const newCrop = centerAspectCrop(width, height, aspect);
-        setCrop(newCrop);
-        setCompletedCrop(newCrop);
-    }
-  }, [scale, rotate, aspect]);
-
   async function handleSaveCrop() {
-    const image = imgRef.current;
-    if (!image || !completedCrop) {
-      throw new Error('Crop or image not available');
-    }
-
-     if (completedCrop.width === 0 || completedCrop.height === 0) {
-        console.error("Invalid crop dimensions, aborting save.");
-        return;
-    }
-
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-      throw new Error('No 2d context');
-    }
-    
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-
-    canvas.width = completedCrop.width * scaleX;
-    canvas.height = completedCrop.height * scaleY;
-    
-    const cropX = completedCrop.x * scaleX;
-    const cropY = completedCrop.y * scaleY;
-    
-    const rotateRads = (rotate * Math.PI) / 180;
-    
-    ctx.save();
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(rotateRads);
-    ctx.scale(scale, scale);
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
-    ctx.drawImage(
-      image,
-      cropX,
-      cropY,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY,
-      0,
-      0,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY
-    );
-    ctx.restore();
-
-
-    // Convert the canvas to a blob and then to a file.
-    const blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(resolve, 'image/png', 1);
-    });
-    
-    if (!blob) {
-      console.error('Canvas is empty');
+    if (!completedCrop || !imgRef.current) {
+      console.error("Crop or image not available");
       return;
     }
 
-    const file = new File([blob], 'cropped-image.png', { type: 'image/png' });
+    const image = imgRef.current;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("No 2d context");
+    }
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    const pixelRatio = window.devicePixelRatio;
+    canvas.width = Math.floor(completedCrop.width * scaleX * pixelRatio);
+    canvas.height = Math.floor(completedCrop.height * scaleY * pixelRatio);
+
+    ctx.scale(pixelRatio, pixelRatio);
+    
+    const cropX = completedCrop.x * scaleX;
+    const cropY = completedCrop.y * scaleY;
+
+    const rotateRads = (rotate * Math.PI) / 180;
+    const centerX = image.naturalWidth / 2;
+    const centerY = image.naturalHeight / 2;
+
+    ctx.save();
+    
+    ctx.translate(-cropX, -cropY);
+    ctx.translate(centerX, centerY);
+    ctx.rotate(rotateRads);
+    ctx.scale(scale, scale);
+    ctx.translate(-centerX, -centerY);
+    ctx.drawImage(
+      image,
+      0,
+      0,
+      image.naturalWidth,
+      image.naturalHeight,
+      0,
+      0,
+      image.naturalWidth,
+      image.naturalHeight
+    );
+
+    ctx.restore();
+
+    const croppedCanvas = document.createElement('canvas');
+    const croppedCtx = croppedCanvas.getContext('2d');
+
+    if (!croppedCtx) {
+      throw new Error('No 2d context');
+    }
+
+    croppedCanvas.width = canvas.width;
+    croppedCanvas.height = canvas.height;
+
+    croppedCtx.drawImage(canvas, 0, 0);
+
+    const finalCanvas = document.createElement('canvas');
+    const finalCtx = finalCanvas.getContext('2d');
+    
+    if (!finalCtx) {
+        throw new Error('No 2d context');
+    }
+
+    finalCanvas.width = croppedCanvas.width;
+    finalCanvas.height = croppedCanvas.height;
+
+    finalCtx.beginPath();
+    finalCtx.arc(finalCanvas.width / 2, finalCanvas.height / 2, Math.min(finalCanvas.width, finalCanvas.height) / 2, 0, Math.PI * 2);
+    finalCtx.closePath();
+    finalCtx.clip();
+    finalCtx.drawImage(croppedCanvas, 0, 0);
+
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+        finalCanvas.toBlob(resolve, "image/png", 1)
+    );
+
+    if (!blob) {
+      console.error("Canvas is empty");
+      return;
+    }
+
+    const file = new File([blob], "cropped-image.png", { type: "image/png" });
     onSave(file);
     onClose();
-  }
+}
   
    const handleCropChange = (newCrop: Crop, percentCrop: Crop) => {
     setCrop(newCrop);
@@ -136,15 +165,7 @@ export function ImageCropperDialog({
 
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) {
-            setScale(1);
-            setRotate(0);
-            setCrop(undefined);
-            setCompletedCrop(undefined);
-        }
-        onClose();
-    }}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl grid-rows-[auto_minmax(0,1fr)_auto] h-[90vh] p-0 gap-0">
         <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle>Crop and Edit Your Image</DialogTitle>
