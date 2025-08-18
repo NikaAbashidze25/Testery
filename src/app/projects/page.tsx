@@ -5,63 +5,57 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, orderBy, query, type DocumentData } from "firebase/firestore";
+import { formatDistanceToNow } from 'date-fns';
+import { Search, MapPin, Inbox } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const mockProjects = [
-  {
-    id: '1',
-    title: 'Senior QA Engineer for E-commerce Platform',
-    company: 'Shopify',
-    location: 'Remote',
-    type: 'Full-time',
-    compensation: '$120,000 - $150,000',
-    description: 'We are looking for a Senior QA Engineer to join our team and help us build the future of e-commerce. You will be responsible for testing our platform and ensuring that it is of the highest quality.',
-    skills: ['Selenium', 'Cypress', 'JavaScript', 'CI/CD'],
-    postedAt: '2 days ago'
-  },
-  {
-    id: '2',
-    title: 'Manual Tester for Mobile Gaming App',
-    company: 'PixelFun',
-    location: 'New York, NY',
-    type: 'Contract',
-    compensation: '$50/hour',
-    description: 'Test our new mobile game on iOS and Android. Looking for someone with a keen eye for detail and a passion for gaming.',
-    skills: ['Manual Testing', 'iOS', 'Android', 'JIRA'],
-    postedAt: '5 days ago'
-  },
-  {
-    id: '3',
-    title: 'Automation Tester (Python)',
-    company: 'DataCorp',
-    location: 'Remote',
-    type: 'Full-time',
-    compensation: '$90,000',
-    description: 'Join our data analytics team to build and maintain our automation testing framework using Python.',
-    skills: ['Python', 'Pytest', 'API Testing', 'SQL'],
-    postedAt: '1 week ago'
-  },
-  {
-    id: '4',
-    title: 'Junior QA Analyst',
-    company: 'Innovate Inc.',
-    location: 'San Francisco, CA',
-    type: 'Internship',
-    compensation: '$25/hour',
-    description: 'An exciting opportunity for a student or recent graduate to get hands-on experience in software quality assurance.',
-    skills: ['Manual Testing', 'Bug Reporting', 'Teamwork'],
-    postedAt: '3 days ago'
-  },
-];
+interface Project extends DocumentData {
+    id: string;
+    title: string;
+    companyName: string;
+    location: string;
+    type: string;
+    compensation: string;
+    description: string;
+    skills: string[];
+    postedAt: {
+        seconds: number;
+        nanoseconds: number;
+    };
+}
+
 
 export default function ProjectsPage() {
-  const [isClient, setIsClient] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setIsClient(true);
+    const fetchProjects = async () => {
+        setIsLoading(true);
+        try {
+            const projectsCollection = collection(db, 'projects');
+            const q = query(projectsCollection, orderBy('postedAt', 'desc'));
+            const querySnapshot = await getDocs(q);
+            const projectsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+            setProjects(projectsData);
+        } catch (error) {
+            console.error("Error fetching projects: ", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchProjects();
   }, []);
+
+  const formatPostedDate = (timestamp: Project['postedAt']) => {
+    if (!timestamp) return '...';
+    const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+    return formatDistanceToNow(date, { addSuffix: true });
+  }
 
   return (
     <div className="container py-12">
@@ -81,39 +75,85 @@ export default function ProjectsPage() {
         </div>
         <Button size="lg" className="h-12">Search</Button>
       </div>
+      
+       {isLoading && (
+         <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            {[...Array(4)].map((_, i) => (
+                <Card key={i}>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-1/2 mt-2" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-full mt-2" />
+                        <Skeleton className="h-4 w-2/3 mt-2" />
+                         <div className="mt-4 flex flex-wrap gap-2">
+                            <Skeleton className="h-6 w-20 rounded-full" />
+                            <Skeleton className="h-6 w-24 rounded-full" />
+                            <Skeleton className="h-6 w-16 rounded-full" />
+                        </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between items-center">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-10 w-28" />
+                    </CardFooter>
+                </Card>
+            ))}
+         </div>
+       )}
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        {mockProjects.map(project => (
-          <Card key={project.id} className="flex flex-col hover:shadow-lg transition-shadow duration-300">
+      {!isLoading && projects.length === 0 && (
+        <Card className="text-center py-12">
             <CardHeader>
-              <CardTitle>{project.title}</CardTitle>
-              <CardDescription>
-                <div className="flex items-center gap-2 text-sm">
-                  <span>{project.company}</span>
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {project.location}
-                  </span>
+                <div className="mx-auto bg-secondary rounded-full h-16 w-16 flex items-center justify-center">
+                    <Inbox className="h-8 w-8 text-muted-foreground" />
                 </div>
-              </CardDescription>
+                <CardTitle className="mt-4">No Projects Found</CardTitle>
+                <CardDescription>There are currently no projects available. Why not be the first to post one?</CardDescription>
             </CardHeader>
-            <CardContent className="flex-grow">
-              <p className="text-sm text-muted-foreground line-clamp-3">{project.description}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {project.skills.map(skill => (
-                  <Badge key={skill} variant="secondary">{skill}</Badge>
-                ))}
-              </div>
+            <CardContent>
+                <Button asChild>
+                    <Link href="/projects/post">Post a Project</Link>
+                </Button>
             </CardContent>
-            <CardFooter className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">{project.postedAt}</span>
-              <Button asChild>
-                <Link href={`/projects/${project.id}`}>View Details</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+        </Card>
+      )}
+
+      {!isLoading && projects.length > 0 && (
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            {projects.map(project => (
+              <Card key={project.id} className="flex flex-col hover:shadow-lg transition-shadow duration-300">
+                <CardHeader>
+                  <CardTitle>{project.title}</CardTitle>
+                  <CardDescription>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span>{project.companyName}</span>
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        {project.location}
+                      </span>
+                    </div>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p className="text-sm text-muted-foreground line-clamp-3">{project.description}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {project.skills.map(skill => (
+                      <Badge key={skill} variant="secondary">{skill}</Badge>
+                    ))}
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">{formatPostedDate(project.postedAt)}</span>
+                  <Button asChild>
+                    <Link href={`/projects/${project.id}`}>View Details</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
     </div>
   );
 }
