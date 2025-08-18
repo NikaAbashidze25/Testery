@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, orderBy, query, type DocumentData } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { collection, getDocs, orderBy, query, where, type DocumentData } from "firebase/firestore";
 import { formatDistanceToNow } from 'date-fns';
-import { Search, MapPin, Inbox } from "lucide-react";
+import { Search, MapPin, Inbox, User } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 
 interface Project extends DocumentData {
     id: string;
@@ -26,21 +27,47 @@ interface Project extends DocumentData {
         seconds: number;
         nanoseconds: number;
     };
+    authorId: string;
 }
 
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchProjects = async () => {
         setIsLoading(true);
         try {
             const projectsCollection = collection(db, 'projects');
-            const q = query(projectsCollection, orderBy('postedAt', 'desc'));
+            let q;
+            // If the user is logged in, fetch projects where the authorId is not the user's uid.
+            // If no user is logged in, fetch all projects.
+            if (user) {
+                q = query(projectsCollection, where('authorId', '!=', user.uid), orderBy('authorId', 'asc'), orderBy('postedAt', 'desc'));
+            } else {
+                q = query(projectsCollection, orderBy('postedAt', 'desc'));
+            }
+            
             const querySnapshot = await getDocs(q);
-            const projectsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+            
+            // Due to Firestore limitations (inequality filter must be on a different field than the first orderBy),
+            // we may need to re-sort client-side if we can't perfectly query.
+            // Let's manually filter and sort to be safe.
+            const projectsData = querySnapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as Project))
+                .filter(project => user ? project.authorId !== user.uid : true)
+                .sort((a, b) => b.postedAt.seconds - a.postedAt.seconds);
+
+
             setProjects(projectsData);
         } catch (error) {
             console.error("Error fetching projects: ", error);
@@ -49,7 +76,7 @@ export default function ProjectsPage() {
         }
     };
     fetchProjects();
-  }, []);
+  }, [user]);
 
   const formatPostedDate = (timestamp: Project['postedAt']) => {
     if (!timestamp) return '...';
@@ -110,7 +137,7 @@ export default function ProjectsPage() {
                     <Inbox className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <CardTitle className="mt-4">No Projects Found</CardTitle>
-                <CardDescription>There are currently no projects available. Why not be the first to post one?</CardDescription>
+                <CardDescription>There are currently no projects available for you to apply to. Check back later!</CardDescription>
             </CardHeader>
             <CardContent>
                 <Button asChild>
