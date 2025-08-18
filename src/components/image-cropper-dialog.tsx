@@ -67,8 +67,8 @@ export function ImageCropperDialog({
   async function handleSaveCrop() {
     const image = imgRef.current;
     if (!image || !completedCrop || !completedCrop.width || !completedCrop.height) {
-        console.error("Crop or image not available or crop area is invalid");
-        return;
+      console.error("Crop or image not available or crop area is invalid");
+      return;
     }
 
     const canvas = document.createElement('canvas');
@@ -81,8 +81,7 @@ export function ImageCropperDialog({
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
     
-    const
-     pixelRatio = window.devicePixelRatio;
+    const pixelRatio = window.devicePixelRatio;
 
     canvas.width = Math.floor(completedCrop.width * scaleX * pixelRatio);
     canvas.height = Math.floor(completedCrop.height * scaleY * pixelRatio);
@@ -97,37 +96,27 @@ export function ImageCropperDialog({
     const centerY = image.naturalHeight / 2;
 
     ctx.save();
-
-    // The order of operations is important here: translate, rotate, scale, then draw.
-    // 1. Move the canvas origin to the center of the scaled crop area.
-    ctx.translate(
-      -cropX,
-      -cropY
-    );
-     // 2. Move canvas origin to the center of the image to rotate around the center.
+    
+    ctx.translate(-cropX, -cropY);
     ctx.translate(centerX, centerY);
-    // 3. Rotate the canvas.
     ctx.rotate((rotate * Math.PI) / 180);
-    // 4. Scale the canvas.
     ctx.scale(scale, scale);
-    // 5. Move the canvas origin back.
     ctx.translate(-centerX, -centerY);
-    // 6. Draw the image.
     ctx.drawImage(
-      image,
-      0,
-      0,
-      image.naturalWidth,
-      image.naturalHeight,
-      0,
-      0,
-      image.naturalWidth,
-      image.naturalHeight
+        image,
+        0,
+        0,
+        image.naturalWidth,
+        image.naturalHeight,
+        0,
+        0,
+        image.naturalWidth,
+        image.naturalHeight
     );
 
     ctx.restore();
-    
-    // Now create the final circular image
+
+    // Create the final circular canvas
     const finalCanvas = document.createElement('canvas');
     const finalCtx = finalCanvas.getContext('2d');
 
@@ -144,7 +133,6 @@ export function ImageCropperDialog({
     finalCtx.closePath();
     finalCtx.clip();
 
-    // Draw the (potentially rotated and scaled) cropped image onto the final canvas.
     finalCtx.drawImage(canvas, 0, 0);
 
     const blob = await new Promise<Blob | null>((resolve) =>
