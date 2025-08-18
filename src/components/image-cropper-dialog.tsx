@@ -71,6 +71,11 @@ export function ImageCropperDialog({
       return;
     }
 
+    if (completedCrop.width === 0 || completedCrop.height === 0) {
+      console.error("Invalid crop dimensions");
+      return;
+    }
+
     const image = imgRef.current;
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
