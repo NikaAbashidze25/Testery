@@ -64,9 +64,6 @@ export default function LoginPage() {
         description: "Welcome back!",
       });
       router.push('/jobs');
-      // Force a reload to update the header state
-      window.location.href = '/jobs';
-
     } catch (error: any) {
       toast({
         variant: "destructive",
