@@ -168,7 +168,11 @@ export default function ProjectDetailPage() {
         <CardHeader>
           <CardTitle className="text-3xl font-bold">{project.title}</CardTitle>
           <CardDescription>
-            Posted by <strong>{project.companyName}</strong> - {formatPostedDate(project.postedAt)}
+            Posted by{' '}
+            <Link href={`/users/${project.authorId}`} className="font-bold text-primary hover:underline">
+                {project.companyName}
+            </Link>
+            {' '}- {formatPostedDate(project.postedAt)}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
