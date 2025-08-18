@@ -66,7 +66,7 @@ export function ImageCropperDialog({
 
   async function handleSaveCrop() {
     const image = imgRef.current;
-    if (!image || !completedCrop || !completedCrop.width || !completedCrop.height) {
+    if (!completedCrop || !image || !completedCrop.width || !completedCrop.height) {
       console.error("Crop or image not available or crop area is invalid");
       return;
     }
@@ -80,8 +80,7 @@ export function ImageCropperDialog({
 
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-    
-    const pixelRatio = window.devicePixelRatio;
+    const pixelRatio = window.devicePixelRatio || 1;
 
     canvas.width = Math.floor(completedCrop.width * scaleX * pixelRatio);
     canvas.height = Math.floor(completedCrop.height * scaleY * pixelRatio);
@@ -92,34 +91,40 @@ export function ImageCropperDialog({
     const cropX = completedCrop.x * scaleX;
     const cropY = completedCrop.y * scaleY;
 
+    const rotateRads = (rotate * Math.PI) / 180;
     const centerX = image.naturalWidth / 2;
     const centerY = image.naturalHeight / 2;
-
+    
     ctx.save();
     
+    // 5) Move the crop origin to the canvas origin (0,0)
     ctx.translate(-cropX, -cropY);
+    // 4) Move the origin to the center of the original position
     ctx.translate(centerX, centerY);
-    ctx.rotate((rotate * Math.PI) / 180);
+    // 3) Rotate around the origin
+    ctx.rotate(rotateRads);
+    // 2) Scale the image
     ctx.scale(scale, scale);
+    // 1) Move the center of the image to the origin (0,0)
     ctx.translate(-centerX, -centerY);
+    
     ctx.drawImage(
-        image,
-        0,
-        0,
-        image.naturalWidth,
-        image.naturalHeight,
-        0,
-        0,
-        image.naturalWidth,
-        image.naturalHeight
+      image,
+      0,
+      0,
+      image.naturalWidth,
+      image.naturalHeight,
+      0,
+      0,
+      image.naturalWidth,
+      image.naturalHeight
     );
 
     ctx.restore();
-
-    // Create the final circular canvas
+    
+    // Create a circular clip
     const finalCanvas = document.createElement('canvas');
     const finalCtx = finalCanvas.getContext('2d');
-
     if (!finalCtx) {
         throw new Error('No 2d context for final canvas');
     }
@@ -127,13 +132,12 @@ export function ImageCropperDialog({
     finalCanvas.width = canvas.width;
     finalCanvas.height = canvas.height;
 
-    // Create a circular clipping path.
     finalCtx.beginPath();
     finalCtx.arc(finalCanvas.width / 2, finalCanvas.height / 2, Math.min(finalCanvas.width, finalCanvas.height) / 2, 0, Math.PI * 2);
     finalCtx.closePath();
     finalCtx.clip();
-
     finalCtx.drawImage(canvas, 0, 0);
+
 
     const blob = await new Promise<Blob | null>((resolve) =>
         finalCanvas.toBlob(resolve, 'image/png', 1)
