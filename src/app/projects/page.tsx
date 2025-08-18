@@ -12,7 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Search, MapPin, Inbox, User } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 
 interface Project extends DocumentData {
     id: string;
@@ -34,7 +34,7 @@ interface Project extends DocumentData {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -49,24 +49,23 @@ export default function ProjectsPage() {
         try {
             const projectsCollection = collection(db, 'projects');
             let q;
-            // If the user is logged in, fetch projects where the authorId is not the user's uid.
-            // If no user is logged in, fetch all projects.
+            // Firestore doesn't allow inequality filters (`!=`) on a field different from the `orderBy` field.
+            // So we query with a more basic sort and then filter/sort client-side.
             if (user) {
-                q = query(projectsCollection, where('authorId', '!=', user.uid), orderBy('authorId', 'asc'), orderBy('postedAt', 'desc'));
+                // We order by authorId first to satisfy Firestore's query constraints,
+                // then by postedAt.
+                q = query(projectsCollection, orderBy('authorId'), orderBy('postedAt', 'desc'));
             } else {
                 q = query(projectsCollection, orderBy('postedAt', 'desc'));
             }
             
             const querySnapshot = await getDocs(q);
             
-            // Due to Firestore limitations (inequality filter must be on a different field than the first orderBy),
-            // we may need to re-sort client-side if we can't perfectly query.
-            // Let's manually filter and sort to be safe.
+            // Manually filter out projects by the current user and re-sort by date.
             const projectsData = querySnapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Project))
                 .filter(project => user ? project.authorId !== user.uid : true)
                 .sort((a, b) => b.postedAt.seconds - a.postedAt.seconds);
-
 
             setProjects(projectsData);
         } catch (error) {
