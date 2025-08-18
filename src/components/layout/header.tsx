@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { RoleSwitcher } from './role-switcher';
 
 export function Header() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -50,7 +51,12 @@ export function Header() {
 
   const renderUserControls = () => {
     if (!isMounted || isLoading) {
-      return <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />;
+      return (
+        <div className="flex items-center gap-4">
+            <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
+            <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
+        </div>
+      );
     }
 
     if (user) {
@@ -99,6 +105,28 @@ export function Header() {
       </>
     );
   };
+  
+  const renderNavLinks = () => {
+    if (isLoading) {
+        return null;
+    }
+    if (user) {
+        return <RoleSwitcher />;
+    }
+    return (
+        <>
+            <Link href="/projects" className="transition-colors hover:text-foreground/80 text-foreground/60">
+              Find a Project
+            </Link>
+            <Link href="/projects/post" className="transition-colors hover:text-foreground/80 text-foreground/60">
+              Post a Project
+            </Link>
+            <Link href="/#features" className="transition-colors hover:text-foreground/80 text-foreground/60">
+              Features
+            </Link>
+        </>
+    )
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -109,15 +137,7 @@ export function Header() {
             <span className="hidden font-bold sm:inline-block">Testery</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
-            <Link href="/projects" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              Find a Project
-            </Link>
-            <Link href="/projects/post" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              Post a Project
-            </Link>
-            <Link href="/#features" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              Features
-            </Link>
+            {renderNavLinks()}
           </nav>
         </div>
 
@@ -144,9 +164,7 @@ export function Header() {
                     <span className="font-bold">Navigation</span>
                   </Link>
                   <nav className="flex flex-col space-y-3">
-                    <Link href="/projects" className="text-lg">Find a Project</Link>
-                    <Link href="/projects/post" className="text-lg">Post a Project</Link>
-                    <Link href="/#features" className="text-lg">Features</Link>
+                    {renderNavLinks()}
                   </nav>
                 </div>
               </SheetContent>
