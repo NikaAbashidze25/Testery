@@ -128,11 +128,6 @@ export default function ProjectsPage() {
                 <CardTitle className="mt-4">No Projects Found</CardTitle>
                 <CardDescription>There are currently no projects available for you to apply to. Check back later!</CardDescription>
             </CardHeader>
-            <CardContent>
-                <Button asChild>
-                    <Link href="/projects/post">Post a Project</Link>
-                </Button>
-            </CardContent>
         </Card>
       )}
 
@@ -144,7 +139,9 @@ export default function ProjectsPage() {
                   <CardTitle>{project.title}</CardTitle>
                   <CardDescription>
                     <div className="flex items-center gap-2 text-sm">
-                      <span>{project.companyName}</span>
+                      <Link href={`/users/${project.authorId}`} className="font-semibold text-primary hover:underline">
+                        {project.companyName}
+                      </Link>
                       <span className="text-muted-foreground flex items-center gap-1">
                         <MapPin className="h-4 w-4" />
                         {project.location}

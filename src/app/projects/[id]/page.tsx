@@ -169,7 +169,7 @@ export default function ProjectDetailPage() {
           <CardTitle className="text-3xl font-bold">{project.title}</CardTitle>
           <CardDescription>
             Posted by{' '}
-            <Link href={`/users/${project.authorId}`} className="font-bold text-primary hover:underline">
+            <Link href={`/users/${project.authorId}`} className="font-semibold text-primary hover:underline">
                 {project.companyName}
             </Link>
             {' '}- {formatPostedDate(project.postedAt)}
