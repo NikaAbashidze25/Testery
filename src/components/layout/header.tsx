@@ -22,9 +22,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 export function Header() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    setIsMounted(true);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setIsLoading(false);
@@ -75,7 +77,7 @@ export function Header() {
         </div>
 
         {/* Mobile Menu */}
-        <div className="md:hidden">
+        {isMounted && <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -96,7 +98,7 @@ export function Header() {
               </div>
             </SheetContent>
           </Sheet>
-        </div>
+        </div>}
 
         <div className="hidden flex-1 items-center justify-end space-x-4 md:flex">
           <nav className="flex items-center space-x-2">
