@@ -1,9 +1,13 @@
+
+'use client';
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, MapPin } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const mockProjects = [
   {
@@ -53,6 +57,12 @@ const mockProjects = [
 ];
 
 export default function ProjectsPage() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   return (
     <div className="container py-12">
       <div className="space-y-4 mb-8 text-center">
