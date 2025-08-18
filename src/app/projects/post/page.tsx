@@ -37,8 +37,8 @@ type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
 export default function PostProjectPage() {
   const [user, setUser] = useState<User | null>(null);
-  const [userAccountType, setUserAccountType] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -46,14 +46,10 @@ export default function PostProjectPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          setUserAccountType(userDocSnap.data().accountType);
-        }
       } else {
         router.push('/login');
       }
+      setIsCheckingAuth(false);
     });
     return () => unsubscribe();
   }, [router]);
@@ -75,18 +71,24 @@ export default function PostProjectPage() {
         toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to post a project.' });
         return;
     }
-    if (userAccountType !== 'company') {
-        toast({ variant: 'destructive', title: 'Invalid Account Type', description: 'Only company accounts can post projects.' });
-        return;
-    }
 
     setIsLoading(true);
     try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        let posterName = user.displayName; // Default to displayName from Auth
+        if(userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          // For companies, use companyName. For individuals, it will be fullName (which is also their displayName).
+          posterName = userData.companyName || userData.fullName;
+        }
+
         await addDoc(collection(db, 'projects'), {
             ...data,
             skills: data.skills.split(',').map(s => s.trim()),
             authorId: user.uid,
-            companyName: user.displayName, // Assumes company name is stored in displayName for company accounts
+            companyName: posterName, 
             postedAt: serverTimestamp(),
         });
         toast({ title: 'Project Posted', description: 'Your project is now live.' });
@@ -98,28 +100,10 @@ export default function PostProjectPage() {
     }
   };
 
-  if (!user || userAccountType === null) {
+  if (isCheckingAuth) {
       return <div className="container py-12 text-center">Loading...</div>
   }
   
-  if (userAccountType !== 'company') {
-      return (
-          <div className="container py-12 text-center">
-              <Card className="max-w-md mx-auto">
-                  <CardHeader>
-                      <CardTitle>Access Denied</CardTitle>
-                      <CardDescription>Only company accounts are allowed to post new projects. Testers can browse available projects.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                       <Button asChild>
-                            <a href="/projects">Browse Projects</a>
-                        </Button>
-                  </CardContent>
-              </Card>
-          </div>
-      )
-  }
-
   return (
     <div className="container py-12">
       <Card className="max-w-3xl mx-auto">
