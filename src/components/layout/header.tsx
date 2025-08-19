@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, TestTube2, User, LogOut } from 'lucide-react';
+import { Menu, User, LogOut } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { RoleSwitcher } from './role-switcher';
+import { TesteryLogo } from './logo';
 
 export function Header() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -133,8 +134,8 @@ export function Header() {
       <div className="container flex h-16 items-center">
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <TestTube2 className="h-6 w-6 text-primary" />
-            <span className="hidden font-bold sm:inline-block">Testery</span>
+            <TesteryLogo className="h-8 w-8" />
+            <span className="hidden font-bold sm:inline-block text-lg">Testery</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             {renderNavLinks()}
@@ -143,8 +144,8 @@ export function Header() {
 
         <div className="flex-1 md:hidden">
           <Link href="/" className="flex items-center space-x-2">
-            <TestTube2 className="h-6 w-6 text-primary" />
-            <span className="font-bold">Testery</span>
+            <TesteryLogo className="h-8 w-8" />
+            <span className="font-bold text-lg">Testery</span>
           </Link>
         </div>
 

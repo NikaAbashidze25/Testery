@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import { TestTube2 } from 'lucide-react';
+import { TesteryLogo } from './logo';
 
 export function Footer() {
   return (
     <footer className="w-full border-t bg-white">
       <div className="container py-8 flex flex-col md:flex-row items-center justify-between">
         <div className="flex items-center space-x-2 mb-4 md:mb-0">
-          <TestTube2 className="h-6 w-6 text-primary" />
+          <TesteryLogo className="h-6 w-6" />
           <span className="font-bold">Testery</span>
         </div>
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm text-muted-foreground mb-4 md:mb-0">
