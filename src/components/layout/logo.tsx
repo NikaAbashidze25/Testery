@@ -6,9 +6,9 @@ export function TesteryLogo({ className }: { className?: string }) {
         <Image
             src="/logo.png"
             alt="Testery Logo"
-            width={130}
-            height={36}
-            className={cn("h-9 w-auto", className)}
+            width={170}
+            height={47}
+            className={cn("h-12 w-auto", className)}
             priority
         />
     );
