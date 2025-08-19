@@ -24,7 +24,7 @@ function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: numbe
     makeAspectCrop(
       {
         unit: '%',
-        width: 50,
+        width: 90,
       },
       aspect,
       mediaWidth,
@@ -52,6 +52,8 @@ export function ImageCropperDialog({
     if (isOpen) {
       setScale(1);
       setRotate(0);
+      setCrop(undefined);
+      setCompletedCrop(undefined);
     }
   }, [isOpen]);
   
@@ -65,16 +67,11 @@ export function ImageCropperDialog({
   }
 
   useEffect(() => {
-    if (
-      completedCrop?.width &&
-      completedCrop?.height &&
-      imgRef.current
-    ) {
-      const image = imgRef.current
-      const { width, height } = image;
-      const initialCrop = centerAspectCrop(width, height, aspect || 1);
-      setCrop(initialCrop);
-      setCompletedCrop(initialCrop);
+    if (imgRef.current && aspect) {
+      const { width, height } = imgRef.current;
+      const newCrop = centerAspectCrop(width, height, aspect);
+      setCrop(newCrop);
+      setCompletedCrop(newCrop);
     }
   }, [scale, rotate, aspect]);
 
@@ -89,7 +86,7 @@ export function ImageCropperDialog({
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
-        throw new Error('No 2d context');
+      throw new Error('No 2d context');
     }
 
     const scaleX = image.naturalWidth / image.width;
@@ -129,7 +126,6 @@ export function ImageCropperDialog({
 
     ctx.restore();
     
-    // Create a circular clip
     const finalCanvas = document.createElement('canvas');
     const finalCtx = finalCanvas.getContext('2d');
     if (!finalCtx) {
