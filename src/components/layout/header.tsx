@@ -20,16 +20,15 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { RoleSwitcher } from './role-switcher';
 import { TesteryLogo } from './logo';
+import { Skeleton } from '../ui/skeleton';
 
 export function Header() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
-      setIsLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -49,13 +48,8 @@ export function Header() {
   };
 
   const renderUserControls = () => {
-    if (isLoading) {
-      return (
-        <div className="flex items-center gap-4">
-            <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
-            <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
-        </div>
-      );
+    if (user === undefined) { // Still checking auth state
+      return <Skeleton className="h-8 w-8 rounded-full" />
     }
 
     if (user) {
@@ -106,8 +100,8 @@ export function Header() {
   };
   
   const renderNavLinks = () => {
-    if (isLoading) {
-        return null;
+    if (user === undefined) {
+      return null;
     }
     if (user) {
         return <RoleSwitcher />;
