@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Menu, User, LogOut } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
@@ -142,6 +142,9 @@ export function Header() {
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+                    <SheetHeader>
+                        <SheetTitle className="sr-only">Menu</SheetTitle>
+                    </SheetHeader>
                     <div className="flex flex-col space-y-4 p-4">
                     <Link href="/" className="mr-6 flex items-center space-x-2">
                         <span className="font-bold">Navigation</span>
