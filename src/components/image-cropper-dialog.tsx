@@ -19,7 +19,13 @@ interface ImageCropperDialogProps {
   onSave: (file: File) => void;
 }
 
-function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number) {
+// This is to demonstate how to make and center a % aspect crop
+// which is a bit trickier作物.
+function centerAspectCrop(
+  mediaWidth: number,
+  mediaHeight: number,
+  aspect: number
+) {
   return centerCrop(
     makeAspectCrop(
       {
@@ -60,20 +66,20 @@ export function ImageCropperDialog({
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     if (aspect) {
       const { width, height } = e.currentTarget;
-      const initialCrop = centerAspectCrop(width, height, aspect);
-      setCrop(initialCrop);
-      setCompletedCrop(initialCrop);
+      const newCrop = centerAspectCrop(width, height, aspect);
+      setCrop(newCrop);
+      setCompletedCrop(newCrop); // Set completed crop on load
     }
   }
 
-  useEffect(() => {
-    if (imgRef.current && aspect) {
-      const { width, height } = imgRef.current;
-      const newCrop = centerAspectCrop(width, height, aspect);
-      setCrop(newCrop);
-      setCompletedCrop(newCrop);
-    }
-  }, [scale, rotate, aspect]);
+  // This is the correct way to update the completedCrop state.
+  // It should be updated whenever the crop selection changes.
+   const handleCropChange = (newCrop: Crop, percentCrop: Crop) => {
+    setCrop(newCrop);
+  };
+   const handleCropComplete = (crop: Crop) => {
+    setCompletedCrop(crop);
+  };
 
   async function handleSaveCrop() {
     const image = imgRef.current;
@@ -92,55 +98,77 @@ export function ImageCropperDialog({
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
     
-    canvas.width = Math.floor(completedCrop.width * scaleX);
-    canvas.height = Math.floor(completedCrop.height * scaleY);
+    // devicePixelRatio slightly increases sharpness on retina displays
+    // but can be removed if strange scaling issues occur.
+    const pixelRatio = window.devicePixelRatio;
 
+    canvas.width = Math.floor(completedCrop.width * scaleX * pixelRatio);
+    canvas.height = Math.floor(completedCrop.height * scaleY * pixelRatio);
+
+    ctx.scale(pixelRatio, pixelRatio);
     ctx.imageSmoothingQuality = 'high';
 
     const cropX = completedCrop.x * scaleX;
     const cropY = completedCrop.y * scaleY;
 
     const rotateRads = (rotate * Math.PI) / 180;
+    
+    // Move the origin to the center of the image.
+    // This makes rotation and scaling simpler.
     const centerX = image.naturalWidth / 2;
     const centerY = image.naturalHeight / 2;
-    
+
     ctx.save();
-    
-    ctx.translate(-cropX, -cropY);
+
+    // 5) Move the origin to the center of the original position
     ctx.translate(centerX, centerY);
+    // 4) Rotate the entire canvas desired angle
     ctx.rotate(rotateRads);
+    // 3) Scale the canvas
     ctx.scale(scale, scale);
+    // 2) Move the origin back to the top left corner of the image
     ctx.translate(-centerX, -centerY);
-    
+    // 1) Draw the entire image (transformed)
     ctx.drawImage(
       image,
       0,
       0,
       image.naturalWidth,
       image.naturalHeight,
-      0,
-      0,
-      image.naturalWidth,
-      image.naturalHeight
     );
 
     ctx.restore();
-    
+
+    // Create a new canvas to draw the circular clip
     const finalCanvas = document.createElement('canvas');
     const finalCtx = finalCanvas.getContext('2d');
+
     if (!finalCtx) {
-        throw new Error('No 2d context for final canvas');
+      throw new Error('No 2d context for final canvas');
     }
-    
+
+    // The final canvas will be the size of the cropped area.
     finalCanvas.width = canvas.width;
     finalCanvas.height = canvas.height;
 
+    // Create a circular clipping path.
     finalCtx.beginPath();
     finalCtx.arc(finalCanvas.width / 2, finalCanvas.height / 2, Math.min(finalCanvas.width, finalCanvas.height) / 2, 0, Math.PI * 2);
     finalCtx.closePath();
     finalCtx.clip();
-    finalCtx.drawImage(canvas, 0, 0);
-
+    
+    // Draw the cropped portion of the main canvas onto the final canvas.
+    finalCtx.drawImage(
+      canvas, // The canvas with the transformed image
+      cropX, // The x coordinate where to start clipping from the main canvas
+      cropY, // The y coordinate where to start clipping from the main canvas
+      completedCrop.width * scaleX, // The width of the clipped image
+      completedCrop.height * scaleY, // The height of the clipped image
+      0, // The x coordinate where to place the image on the final canvas
+      0, // The y coordinate where to place the image on the final canvas
+      canvas.width, // The width of the image to use (stretches to fill)
+      canvas.height, // The height of the image to use (stretches to fill)
+    );
 
     const blob = await new Promise<Blob | null>((resolve) =>
         finalCanvas.toBlob(resolve, 'image/png', 1)
@@ -155,10 +183,6 @@ export function ImageCropperDialog({
     onSave(file);
     onClose();
 }
-  
-   const handleCropChange = (newCrop: Crop, percentCrop: Crop) => {
-    setCrop(newCrop);
-  };
 
 
   return (
@@ -172,7 +196,7 @@ export function ImageCropperDialog({
               <ReactCrop
                 crop={crop}
                 onChange={handleCropChange}
-                onComplete={(c) => setCompletedCrop(c)}
+                onComplete={handleCropComplete}
                 aspect={aspect}
                 circularCrop={true}
                 keepSelection={true}
