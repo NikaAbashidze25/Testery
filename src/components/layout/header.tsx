@@ -134,8 +134,8 @@ export function Header() {
       <div className="container flex h-16 items-center">
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <TesteryLogo className="h-8 w-8" />
-            <span className="hidden font-bold sm:inline-block text-lg">Testery</span>
+            <TesteryLogo />
+            <span className="sr-only">Testery</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             {renderNavLinks()}
@@ -144,8 +144,8 @@ export function Header() {
 
         <div className="flex-1 md:hidden">
           <Link href="/" className="flex items-center space-x-2">
-            <TesteryLogo className="h-8 w-8" />
-            <span className="font-bold text-lg">Testery</span>
+            <TesteryLogo />
+            <span className="sr-only">Testery</span>
           </Link>
         </div>
 
