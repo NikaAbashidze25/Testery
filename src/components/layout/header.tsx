@@ -132,48 +132,40 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <div className="mr-4 hidden md:flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
-            <TesteryLogo />
-            <span className="sr-only">Testery</span>
-          </Link>
-          <nav className="flex items-center space-x-6 text-sm font-medium">
-            {renderNavLinks()}
-          </nav>
+        <div className="flex items-center">
+            {isMounted && (
+                <Sheet>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="mr-2">
+                    <Menu className="h-6 w-6" />
+                    <span className="sr-only">Toggle Menu</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+                    <div className="flex flex-col space-y-4 p-4">
+                    <Link href="/" className="mr-6 flex items-center space-x-2">
+                        <span className="font-bold">Navigation</span>
+                    </Link>
+                    <nav className="flex flex-col space-y-3">
+                        {renderNavLinks()}
+                    </nav>
+                    </div>
+                </SheetContent>
+                </Sheet>
+            )}
+             <Link href="/" className="flex items-center space-x-2">
+                <TesteryLogo />
+                <span className="sr-only">Testery</span>
+            </Link>
+        </div>
+       
+        <div className="hidden flex-1 items-center justify-center space-x-6 text-sm font-medium md:flex">
+             <nav className="flex items-center space-x-6 text-sm font-medium">
+                {renderNavLinks()}
+            </nav>
         </div>
 
-        <div className="flex-1 md:hidden">
-          <Link href="/" className="flex items-center space-x-2">
-            <TesteryLogo />
-            <span className="sr-only">Testery</span>
-          </Link>
-        </div>
-
-        {/* Mobile Menu */}
-        <div className="md:hidden">
-          {isMounted && (
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Toggle Menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <div className="flex flex-col space-y-4 p-4">
-                  <Link href="/" className="mr-6 flex items-center space-x-2">
-                    <span className="font-bold">Navigation</span>
-                  </Link>
-                  <nav className="flex flex-col space-y-3">
-                    {renderNavLinks()}
-                  </nav>
-                </div>
-              </SheetContent>
-            </Sheet>
-          )}
-        </div>
-
-        <div className="hidden flex-1 items-center justify-end space-x-4 md:flex">
+        <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="flex items-center space-x-2">{renderUserControls()}</nav>
         </div>
       </div>
