@@ -64,6 +64,20 @@ export function ImageCropperDialog({
     }
   }
 
+  useEffect(() => {
+    if (
+      completedCrop?.width &&
+      completedCrop?.height &&
+      imgRef.current
+    ) {
+      const image = imgRef.current
+      const { width, height } = image;
+      const initialCrop = centerAspectCrop(width, height, aspect || 1);
+      setCrop(initialCrop);
+      setCompletedCrop(initialCrop);
+    }
+  }, [scale, rotate, aspect]);
+
   async function handleSaveCrop() {
     const image = imgRef.current;
     if (!completedCrop || !image || !completedCrop.width || !completedCrop.height) {
