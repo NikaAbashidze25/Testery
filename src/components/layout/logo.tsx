@@ -8,7 +8,7 @@ export function TesteryLogo({ className }: { className?: string }) {
             alt="Testery Logo"
             width={170}
             height={47}
-            className={cn("h-12 w-auto", className)}
+            className={cn("h-14 w-auto", className)}
             priority
         />
     );
