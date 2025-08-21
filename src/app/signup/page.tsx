@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,7 +22,7 @@ import { Progress } from '@/components/ui/progress';
 import { Upload, Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, storage, googleProvider } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
@@ -125,56 +125,6 @@ export default function SignUpPage() {
   
   const [profilePictureName, setProfilePictureName] = useState('');
   const [companyLogoName, setCompanyLogoName] = useState('');
-  
-  useEffect(() => {
-    const handleRedirectResult = async () => {
-        setIsGoogleLoading(true);
-        try {
-            const result = await getRedirectResult(auth);
-            if (result) {
-                const user = result.user;
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDocSnap = await getDoc(userDocRef);
-
-                if (!userDocSnap.exists()) {
-                     await setDoc(userDocRef, {
-                        uid: user.uid,
-                        fullName: user.displayName,
-                        email: user.email,
-                        profilePictureUrl: user.photoURL,
-                        accountType: 'individual',
-                        skills: []
-                    });
-                     toast({
-                        title: "Account Created",
-                        description: "Your account has been successfully created with Google.",
-                    });
-                } else {
-                    const existingData = userDocSnap.data();
-                    await updateProfile(user, {
-                        displayName: existingData.fullName || existingData.companyName,
-                        photoURL: existingData.profilePictureUrl || existingData.companyLogoUrl,
-                    });
-                    toast({
-                      title: "Login Successful",
-                      description: `Welcome back, ${user.displayName}!`,
-                    });
-                }
-                router.push('/projects');
-            }
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Google Sign-In failed",
-                description: error.message,
-            });
-        } finally {
-            setIsGoogleLoading(false);
-        }
-    };
-    handleRedirectResult();
-  }, [router, toast]);
-
 
   const individualForm = useForm<z.infer<typeof individualSchema>>({
     resolver: zodResolver(individualSchema),
@@ -212,7 +162,46 @@ export default function SignUpPage() {
   
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    await signInWithRedirect(auth, googleProvider);
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (!userDocSnap.exists()) {
+             await setDoc(userDocRef, {
+                uid: user.uid,
+                fullName: user.displayName,
+                email: user.email,
+                profilePictureUrl: user.photoURL,
+                accountType: 'individual',
+                skills: []
+            });
+             toast({
+                title: "Account Created",
+                description: "Your account has been successfully created with Google.",
+            });
+        } else {
+            const existingData = userDocSnap.data();
+            await updateProfile(user, {
+                displayName: existingData.fullName || existingData.companyName,
+                photoURL: existingData.profilePictureUrl || existingData.companyLogoUrl,
+            });
+            toast({
+              title: "Login Successful",
+              description: `Welcome back, ${user.displayName}!`,
+            });
+        }
+        router.push('/projects');
+    } catch (error: any) {
+         toast({
+            variant: "destructive",
+            title: "Google Sign-In failed",
+            description: error.message,
+        });
+    } finally {
+        setIsGoogleLoading(false);
+    }
   };
 
 

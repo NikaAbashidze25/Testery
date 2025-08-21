@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, googleProvider } from '@/lib/firebase';
-import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -49,56 +49,6 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  useEffect(() => {
-    const handleRedirectResult = async () => {
-        setIsGoogleLoading(true);
-        try {
-            const result = await getRedirectResult(auth);
-            if (result) {
-                const user = result.user;
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDocSnap = await getDoc(userDocRef);
-
-                if (!userDocSnap.exists()) {
-                     await setDoc(userDocRef, {
-                        uid: user.uid,
-                        fullName: user.displayName,
-                        email: user.email,
-                        profilePictureUrl: user.photoURL,
-                        accountType: 'individual',
-                        skills: []
-                    });
-                     toast({
-                        title: "Account Created",
-                        description: "Your account has been successfully created with Google.",
-                    });
-                } else {
-                    const existingData = userDocSnap.data();
-                    await updateProfile(user, {
-                        displayName: existingData.fullName || existingData.companyName,
-                        photoURL: existingData.profilePictureUrl || existingData.companyLogoUrl,
-                    });
-                    toast({
-                      title: "Login Successful",
-                      description: `Welcome back, ${user.displayName}!`,
-                    });
-                }
-                router.push('/projects');
-            }
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Google Sign-In failed",
-                description: error.message,
-            });
-        } finally {
-            setIsGoogleLoading(false);
-        }
-    };
-    handleRedirectResult();
-  }, [router, toast]);
-
-
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
@@ -109,7 +59,46 @@ export default function LoginPage() {
 
  const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    await signInWithRedirect(auth, googleProvider);
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (!userDocSnap.exists()) {
+            await setDoc(userDocRef, {
+                uid: user.uid,
+                fullName: user.displayName,
+                email: user.email,
+                profilePictureUrl: user.photoURL,
+                accountType: 'individual',
+                skills: []
+            });
+            toast({
+                title: "Account Created",
+                description: "Your account has been successfully created with Google.",
+            });
+        } else {
+             const existingData = userDocSnap.data();
+             await updateProfile(user, {
+                displayName: existingData.fullName || existingData.companyName,
+                photoURL: existingData.profilePictureUrl || existingData.companyLogoUrl,
+             });
+            toast({
+                title: "Login Successful",
+                description: `Welcome back, ${user.displayName}!`,
+            });
+        }
+        router.push('/projects');
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Google Sign-In failed",
+            description: error.message,
+        });
+    } finally {
+        setIsGoogleLoading(false);
+    }
   };
 
   const onSubmit = async (data: LoginFormValues) => {
