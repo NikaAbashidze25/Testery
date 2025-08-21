@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit } from 'lucide-react';
 import Link from 'next/link';
 
 interface Project extends DocumentData {
@@ -78,10 +78,18 @@ export default function ProjectDetailPage() {
       }
       if (isOwner) {
           return (
-              <div className="flex items-center gap-2 rounded-md bg-muted p-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 rounded-md bg-muted p-3 text-sm text-muted-foreground">
                   <UserCircle className="h-5 w-5" />
                   You cannot apply to your own project.
-              </div>
+                </div>
+                <Button asChild>
+                    <Link href={`/projects/${project?.id}/edit`}>
+                       <Edit className="mr-2 h-4 w-4"/>
+                       Edit Project
+                    </Link>
+                </Button>
+            </div>
           );
       }
       if (user) {
