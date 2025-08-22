@@ -25,15 +25,18 @@ export function Header() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    setHasMounted(true);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -50,6 +53,10 @@ export function Header() {
   };
 
   const renderUserControls = () => {
+    if (isAuthLoading || !hasMounted) {
+      return <Skeleton className="h-8 w-8 rounded-full" />;
+    }
+
     if (user) {
       return (
         <DropdownMenu>
@@ -109,6 +116,16 @@ export function Header() {
         onClick: isMobile ? handleLinkClick : undefined
     };
 
+    if (isAuthLoading || !hasMounted) {
+        return (
+            <>
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-6 w-28" />
+                <Skeleton className="h-6 w-20" />
+            </>
+        )
+    }
+
     if (user) {
         return (
             <>
@@ -153,7 +170,7 @@ export function Header() {
         </div>
         
         <div className="flex items-center md:hidden">
-            {!isAuthLoading && (
+            {hasMounted && !isAuthLoading && (
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
                     <Button variant="ghost" size="icon" className="mr-2 h-10 w-10">
@@ -180,13 +197,13 @@ export function Header() {
        
         <div className="hidden flex-1 items-center justify-center space-x-6 text-sm font-medium md:flex">
              <nav className="flex items-center space-x-6 text-sm font-medium">
-                {!isAuthLoading && renderNavLinks()}
+                {renderNavLinks()}
             </nav>
         </div>
 
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="flex items-center space-x-2">
-            {isAuthLoading ? <Skeleton className="h-8 w-8 rounded-full" /> : renderUserControls()}
+            {renderUserControls()}
           </nav>
         </div>
       </div>
