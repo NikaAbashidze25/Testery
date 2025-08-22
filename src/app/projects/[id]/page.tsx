@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit } from 'lucide-react';
+import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check } from 'lucide-react';
 import Link from 'next/link';
 
 interface Project extends DocumentData {
@@ -37,6 +37,8 @@ export default function ProjectDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [hasApplied, setHasApplied] = useState(false);
+
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -63,6 +65,12 @@ export default function ProjectDetailPage() {
         fetchProject();
     }
   }, [id]);
+
+  const handleApply = () => {
+    // In a real application, you would save this to a database.
+    // For now, we'll just update the UI state.
+    setHasApplied(true);
+  };
 
   const formatPostedDate = (timestamp: Project['postedAt']) => {
     if (!timestamp) return '...';
@@ -93,7 +101,15 @@ export default function ProjectDetailPage() {
           );
       }
       if (user) {
-          return <Button size="lg">Apply for this Project</Button>;
+          if (hasApplied) {
+            return (
+                <Button size="lg" disabled>
+                    <Check className="mr-2 h-4 w-4" />
+                    Applied
+                </Button>
+            );
+          }
+          return <Button size="lg" onClick={handleApply}>Apply for this Project</Button>;
       }
       return (
           <Button size="lg" asChild>
