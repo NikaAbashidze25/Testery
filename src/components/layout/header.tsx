@@ -147,8 +147,20 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <div className="mr-auto flex items-center">
-           <Link href="/" className="inline-block" aria-label="Homepage">
-                <TesteryLogo className="h-32 w-auto" />
+           <Link 
+              href="/" 
+              className="inline-block" 
+              aria-label="Homepage"
+              style={{ 
+                WebkitMaskImage: 'url(/logo.png)',
+                maskImage: 'url(/logo.png)',
+                WebkitMaskSize: 'contain',
+                maskSize: 'contain',
+                WebkitMaskRepeat: 'no-repeat',
+                maskRepeat: 'no-repeat',
+              }}
+            >
+              <TesteryLogo className="h-28" />
             </Link>
         </div>
         
