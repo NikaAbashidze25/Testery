@@ -50,10 +50,6 @@ export function Header() {
   };
 
   const renderUserControls = () => {
-    if (isAuthLoading) { 
-      return <Skeleton className="h-8 w-8 rounded-full" />
-    }
-
     if (user) {
       return (
         <DropdownMenu>
@@ -112,16 +108,6 @@ export function Header() {
     const linkProps = {
         onClick: isMobile ? handleLinkClick : undefined
     };
-
-    if (isAuthLoading) {
-        return (
-             <>
-                <Skeleton className={`h-6 w-28 ${isMobile ? 'my-2' : ''}`} />
-                <Skeleton className={`h-6 w-28 ${isMobile ? 'my-2' : ''}`} />
-                <Skeleton className={`h-6 w-24 ${isMobile ? 'my-2' : ''}`} />
-            </>
-        )
-    }
 
     if (user) {
         return (
@@ -194,12 +180,14 @@ export function Header() {
        
         <div className="hidden flex-1 items-center justify-center space-x-6 text-sm font-medium md:flex">
              <nav className="flex items-center space-x-6 text-sm font-medium">
-                {renderNavLinks()}
+                {!isAuthLoading && renderNavLinks()}
             </nav>
         </div>
 
         <div className="flex flex-1 items-center justify-end space-x-4">
-          <nav className="flex items-center space-x-2">{renderUserControls()}</nav>
+          <nav className="flex items-center space-x-2">
+            {isAuthLoading ? <Skeleton className="h-8 w-8 rounded-full" /> : renderUserControls()}
+          </nav>
         </div>
       </div>
     </header>
