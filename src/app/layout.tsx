@@ -27,7 +27,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.className} antialiased`}>
       <body>
         <div className="flex min-h-screen flex-col">
-          <div className="flex items-center container">
+          <div className="container flex h-16 items-center">
              <Link href="/" className="hidden items-center space-x-2 md:flex mr-6">
                 <TesteryLogo className="h-24 w-auto" />
                 <span className="sr-only">Testery</span>
