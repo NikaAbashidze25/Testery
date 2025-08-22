@@ -62,3 +62,9 @@
     font-family: 'Inter', sans-serif;
   }
 }
+
+@layer components {
+  [role="img"] {
+    outline: none;
+  }
+}
