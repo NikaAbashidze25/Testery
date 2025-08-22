@@ -31,11 +31,12 @@ export default function Home() {
               </div>
             </div>
             <Image
-              src="/logo.png"
+              src="https://placehold.co/600x400.png"
               width="600"
-              height="166"
-              alt="Testery Logo"
-              className="mx-auto aspect-video overflow-hidden rounded-xl object-contain sm:w-full lg:order-last"
+              height="400"
+              alt="Testery platform screenshot"
+              className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last"
+              data-ai-hint="app testing platform"
             />
           </div>
         </div>

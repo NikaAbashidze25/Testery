@@ -136,12 +136,12 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-20 items-center">
+      <div className="container flex h-16 items-center">
         <div className="flex items-center">
             <Sheet>
             <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="mr-2 h-10 w-10 md:hidden">
-                <Menu className="h-8 w-8" />
+                <Menu className="h-6 w-6" />
                 <span className="sr-only">Toggle Menu</span>
                 </Button>
             </SheetTrigger>
@@ -151,7 +151,7 @@ export function Header() {
                 </SheetHeader>
                 <div className="flex flex-col space-y-4 p-4">
                 <Link href="/" className="mr-6 flex items-center space-x-2">
-                    <TesteryLogo className="h-10 w-auto" />
+                    <TesteryLogo />
                 </Link>
                 <nav className="flex flex-col space-y-3">
                     {renderNavLinks(true)}
@@ -159,7 +159,7 @@ export function Header() {
                 </div>
             </SheetContent>
             </Sheet>
-             <Link href="/" className="flex items-center space-x-2">
+             <Link href="/" className="hidden items-center space-x-2 md:flex">
                 <TesteryLogo />
                 <span className="sr-only">Testery</span>
             </Link>
