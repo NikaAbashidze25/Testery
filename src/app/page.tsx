@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-white">
+      <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-card">
         <div className="container px-4 md:px-6">
           <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px]">
             <div className="flex flex-col justify-center space-y-4">
@@ -56,7 +56,7 @@ export default function Home() {
           </div>
           <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3 lg:max-w-none mt-12">
             <div className="grid gap-1 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 mb-4">
                 <Search className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-lg font-bold">1. Post a Project</h3>
@@ -65,7 +65,7 @@ export default function Home() {
               </p>
             </div>
             <div className="grid gap-1 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 mb-4">
                 <CheckCircle className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-lg font-bold">2. Testers Apply & Work</h3>
@@ -74,7 +74,7 @@ export default function Home() {
               </p>
             </div>
             <div className="grid gap-1 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 mb-4">
                 <DollarSign className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-lg font-bold">3. Review & Pay</h3>
@@ -87,7 +87,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-white">
+      <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-card">
         <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
                 <div className="space-y-2">
@@ -98,9 +98,9 @@ export default function Home() {
                 </div>
             </div>
             <div className="mx-auto grid max-w-sm items-start gap-8 sm:max-w-4xl sm:grid-cols-2 md:gap-12 lg:max-w-5xl lg:grid-cols-2 mt-12">
-                <Card>
+                <Card className="bg-background">
                     <CardHeader className="flex flex-row items-center gap-4">
-                        <div className="flex items-center justify-center rounded-full bg-primary/10 p-2">
+                        <div className="flex items-center justify-center rounded-full bg-primary/20 p-2">
                             <Search className="h-6 w-6 text-primary" />
                         </div>
                         <CardTitle>Project Posting & Search</CardTitle>
@@ -109,9 +109,9 @@ export default function Home() {
                         <p className="text-sm text-muted-foreground">Easily post testing projects and allow our community of testers to find and apply for them with advanced filtering.</p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="bg-background">
                     <CardHeader className="flex flex-row items-center gap-4">
-                        <div className="flex items-center justify-center rounded-full bg-primary/10 p-2">
+                        <div className="flex items-center justify-center rounded-full bg-primary/20 p-2">
                            <MessageSquare className="h-6 w-6 text-primary" />
                         </div>
                         <CardTitle>Seamless Communication</CardTitle>
