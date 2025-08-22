@@ -6,13 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth, db } from "@/lib/firebase";
-import { collection, getDocs, orderBy, query, where, type DocumentData } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, orderBy, query, type DocumentData } from "firebase/firestore";
 import { formatDistanceToNow } from 'date-fns';
 import { Search, MapPin, Inbox, User } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 
 interface Project extends DocumentData {
     id: string;
@@ -34,14 +33,6 @@ interface Project extends DocumentData {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -52,10 +43,8 @@ export default function ProjectsPage() {
             
             const querySnapshot = await getDocs(q);
             
-            // Manually filter out projects by the current user
             const projectsData = querySnapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() } as Project))
-                .filter(project => user ? project.authorId !== user.uid : true);
+                .map(doc => ({ id: doc.id, ...doc.data() } as Project));
 
             setProjects(projectsData);
         } catch (error) {
@@ -65,7 +54,7 @@ export default function ProjectsPage() {
         }
     };
     fetchProjects();
-  }, [user]);
+  }, []);
 
   const formatPostedDate = (timestamp: Project['postedAt']) => {
     if (!timestamp) return '...';
@@ -126,7 +115,7 @@ export default function ProjectsPage() {
                     <Inbox className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <CardTitle className="mt-4">No Projects Found</CardTitle>
-                <CardDescription>There are currently no projects available for you to apply to. Check back later!</CardDescription>
+                <CardDescription>There are currently no projects available. Check back later!</CardDescription>
             </CardHeader>
         </Card>
       )}

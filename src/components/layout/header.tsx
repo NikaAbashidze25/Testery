@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Menu, User, LogOut } from 'lucide-react';
+import { Menu, User, LogOut, Search, FilePlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -18,17 +18,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { RoleSwitcher } from './role-switcher';
 import { TesteryLogo } from './logo';
 import { Skeleton } from '../ui/skeleton';
 
 export function Header() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -48,7 +49,7 @@ export function Header() {
   };
 
   const renderUserControls = () => {
-    if (user === undefined) { // Still checking auth state
+    if (isAuthLoading) { 
       return <Skeleton className="h-8 w-8 rounded-full" />
     }
 
@@ -99,23 +100,35 @@ export function Header() {
     );
   };
   
-  const renderNavLinks = () => {
-    if (user === undefined) {
+  const renderNavLinks = (isMobile = false) => {
+    if (isAuthLoading) {
       return null;
     }
+    const commonClass = "transition-colors hover:text-foreground/80 text-foreground/60";
+    const mobileClass = "flex items-center gap-2";
+
     if (user) {
-        return <RoleSwitcher />;
+        return (
+            <>
+                <Link href="/projects" className={isMobile ? mobileClass : commonClass}>
+                   {isMobile && <Search className="h-4 w-4" />} Find a Project
+                </Link>
+                <Link href="/projects/post" className={isMobile ? mobileClass : commonClass}>
+                   {isMobile && <FilePlus className="h-4 w-4" />} Post a Project
+                </Link>
+            </>
+        );
     }
     return (
         <>
-            <Link href="/projects" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              Find a Project
+            <Link href="/projects" className={isMobile ? mobileClass : commonClass}>
+               {isMobile && <Search className="h-4 w-4" />} Find a Project
             </Link>
-            <Link href="/projects/post" className="transition-colors hover:text-foreground/80 text-foreground/60">
-              Post a Project
-            </Link>
-            <Link href="/#features" className="transition-colors hover:text-foreground/80 text-foreground/60">
+             <Link href="/#features" className={isMobile ? mobileClass : commonClass}>
               Features
+            </Link>
+            <Link href="/about" className={isMobile ? mobileClass : commonClass}>
+              About Us
             </Link>
         </>
     )
@@ -127,7 +140,7 @@ export function Header() {
         <div className="flex items-center">
             <Sheet>
             <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="mr-2 h-10 w-10">
+                <Button variant="ghost" size="icon" className="mr-2 h-10 w-10 md:hidden">
                 <Menu className="h-8 w-8" />
                 <span className="sr-only">Toggle Menu</span>
                 </Button>
@@ -138,10 +151,10 @@ export function Header() {
                 </SheetHeader>
                 <div className="flex flex-col space-y-4 p-4">
                 <Link href="/" className="mr-6 flex items-center space-x-2">
-                    <span className="font-bold">Navigation</span>
+                    <TesteryLogo className="h-10 w-auto" />
                 </Link>
                 <nav className="flex flex-col space-y-3">
-                    {renderNavLinks()}
+                    {renderNavLinks(true)}
                 </nav>
                 </div>
             </SheetContent>
