@@ -22,7 +22,7 @@ import { Progress } from '@/components/ui/progress';
 import { Upload, Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, storage, googleProvider } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, signInWithRedirect, getRedirectResult, inMemoryPersistence, setPersistence } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
@@ -114,7 +114,7 @@ const GoogleIcon = () => (
 export default function SignUpPage() {
   const [accountType, setAccountType] = useState('individual');
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -137,67 +137,60 @@ export default function SignUpPage() {
   });
 
    useEffect(() => {
-    const handleRedirectResult = async () => {
-        setIsGoogleLoading(true);
-        try {
-            const result = await getRedirectResult(auth);
-            if (result) {
-                const user = result.user;
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDocSnap = await getDoc(userDocRef);
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result) {
+            const user = result.user;
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
 
-                 if (!userDocSnap.exists()) {
-                    let userData;
-                    if (accountType === 'individual') {
-                        userData = {
-                            uid: user.uid,
-                            fullName: user.displayName,
-                            email: user.email,
-                            profilePictureUrl: user.photoURL,
-                            accountType: 'individual',
-                            skills: []
-                        };
-                    } else { // company
-                        userData = {
-                            uid: user.uid,
-                            companyName: user.displayName, // Default to user's name
-                            contactPerson: user.displayName, // Default to user's name
-                            email: user.email,
-                            companyLogoUrl: user.photoURL,
-                            accountType: 'company',
-                            industry: '',
-                            website: ''
-                        };
-                    }
-                    await setDoc(userDocRef, userData);
-                    toast({
-                        title: "Account Created",
-                        description: "Your account has been successfully created with Google.",
-                    });
-                } else {
-                    const existingData = userDocSnap.data();
-                     await updateProfile(user, {
-                        displayName: existingData.fullName || existingData.companyName,
-                        photoURL: existingData.profilePictureUrl || existingData.companyLogoUrl,
-                     });
-                    toast({
-                      title: "Login Successful",
-                      description: `Welcome back, ${user.displayName}!`,
-                    });
+             if (!userDocSnap.exists()) {
+                let userData;
+                if (accountType === 'individual') {
+                    userData = {
+                        uid: user.uid,
+                        fullName: user.displayName,
+                        email: user.email,
+                        profilePictureUrl: user.photoURL,
+                        accountType: 'individual',
+                        skills: []
+                    };
+                } else { // company
+                    userData = {
+                        uid: user.uid,
+                        companyName: user.displayName, // Default to user's name
+                        contactPerson: user.displayName, // Default to user's name
+                        email: user.email,
+                        companyLogoUrl: user.photoURL,
+                        accountType: 'company',
+                        industry: '',
+                        website: ''
+                    };
                 }
-                router.push('/projects');
+                await setDoc(userDocRef, userData);
+                toast({
+                    title: "Account Created",
+                    description: "Your account has been successfully created with Google.",
+                });
+            } else {
+                toast({
+                  title: "Login Successful",
+                  description: `Welcome back, ${user.displayName}!`,
+                });
             }
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Google Sign-In failed",
-                description: error.message,
-            });
-        } finally {
+            router.push('/projects');
+        } else {
             setIsGoogleLoading(false);
         }
-    };
-    handleRedirectResult();
+      })
+      .catch((error) => {
+        toast({
+            variant: "destructive",
+            title: "Google Sign-In failed",
+            description: error.message,
+        });
+        setIsGoogleLoading(false);
+      });
   }, [router, toast, accountType]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: any, setName: (name: string) => void) => {
@@ -226,16 +219,15 @@ export default function SignUpPage() {
   
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    try {
-        await signInWithRedirect(auth, googleProvider);
-    } catch (error: any) {
+    await setPersistence(auth, inMemoryPersistence);
+    signInWithRedirect(auth, googleProvider).catch((error) => {
          toast({
             variant: "destructive",
             title: "Google Sign-In failed",
             description: error.message,
         });
         setIsGoogleLoading(false);
-    }
+    });
   };
 
 

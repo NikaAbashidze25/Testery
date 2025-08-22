@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, googleProvider } from '@/lib/firebase';
-import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult, updateProfile, inMemoryPersistence, setPersistence } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -44,7 +44,7 @@ const GoogleIcon = () => (
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(true); // Start as true to handle redirect
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -57,68 +57,60 @@ export default function LoginPage() {
     },
   });
 
-  useEffect(() => {
-    const handleRedirectResult = async () => {
-        setIsGoogleLoading(true);
-        try {
-            const result = await getRedirectResult(auth);
-            if (result) {
-                const user = result.user;
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDocSnap = await getDoc(userDocRef);
+   useEffect(() => {
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result) {
+            const user = result.user;
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
 
-                 if (!userDocSnap.exists()) {
-                    await setDoc(userDocRef, {
-                        uid: user.uid,
-                        fullName: user.displayName,
-                        email: user.email,
-                        profilePictureUrl: user.photoURL,
-                        accountType: 'individual',
-                        skills: []
-                    });
-                    toast({
-                        title: "Account Created",
-                        description: "Your account has been successfully created with Google.",
-                    });
-                } else {
-                    const existingData = userDocSnap.data();
-                    await updateProfile(user, {
-                        displayName: existingData.fullName || existingData.companyName,
-                        photoURL: existingData.profilePictureUrl || existingData.companyLogoUrl,
-                    });
-                    toast({
-                        title: "Login Successful",
-                        description: `Welcome back, ${user.displayName}!`,
-                    });
-                }
-                router.push('/projects');
+             if (!userDocSnap.exists()) {
+                await setDoc(userDocRef, {
+                    uid: user.uid,
+                    fullName: user.displayName,
+                    email: user.email,
+                    profilePictureUrl: user.photoURL,
+                    accountType: 'individual',
+                    skills: []
+                });
+                toast({
+                    title: "Account Created",
+                    description: "Your account has been successfully created with Google.",
+                });
+            } else {
+                toast({
+                    title: "Login Successful",
+                    description: `Welcome back, ${user.displayName}!`,
+                });
             }
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Google Sign-In failed",
-                description: error.message,
-            });
-        } finally {
+            router.push('/projects');
+        } else {
             setIsGoogleLoading(false);
         }
-    };
-    handleRedirectResult();
-  }, [router, toast]);
-
-
- const handleGoogleSignIn = async () => {
-    setIsGoogleLoading(true);
-    try {
-        await signInWithRedirect(auth, googleProvider);
-    } catch (error: any) {
+      })
+      .catch((error) => {
         toast({
             variant: "destructive",
             title: "Google Sign-In failed",
             description: error.message,
         });
         setIsGoogleLoading(false);
-    }
+      });
+  }, [router, toast]);
+
+
+ const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    await setPersistence(auth, inMemoryPersistence);
+    signInWithRedirect(auth, googleProvider).catch((error) => {
+         toast({
+            variant: "destructive",
+            title: "Google Sign-In failed",
+            description: error.message,
+        });
+        setIsGoogleLoading(false);
+    });
   };
 
   const onSubmit = async (data: LoginFormValues) => {
