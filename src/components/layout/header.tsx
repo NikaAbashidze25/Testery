@@ -115,7 +115,7 @@ export function Header() {
 
     if (isAuthLoading) {
         return (
-            <>
+             <>
                 <Skeleton className={`h-6 w-28 ${isMobile ? 'my-2' : ''}`} />
                 <Skeleton className={`h-6 w-28 ${isMobile ? 'my-2' : ''}`} />
                 <Skeleton className={`h-6 w-24 ${isMobile ? 'my-2' : ''}`} />
@@ -131,6 +131,9 @@ export function Header() {
                 </Link>
                 <Link href="/projects/post" className={isMobile ? mobileClass : commonClass} {...linkProps}>
                    {isMobile && <FilePlus className="h-4 w-4" />} Post a Project
+                </Link>
+                 <Link href="/about" className={isMobile ? mobileClass : commonClass} {...linkProps}>
+                  About Us
                 </Link>
             </>
         );
@@ -164,27 +167,29 @@ export function Header() {
         </div>
         
         <div className="flex items-center md:hidden">
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="mr-2 h-10 w-10">
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">Toggle Menu</span>
-                </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-                <SheetHeader>
-                    <SheetTitle className="sr-only">Menu</SheetTitle>
-                </SheetHeader>
-                 <Link href="/" className="mr-6 flex items-center space-x-2" onClick={handleLinkClick}>
-                    <TesteryLogo className="h-20 w-auto" />
-                </Link>
-                <div className="flex flex-col space-y-4 p-4">
-                <nav className="flex flex-col space-y-3">
-                    {renderNavLinks(true)}
-                </nav>
-                </div>
-            </SheetContent>
-            </Sheet>
+            {!isAuthLoading && (
+                <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="mr-2 h-10 w-10">
+                    <Menu className="h-6 w-6" />
+                    <span className="sr-only">Toggle Menu</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+                    <SheetHeader>
+                        <SheetTitle className="sr-only">Menu</SheetTitle>
+                    </SheetHeader>
+                    <Link href="/" className="mr-6 flex items-center space-x-2" onClick={handleLinkClick}>
+                        <TesteryLogo className="h-20 w-auto" />
+                    </Link>
+                    <div className="flex flex-col space-y-4 p-4">
+                    <nav className="flex flex-col space-y-3">
+                        {renderNavLinks(true)}
+                    </nav>
+                    </div>
+                </SheetContent>
+                </Sheet>
+            )}
         </div>
        
         <div className="hidden flex-1 items-center justify-center space-x-6 text-sm font-medium md:flex">
