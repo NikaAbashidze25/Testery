@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, googleProvider } from '@/lib/firebase';
-import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -44,7 +44,7 @@ const GoogleIcon = () => (
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(true); // Start as true to handle redirect
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -57,60 +57,44 @@ export default function LoginPage() {
     },
   });
 
-   useEffect(() => {
-    getRedirectResult(auth)
-      .then(async (result) => {
-        if (result) {
-            setIsGoogleLoading(true);
-            const user = result.user;
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDocSnap = await getDoc(userDocRef);
-
-             if (!userDocSnap.exists()) {
-                await setDoc(userDocRef, {
-                    uid: user.uid,
-                    fullName: user.displayName,
-                    email: user.email,
-                    profilePictureUrl: user.photoURL,
-                    accountType: 'individual',
-                    skills: []
-                });
-                toast({
-                    title: "Account Created",
-                    description: "Your account has been successfully created with Google.",
-                });
-            } else {
-                toast({
-                    title: "Login Successful",
-                    description: `Welcome back, ${user.displayName}!`,
-                });
-            }
-            router.push('/projects');
-        } else {
-            setIsGoogleLoading(false);
-        }
-      })
-      .catch((error) => {
-        toast({
-            variant: "destructive",
-            title: "Google Sign-In failed",
-            description: error.message,
-        });
-        setIsGoogleLoading(false);
-      });
-  }, [router, toast]);
-
-
  const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    signInWithRedirect(auth, googleProvider).catch((error) => {
-         toast({
-            variant: "destructive",
-            title: "Google Sign-In failed",
-            description: error.message,
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+        await setDoc(userDocRef, {
+          uid: user.uid,
+          fullName: user.displayName,
+          email: user.email,
+          profilePictureUrl: user.photoURL,
+          accountType: 'individual',
+          skills: []
         });
-        setIsGoogleLoading(false);
-    });
+        toast({
+          title: "Account Created",
+          description: "Your account has been successfully created with Google.",
+        });
+      } else {
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${user.displayName}!`,
+        });
+      }
+      router.push('/projects');
+
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Google Sign-In failed",
+        description: error.message,
+      });
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   const onSubmit = async (data: LoginFormValues) => {
