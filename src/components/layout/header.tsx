@@ -137,6 +137,11 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
+        <Link href="/" className="mr-6 hidden items-center space-x-2 md:flex">
+          <TesteryLogo className="h-28 w-auto" />
+          <span className="sr-only">Testery</span>
+        </Link>
+        
         <div className="flex items-center md:hidden">
             <Sheet>
             <SheetTrigger asChild>
