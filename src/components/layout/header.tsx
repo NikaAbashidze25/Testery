@@ -151,16 +151,8 @@ export function Header() {
               href="/" 
               className="inline-block" 
               aria-label="Homepage"
-              style={{ 
-                WebkitMaskImage: 'url(/logo.png)',
-                maskImage: 'url(/logo.png)',
-                WebkitMaskSize: 'contain',
-                maskSize: 'contain',
-                WebkitMaskRepeat: 'no-repeat',
-                maskRepeat: 'no-repeat',
-              }}
             >
-              <TesteryLogo className="h-28" />
+              <TesteryLogo className="h-32" />
             </Link>
         </div>
         
