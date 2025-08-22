@@ -108,18 +108,20 @@ export default function PostProjectPage() {
   
   return (
     <div className="container py-12">
-      <div className="max-w-3xl mx-auto mb-6 flex justify-end">
-          <Button asChild variant="outline">
-              <Link href="/profile/my-projects">
-                  <FileText className="mr-2 h-4 w-4" />
-                  My Posted Projects
-              </Link>
-          </Button>
-      </div>
       <Card className="max-w-3xl mx-auto">
         <CardHeader>
-          <CardTitle>Post a New Testing Project</CardTitle>
-          <CardDescription>Fill out the details below to find the perfect tester for your project.</CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Post a New Testing Project</CardTitle>
+              <CardDescription>Fill out the details below to find the perfect tester for your project.</CardDescription>
+            </div>
+            <Button asChild variant="outline">
+                <Link href="/profile/my-projects">
+                    <FileText className="mr-2 h-4 w-4" />
+                    My Posted Projects
+                </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Form {...form}>
