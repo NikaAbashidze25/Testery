@@ -169,14 +169,29 @@ export default function SignUpPage() {
         const userDocSnap = await getDoc(userDocRef);
 
         if (!userDocSnap.exists()) {
-             await setDoc(userDocRef, {
-                uid: user.uid,
-                fullName: user.displayName,
-                email: user.email,
-                profilePictureUrl: user.photoURL,
-                accountType: 'individual',
-                skills: []
-            });
+            let userData;
+            if (accountType === 'individual') {
+                userData = {
+                    uid: user.uid,
+                    fullName: user.displayName,
+                    email: user.email,
+                    profilePictureUrl: user.photoURL,
+                    accountType: 'individual',
+                    skills: []
+                };
+            } else { // company
+                userData = {
+                    uid: user.uid,
+                    companyName: user.displayName, // Default to user's name
+                    contactPerson: user.displayName, // Default to user's name
+                    email: user.email,
+                    companyLogoUrl: user.photoURL,
+                    accountType: 'company',
+                    industry: '',
+                    website: ''
+                };
+            }
+            await setDoc(userDocRef, userData);
              toast({
                 title: "Account Created",
                 description: "Your account has been successfully created with Google.",
