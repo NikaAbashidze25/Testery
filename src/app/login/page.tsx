@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, googleProvider } from '@/lib/firebase';
-import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult, updateProfile, inMemoryPersistence, setPersistence } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -61,6 +61,7 @@ export default function LoginPage() {
     getRedirectResult(auth)
       .then(async (result) => {
         if (result) {
+            setIsGoogleLoading(true);
             const user = result.user;
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
@@ -102,7 +103,6 @@ export default function LoginPage() {
 
  const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    await setPersistence(auth, inMemoryPersistence);
     signInWithRedirect(auth, googleProvider).catch((error) => {
          toast({
             variant: "destructive",

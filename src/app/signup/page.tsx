@@ -22,7 +22,7 @@ import { Progress } from '@/components/ui/progress';
 import { Upload, Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, storage, googleProvider } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, signInWithRedirect, getRedirectResult, inMemoryPersistence, setPersistence } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
@@ -140,6 +140,7 @@ export default function SignUpPage() {
     getRedirectResult(auth)
       .then(async (result) => {
         if (result) {
+            setIsGoogleLoading(true);
             const user = result.user;
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
@@ -219,7 +220,6 @@ export default function SignUpPage() {
   
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    await setPersistence(auth, inMemoryPersistence);
     signInWithRedirect(auth, googleProvider).catch((error) => {
          toast({
             variant: "destructive",
