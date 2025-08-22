@@ -3,7 +3,7 @@ import { TesteryLogo } from './logo';
 
 export function Footer() {
   return (
-    <footer className="w-full border-t bg-white">
+    <footer className="w-full border-t bg-background">
       <div className="container py-8 flex flex-col md:flex-row items-center justify-between">
         <div className="flex items-center space-x-2 mb-4 md:mb-0">
           <TesteryLogo />
