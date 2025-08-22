@@ -24,6 +24,7 @@ import { Skeleton } from '../ui/skeleton';
 export function Header() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -100,20 +101,28 @@ export function Header() {
     );
   };
   
+  const handleLinkClick = () => {
+    setMobileMenuOpen(false);
+  };
+
   const renderNavLinks = (isMobile = false) => {
     if (isAuthLoading) {
       return null;
     }
     const commonClass = "transition-colors hover:text-foreground/80 text-foreground/60";
-    const mobileClass = "flex items-center gap-2";
+    const mobileClass = "flex items-center gap-2 text-lg py-2";
+
+    const linkProps = {
+        onClick: isMobile ? handleLinkClick : undefined
+    };
 
     if (user) {
         return (
             <>
-                <Link href="/projects" className={isMobile ? mobileClass : commonClass}>
+                <Link href="/projects" className={isMobile ? mobileClass : commonClass} {...linkProps}>
                    {isMobile && <Search className="h-4 w-4" />} Find a Project
                 </Link>
-                <Link href="/projects/post" className={isMobile ? mobileClass : commonClass}>
+                <Link href="/projects/post" className={isMobile ? mobileClass : commonClass} {...linkProps}>
                    {isMobile && <FilePlus className="h-4 w-4" />} Post a Project
                 </Link>
             </>
@@ -121,13 +130,13 @@ export function Header() {
     }
     return (
         <>
-            <Link href="/projects" className={isMobile ? mobileClass : commonClass}>
+            <Link href="/projects" className={isMobile ? mobileClass : commonClass} {...linkProps}>
                {isMobile && <Search className="h-4 w-4" />} Find a Project
             </Link>
-             <Link href="/#features" className={isMobile ? mobileClass : commonClass}>
+             <Link href="/#features" className={isMobile ? mobileClass : commonClass} {...linkProps}>
               Features
             </Link>
-            <Link href="/about" className={isMobile ? mobileClass : commonClass}>
+            <Link href="/about" className={isMobile ? mobileClass : commonClass} {...linkProps}>
               About Us
             </Link>
         </>
@@ -137,15 +146,15 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <div className="mr-6 flex items-center">
-          <Link href="/" className="mr-6 flex items-center space-x-2 md:flex">
-            <TesteryLogo className="h-32 w-auto" />
-            <span className="sr-only">Testery</span>
-          </Link>
+        <div className="mr-auto flex items-center">
+           <Link href="/" className="mr-6" aria-label="Homepage">
+                <TesteryLogo className="h-32 w-auto" />
+                <span className="sr-only">Testery</span>
+            </Link>
         </div>
         
         <div className="flex items-center md:hidden">
-            <Sheet>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="mr-2 h-10 w-10">
                 <Menu className="h-6 w-6" />
@@ -156,10 +165,10 @@ export function Header() {
                 <SheetHeader>
                     <SheetTitle className="sr-only">Menu</SheetTitle>
                 </SheetHeader>
-                <div className="flex flex-col space-y-4 p-4">
-                <Link href="/" className="mr-6 flex items-center space-x-2">
-                    <TesteryLogo />
+                 <Link href="/" className="mr-6 flex items-center space-x-2" onClick={handleLinkClick}>
+                    <TesteryLogo className="h-20 w-auto" />
                 </Link>
+                <div className="flex flex-col space-y-4 p-4">
                 <nav className="flex flex-col space-y-3">
                     {renderNavLinks(true)}
                 </nav>
