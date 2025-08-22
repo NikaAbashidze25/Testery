@@ -29,7 +29,7 @@ export default function RootLayout({
         <div className="flex min-h-screen flex-col">
           <div className="flex items-center container">
              <Link href="/" className="hidden items-center space-x-2 md:flex mr-6">
-                <TesteryLogo className="h-16 w-auto" />
+                <TesteryLogo className="h-24 w-auto" />
                 <span className="sr-only">Testery</span>
             </Link>
             <div className="flex-1">
