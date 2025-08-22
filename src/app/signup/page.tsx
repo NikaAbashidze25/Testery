@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,7 +22,7 @@ import { Progress } from '@/components/ui/progress';
 import { Upload, Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, storage, googleProvider } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
@@ -136,6 +136,70 @@ export default function SignUpPage() {
     defaultValues: { companyName: "", contactPerson: "", email: "", password: "", confirmPassword: "", industry: "", website: "" },
   });
 
+   useEffect(() => {
+    const handleRedirectResult = async () => {
+        setIsGoogleLoading(true);
+        try {
+            const result = await getRedirectResult(auth);
+            if (result) {
+                const user = result.user;
+                const userDocRef = doc(db, 'users', user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                 if (!userDocSnap.exists()) {
+                    let userData;
+                    if (accountType === 'individual') {
+                        userData = {
+                            uid: user.uid,
+                            fullName: user.displayName,
+                            email: user.email,
+                            profilePictureUrl: user.photoURL,
+                            accountType: 'individual',
+                            skills: []
+                        };
+                    } else { // company
+                        userData = {
+                            uid: user.uid,
+                            companyName: user.displayName, // Default to user's name
+                            contactPerson: user.displayName, // Default to user's name
+                            email: user.email,
+                            companyLogoUrl: user.photoURL,
+                            accountType: 'company',
+                            industry: '',
+                            website: ''
+                        };
+                    }
+                    await setDoc(userDocRef, userData);
+                    toast({
+                        title: "Account Created",
+                        description: "Your account has been successfully created with Google.",
+                    });
+                } else {
+                    const existingData = userDocSnap.data();
+                     await updateProfile(user, {
+                        displayName: existingData.fullName || existingData.companyName,
+                        photoURL: existingData.profilePictureUrl || existingData.companyLogoUrl,
+                     });
+                    toast({
+                      title: "Login Successful",
+                      description: `Welcome back, ${user.displayName}!`,
+                    });
+                }
+                router.push('/projects');
+            }
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Google Sign-In failed",
+                description: error.message,
+            });
+        } finally {
+            setIsGoogleLoading(false);
+        }
+    };
+    handleRedirectResult();
+  }, [router, toast, accountType]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: any, setName: (name: string) => void) => {
     const file = e.target.files?.[0];
     if (!file) {
@@ -163,58 +227,13 @@ export default function SignUpPage() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-        const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (!userDocSnap.exists()) {
-            let userData;
-            if (accountType === 'individual') {
-                userData = {
-                    uid: user.uid,
-                    fullName: user.displayName,
-                    email: user.email,
-                    profilePictureUrl: user.photoURL,
-                    accountType: 'individual',
-                    skills: []
-                };
-            } else { // company
-                userData = {
-                    uid: user.uid,
-                    companyName: user.displayName, // Default to user's name
-                    contactPerson: user.displayName, // Default to user's name
-                    email: user.email,
-                    companyLogoUrl: user.photoURL,
-                    accountType: 'company',
-                    industry: '',
-                    website: ''
-                };
-            }
-            await setDoc(userDocRef, userData);
-             toast({
-                title: "Account Created",
-                description: "Your account has been successfully created with Google.",
-            });
-        } else {
-            const existingData = userDocSnap.data();
-            await updateProfile(user, {
-                displayName: existingData.fullName || existingData.companyName,
-                photoURL: existingData.profilePictureUrl || existingData.companyLogoUrl,
-            });
-            toast({
-              title: "Login Successful",
-              description: `Welcome back, ${user.displayName}!`,
-            });
-        }
-        router.push('/projects');
+        await signInWithRedirect(auth, googleProvider);
     } catch (error: any) {
          toast({
             variant: "destructive",
             title: "Google Sign-In failed",
             description: error.message,
         });
-    } finally {
         setIsGoogleLoading(false);
     }
   };
