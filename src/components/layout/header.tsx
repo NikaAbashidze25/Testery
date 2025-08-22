@@ -116,7 +116,7 @@ export function Header() {
         onClick: isMobile ? handleLinkClick : undefined
     };
 
-    if (isAuthLoading || !hasMounted) {
+    if (isAuthLoading) {
         return (
             <>
                 <Skeleton className="h-6 w-24" />
@@ -170,7 +170,7 @@ export function Header() {
         </div>
         
         <div className="flex items-center md:hidden">
-            {hasMounted && !isAuthLoading && (
+            {hasMounted && (
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
                     <Button variant="ghost" size="icon" className="mr-2 h-10 w-10">
@@ -197,13 +197,13 @@ export function Header() {
        
         <div className="hidden flex-1 items-center justify-center space-x-6 text-sm font-medium md:flex">
              <nav className="flex items-center space-x-6 text-sm font-medium">
-                {renderNavLinks()}
+                {hasMounted && renderNavLinks()}
             </nav>
         </div>
 
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="flex items-center space-x-2">
-            {renderUserControls()}
+            {hasMounted && renderUserControls()}
           </nav>
         </div>
       </div>
