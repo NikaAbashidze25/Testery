@@ -137,10 +137,10 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <div className="flex items-center">
+        <div className="flex items-center md:hidden">
             <Sheet>
             <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="mr-2 h-10 w-10 md:hidden">
+                <Button variant="ghost" size="icon" className="mr-2 h-10 w-10">
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Toggle Menu</span>
                 </Button>
@@ -159,10 +159,6 @@ export function Header() {
                 </div>
             </SheetContent>
             </Sheet>
-             <Link href="/" className="hidden items-center space-x-2 md:flex">
-                <TesteryLogo />
-                <span className="sr-only">Testery</span>
-            </Link>
         </div>
        
         <div className="hidden flex-1 items-center justify-center space-x-6 text-sm font-medium md:flex">
