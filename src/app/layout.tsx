@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Header } from '@/components/layout/header';
@@ -28,7 +29,7 @@ export default function RootLayout({
         <div className="flex min-h-screen flex-col">
           <div className="flex items-center container">
              <Link href="/" className="hidden items-center space-x-2 md:flex mr-6">
-                <TesteryLogo className="h-32 w-auto" />
+                <TesteryLogo className="h-16 w-auto" />
                 <span className="sr-only">Testery</span>
             </Link>
             <div className="flex-1">
