@@ -139,7 +139,7 @@ export function Header() {
       <div className="container flex h-16 items-center">
         <div className="mr-6 flex items-center">
           <Link href="/" className="mr-6 flex items-center space-x-2 md:flex">
-            <TesteryLogo className="h-28 w-auto" />
+            <TesteryLogo className="h-32 w-auto" />
             <span className="sr-only">Testery</span>
           </Link>
         </div>
