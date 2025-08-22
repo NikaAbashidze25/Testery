@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, googleProvider } from '@/lib/firebase';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -49,52 +49,54 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginFormSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+        setIsGoogleLoading(true);
+        try {
+            const result = await getRedirectResult(auth);
+            if (result) {
+                const user = result.user;
+                const userDocRef = doc(db, 'users', user.uid);
+                const userDocSnap = await getDoc(userDocRef);
 
- const handleGoogleSignIn = async () => {
+                if (!userDocSnap.exists()) {
+                    await setDoc(userDocRef, {
+                        uid: user.uid,
+                        fullName: user.displayName,
+                        email: user.email,
+                        profilePictureUrl: user.photoURL,
+                        accountType: 'individual',
+                        skills: []
+                    });
+                     toast({
+                        title: "Account Created",
+                        description: "Your account has been successfully created with Google.",
+                    });
+                } else {
+                     toast({
+                        title: "Login Successful",
+                        description: `Welcome back, ${user.displayName}!`,
+                    });
+                }
+                router.push('/projects');
+            }
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Google Sign-In failed",
+                description: error.message,
+            });
+        } finally {
+            setIsGoogleLoading(false);
+        }
+    };
+    handleRedirectResult();
+  }, [router, toast]);
+
+
+  const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (!userDocSnap.exists()) {
-        await setDoc(userDocRef, {
-          uid: user.uid,
-          fullName: user.displayName,
-          email: user.email,
-          profilePictureUrl: user.photoURL,
-          accountType: 'individual',
-          skills: []
-        });
-        toast({
-          title: "Account Created",
-          description: "Your account has been successfully created with Google.",
-        });
-      } else {
-        toast({
-          title: "Login Successful",
-          description: `Welcome back, ${user.displayName}!`,
-        });
-      }
-      router.push('/projects');
-
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Google Sign-In failed",
-        description: error.message,
-      });
-    } finally {
-      setIsGoogleLoading(false);
-    }
+    await signInWithRedirect(auth, googleProvider);
   };
 
   const onSubmit = async (data: LoginFormValues) => {
@@ -127,6 +129,14 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+    const form = useForm<LoginFormValues>({
+        resolver: zodResolver(loginFormSchema),
+        defaultValues: {
+        email: '',
+        password: '',
+        },
+    });
 
   return (
     <div className="container py-12">
@@ -190,7 +200,7 @@ export default function LoginPage() {
           </div>
           
           <Button variant="outline" className="w-full" size="lg" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
-            {isGoogleLoading ? 'Signing In...' : <> <GoogleIcon /> Continue with Google </>}
+            {isGoogleLoading ? 'Signing In with Google...' : <> <GoogleIcon /> Continue with Google </>}
           </Button>
 
           <div className="mt-6 text-center text-sm">
