@@ -1,13 +1,21 @@
+'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
 
 export default function PrivacyPolicyPage() {
+  const [currentDate, setCurrentDate] = useState('');
+
+  useEffect(() => {
+    setCurrentDate(new Date().toLocaleDateString());
+  }, []);
+
   return (
     <div className="container py-12 md:py-24">
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle className="text-3xl font-bold">Privacy Policy</CardTitle>
-          <p className="text-muted-foreground">Last Updated: {new Date().toLocaleDateString()}</p>
+          <p className="text-muted-foreground">Last Updated: {currentDate}</p>
         </CardHeader>
         <CardContent className="space-y-6">
           <section>
