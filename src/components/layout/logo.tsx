@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 
 export function TesteryLogo({ className }: { className?: string }) {
     return (
-        <div className={cn("flex items-center justify-center font-bold text-lg h-16 w-auto", className)}>
-            <Image src="/logo.png" alt="Testery Logo" width={200} height={64} className="h-16 w-auto" priority />
+        <div className={cn("flex items-center justify-center font-bold text-lg h-32 w-auto", className)}>
+            <Image src="/logo.png" alt="Testery Logo" width={400} height={128} className="h-32 w-auto" priority />
         </div>
     );
 }
