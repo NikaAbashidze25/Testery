@@ -106,15 +106,22 @@ export function Header() {
   };
 
   const renderNavLinks = (isMobile = false) => {
-    if (isAuthLoading) {
-      return null;
-    }
     const commonClass = "transition-colors hover:text-foreground/80 text-foreground/60";
     const mobileClass = "flex items-center gap-2 text-lg py-2";
 
     const linkProps = {
         onClick: isMobile ? handleLinkClick : undefined
     };
+
+    if (isAuthLoading) {
+        return (
+            <>
+                <Skeleton className={`h-6 w-28 ${isMobile ? 'my-2' : ''}`} />
+                <Skeleton className={`h-6 w-28 ${isMobile ? 'my-2' : ''}`} />
+                <Skeleton className={`h-6 w-24 ${isMobile ? 'my-2' : ''}`} />
+            </>
+        )
+    }
 
     if (user) {
         return (
