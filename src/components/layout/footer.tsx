@@ -39,13 +39,13 @@ export function Footer() {
          <div className="flex flex-col gap-4 items-start md:items-end">
             <h3 className="text-sm font-semibold text-foreground">Connect With Us</h3>
             <div className="flex gap-4">
-                <Link href="#" className="text-muted-foreground hover:text-foreground" aria-label="Facebook">
+                <Link href="https://www.facebook.com/profile.php?id=61579247797622" className="text-muted-foreground hover:text-foreground" aria-label="Facebook">
                     <Facebook className="h-6 w-6" />
                 </Link>
-                <Link href="#" className="text-muted-foreground hover:text-foreground" aria-label="Instagram">
+                <Link href="https://www.instagram.com/testery_global/" className="text-muted-foreground hover:text-foreground" aria-label="Instagram">
                     <Instagram className="h-6 w-6" />
                 </Link>
-                 <Link href="#" className="text-muted-foreground hover:text-foreground" aria-label="LinkedIn">
+                 <Link href="https://www.linkedin.com/company/tsetery/posts/?feedView=all" className="text-muted-foreground hover:text-foreground" aria-label="LinkedIn">
                     <Linkedin className="h-6 w-6" />
                 </Link>
             </div>
