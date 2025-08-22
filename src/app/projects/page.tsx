@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { collection, getDocs, orderBy, query, type DocumentData } from "firebase/firestore";
 import { formatDistanceToNow } from 'date-fns';
 import { Search, MapPin, Inbox, User } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+
 
 interface Project extends DocumentData {
     id: string;
@@ -33,6 +35,16 @@ interface Project extends DocumentData {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -43,8 +55,12 @@ export default function ProjectsPage() {
             
             const querySnapshot = await getDocs(q);
             
-            const projectsData = querySnapshot.docs
+            let projectsData = querySnapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Project));
+
+            if (user) {
+                projectsData = projectsData.filter(p => p.authorId !== user.uid);
+            }
 
             setProjects(projectsData);
         } catch (error) {
@@ -53,8 +69,10 @@ export default function ProjectsPage() {
             setIsLoading(false);
         }
     };
-    fetchProjects();
-  }, []);
+    if (!isAuthLoading) {
+        fetchProjects();
+    }
+  }, [user, isAuthLoading]);
 
   const formatPostedDate = (timestamp: Project['postedAt']) => {
     if (!timestamp) return '...';
@@ -81,7 +99,7 @@ export default function ProjectsPage() {
         <Button size="lg" className="h-12">Search</Button>
       </div>
       
-       {isLoading && (
+       {(isLoading || isAuthLoading) && (
          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
             {[...Array(4)].map((_, i) => (
                 <Card key={i}>
@@ -108,7 +126,7 @@ export default function ProjectsPage() {
          </div>
        )}
 
-      {!isLoading && projects.length === 0 && (
+      {!isLoading && !isAuthLoading && projects.length === 0 && (
         <Card className="text-center py-12">
             <CardHeader>
                 <div className="mx-auto bg-secondary rounded-full h-16 w-16 flex items-center justify-center">
@@ -120,7 +138,7 @@ export default function ProjectsPage() {
         </Card>
       )}
 
-      {!isLoading && projects.length > 0 && (
+      {!isLoading && !isAuthLoading && projects.length > 0 && (
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
             {projects.map(project => (
               <Card key={project.id} className="flex flex-col hover:shadow-lg transition-shadow duration-300">
