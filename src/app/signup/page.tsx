@@ -127,38 +127,26 @@ export default function SignUpPage() {
   const [companyLogoName, setCompanyLogoName] = useState('');
 
     useEffect(() => {
-        const handleRedirectResult = async () => {
-            setIsGoogleLoading(true);
+        const processRedirectResult = async () => {
             try {
                 const result = await getRedirectResult(auth);
                 if (result) {
+                    setIsGoogleLoading(true);
                     const user = result.user;
                     const userDocRef = doc(db, 'users', user.uid);
                     const userDocSnap = await getDoc(userDocRef);
 
                     if (!userDocSnap.exists()) {
-                       let userData;
-                        if (accountType === 'individual') {
-                            userData = {
-                                uid: user.uid,
-                                fullName: user.displayName,
-                                email: user.email,
-                                profilePictureUrl: user.photoURL,
-                                accountType: 'individual',
-                                skills: []
-                            };
-                        } else { // company
-                            userData = {
-                                uid: user.uid,
-                                companyName: user.displayName, // Default to user's name
-                                contactPerson: user.displayName, // Default to user's name
-                                email: user.email,
-                                companyLogoUrl: user.photoURL,
-                                accountType: 'company',
-                                industry: '',
-                                website: ''
-                            };
-                        }
+                       // We don't know if they intended to be an individual or company,
+                       // so we create a basic individual profile. They can edit it later.
+                        const userData = {
+                            uid: user.uid,
+                            fullName: user.displayName,
+                            email: user.email,
+                            profilePictureUrl: user.photoURL,
+                            accountType: 'individual',
+                            skills: []
+                        };
                         await setDoc(userDocRef, userData);
                         toast({
                             title: "Account Created",
@@ -176,14 +164,14 @@ export default function SignUpPage() {
                 toast({
                     variant: "destructive",
                     title: "Google Sign-In failed",
-                    description: error.message,
+                    description: `Error: ${error.code} - ${error.message}`,
                 });
             } finally {
                 setIsGoogleLoading(false);
             }
         };
-        handleRedirectResult();
-    }, [router, toast, accountType]);
+        processRedirectResult();
+    }, [router, toast]);
 
 
   const individualForm = useForm<z.infer<typeof individualSchema>>({
@@ -222,7 +210,14 @@ export default function SignUpPage() {
   
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    await signInWithRedirect(auth, googleProvider);
+    signInWithRedirect(auth, googleProvider).catch((error) => {
+        toast({
+            variant: "destructive",
+            title: "Could not start Google Sign-In",
+            description: error.message,
+        });
+        setIsGoogleLoading(false);
+    });
   };
 
 

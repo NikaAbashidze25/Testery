@@ -50,53 +50,60 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const handleRedirectResult = async () => {
-        setIsGoogleLoading(true);
-        try {
-            const result = await getRedirectResult(auth);
-            if (result) {
-                const user = result.user;
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDocSnap = await getDoc(userDocRef);
+    const processRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          setIsGoogleLoading(true); // Show loading indicator while we process
+          const user = result.user;
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
 
-                if (!userDocSnap.exists()) {
-                    await setDoc(userDocRef, {
-                        uid: user.uid,
-                        fullName: user.displayName,
-                        email: user.email,
-                        profilePictureUrl: user.photoURL,
-                        accountType: 'individual',
-                        skills: []
-                    });
-                     toast({
-                        title: "Account Created",
-                        description: "Your account has been successfully created with Google.",
-                    });
-                } else {
-                     toast({
-                        title: "Login Successful",
-                        description: `Welcome back, ${user.displayName}!`,
-                    });
-                }
-                router.push('/projects');
-            }
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Google Sign-In failed",
-                description: error.message,
+          if (!userDocSnap.exists()) {
+            await setDoc(userDocRef, {
+              uid: user.uid,
+              fullName: user.displayName,
+              email: user.email,
+              profilePictureUrl: user.photoURL,
+              accountType: 'individual',
+              skills: [],
             });
-        } finally {
-            setIsGoogleLoading(false);
+            toast({
+              title: "Account Created",
+              description: "Your account has been successfully created with Google.",
+            });
+          } else {
+            toast({
+              title: "Login Successful",
+              description: `Welcome back, ${user.displayName}!`,
+            });
+          }
+          router.push('/projects');
         }
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Google Sign-In failed",
+          description: `Error: ${error.code} - ${error.message}`,
+        });
+      } finally {
+        setIsGoogleLoading(false);
+      }
     };
-    handleRedirectResult();
+    processRedirectResult();
   }, [router, toast]);
 
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    await signInWithRedirect(auth, googleProvider);
+    signInWithRedirect(auth, googleProvider).catch((error) => {
+        toast({
+            variant: "destructive",
+            title: "Could not start Google Sign-In",
+            description: error.message,
+        });
+        setIsGoogleLoading(false);
+    });
   };
 
   const onSubmit = async (data: LoginFormValues) => {
