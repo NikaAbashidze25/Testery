@@ -5,37 +5,6 @@ import { Briefcase, Lightbulb, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-const teamMembers = [
-  {
-    name: 'Nika Abashidze',
-    role: 'Founder & CEO',
-    avatar: '/avatars/alex.jpg',
-    bio: 'The visionary behind Testery, driven by a passion for quality software.',
-    social: {
-        linkedin: '#',
-    }
-  },
-  {
-    name: 'Jane Doe',
-    role: 'Lead Developer',
-    avatar: '/avatars/jane.jpg',
-    bio: 'The architect of our platform, building a seamless experience for users.',
-     social: {
-        linkedin: '#',
-    }
-  },
-  {
-    name: 'John Smith',
-    role: 'Community Manager',
-    avatar: '/avatars/john.jpg',
-    bio: 'The voice of our users, dedicated to building a strong and supportive community.',
-     social: {
-        linkedin: '#',
-    }
-  },
-];
-
-
 export default function AboutPage() {
   return (
     <div className="bg-background text-foreground">
@@ -95,36 +64,6 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
-      
-      {/* Team Section */}
-      <section id="team" className="w-full py-12 md:py-24 lg:py-32 bg-white">
-        <div className="container px-4 md:px-6">
-          <div className="flex flex-col items-center justify-center space-y-4 text-center">
-            <div className="space-y-2">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Meet the Team</h2>
-              <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                We are a small, dedicated team of innovators and problem-solvers passionate about quality.
-              </p>
-            </div>
-          </div>
-          <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3 lg:max-w-none mt-12">
-            {teamMembers.map((member) => (
-              <Card key={member.name} className="text-center">
-                 <CardContent className="pt-6">
-                  <Avatar className="w-24 h-24 mx-auto mb-4">
-                    <AvatarImage src={`https://placehold.co/100x100.png`} data-ai-hint="professional headshot" />
-                    <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <h3 className="text-xl font-bold">{member.name}</h3>
-                  <p className="text-sm text-primary">{member.role}</p>
-                  <p className="text-muted-foreground mt-2">{member.bio}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
     </div>
   );
 }
