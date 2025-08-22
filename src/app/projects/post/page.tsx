@@ -23,6 +23,8 @@ import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/fires
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import Link from 'next/link';
+import { FileText } from 'lucide-react';
 
 const projectFormSchema = z.object({
   title: z.string().min(10, 'Title must be at least 10 characters.'),
@@ -106,6 +108,14 @@ export default function PostProjectPage() {
   
   return (
     <div className="container py-12">
+      <div className="max-w-3xl mx-auto mb-6 flex justify-end">
+          <Button asChild variant="outline">
+              <Link href="/profile/my-projects">
+                  <FileText className="mr-2 h-4 w-4" />
+                  My Posted Projects
+              </Link>
+          </Button>
+      </div>
       <Card className="max-w-3xl mx-auto">
         <CardHeader>
           <CardTitle>Post a New Testing Project</CardTitle>
