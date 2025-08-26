@@ -30,6 +30,11 @@ export default function RootLayout({
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
+            value={{
+              light: 'light',
+              dark: 'dark',
+              midnight: 'dark',
+            }}
           >
             <div className="flex min-h-screen flex-col">
               <Header />
