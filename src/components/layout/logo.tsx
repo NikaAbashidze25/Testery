@@ -14,7 +14,7 @@ export function TesteryLogo({ className }: { className?: string }) {
                 data-ai-hint="logo light" 
             />
             <Image 
-                src="/logo-midnight.png" 
+                src="/logo-midnight2.png" 
                 alt="Testery Logo" 
                 width={150} 
                 height={40}
