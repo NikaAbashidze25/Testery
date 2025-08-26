@@ -87,7 +87,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-card">
+      <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-background">
         <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
                 <div className="space-y-2">
@@ -98,7 +98,7 @@ export default function Home() {
                 </div>
             </div>
             <div className="mx-auto grid max-w-sm items-start gap-8 sm:max-w-4xl sm:grid-cols-2 md:gap-12 lg:max-w-5xl lg:grid-cols-2 mt-12">
-                <Card className="bg-background">
+                <Card>
                     <CardHeader className="flex flex-row items-center gap-4">
                         <div className="flex items-center justify-center rounded-full bg-primary/20 p-2">
                             <Search className="h-6 w-6 text-primary" />
@@ -109,7 +109,7 @@ export default function Home() {
                         <p className="text-sm text-muted-foreground">Easily post testing projects and allow our community of testers to find and apply for them with advanced filtering.</p>
                     </CardContent>
                 </Card>
-                <Card className="bg-background">
+                <Card>
                     <CardHeader className="flex flex-row items-center gap-4">
                         <div className="flex items-center justify-center rounded-full bg-primary/20 p-2">
                            <MessageSquare className="h-6 w-6 text-primary" />
