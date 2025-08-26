@@ -29,7 +29,6 @@ export default function RootLayout({
             attribute="class"
             defaultTheme="system"
             enableSystem
-            disableTransitionOnChange
             value={{
               light: 'light',
               midnight: 'midnight',

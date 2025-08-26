@@ -74,7 +74,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-300;
   }
   h1, h2, h3, h4, h5, h6, .font-headline {
     font-family: 'Inter', sans-serif;
