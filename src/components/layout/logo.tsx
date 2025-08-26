@@ -14,11 +14,19 @@ export function TesteryLogo({ className }: { className?: string }) {
                 data-ai-hint="logo light" 
             />
             <Image 
+                src="/logo-dark.png" 
+                alt="Testery Logo" 
+                width={150} 
+                height={40}
+                className="hidden dark:block midnight:hidden" 
+                data-ai-hint="logo dark" 
+            />
+             <Image 
                 src="/logo-midnight.png" 
                 alt="Testery Logo" 
                 width={150} 
                 height={40}
-                className="hidden dark:block" 
+                className="hidden midnight:block" 
                 data-ai-hint="logo dark" 
             />
         </div>
