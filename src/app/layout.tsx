@@ -33,7 +33,7 @@ export default function RootLayout({
             value={{
               light: 'light',
               dark: 'dark',
-              midnight: 'dark',
+              midnight: 'midnight',
             }}
           >
             <div className="flex min-h-screen flex-col">
