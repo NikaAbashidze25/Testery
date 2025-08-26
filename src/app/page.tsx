@@ -36,7 +36,7 @@ export default function Home() {
               height="400"
               alt="Testery platform screenshot"
               className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last"
-              data-ai-hint="app testing platform"
+              data-ai-hint="app testing platform interface"
             />
           </div>
         </div>
