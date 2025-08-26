@@ -10,7 +10,7 @@ export function TesteryLogo({ className }: { className?: string }) {
                 alt="Testery Logo" 
                 width={150} 
                 height={40}
-                className="block dark:hidden"
+                className="block dark:hidden midnight:hidden"
                 data-ai-hint="logo light" 
             />
             <Image 
@@ -18,7 +18,7 @@ export function TesteryLogo({ className }: { className?: string }) {
                 alt="Testery Logo" 
                 width={150} 
                 height={40}
-                className="hidden dark:block" 
+                className="hidden dark:block midnight:block" 
                 data-ai-hint="logo dark" 
             />
         </div>
