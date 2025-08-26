@@ -9,12 +9,12 @@ export default function AboutPage() {
   return (
     <div className="bg-background text-foreground">
       {/* Hero Section */}
-      <section className="w-full py-20 md:py-32 bg-card">
+      <section className="w-full py-20 md:py-32 bg-secondary">
         <div className="container px-4 md:px-6">
           <div className="grid gap-6 lg:grid-cols-[1fr_500px] lg:gap-12 xl:grid-cols-[1fr_600px]">
             <div className="flex flex-col justify-center space-y-4">
               <div className="space-y-2">
-                 <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm">About Testery</div>
+                 <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm">About Testery</div>
                 <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none font-headline">
                   We're Building the Future of Software Testing.
                 </h1>
