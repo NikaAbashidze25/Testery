@@ -20,6 +20,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { TesteryLogo } from './logo';
 import { Skeleton } from '../ui/skeleton';
+import { ThemeToggle } from './theme-toggle';
 
 export function Header() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -202,6 +203,7 @@ export function Header() {
         </div>
 
         <div className="flex flex-1 items-center justify-end space-x-4">
+          <ThemeToggle />
           <nav className="flex items-center space-x-2">
             {hasMounted && renderUserControls()}
           </nav>
