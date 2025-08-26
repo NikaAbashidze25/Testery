@@ -32,7 +32,6 @@ export default function RootLayout({
             disableTransitionOnChange
             value={{
               light: 'light',
-              dark: 'dark',
               midnight: 'midnight',
             }}
           >
