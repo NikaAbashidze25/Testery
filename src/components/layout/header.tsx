@@ -166,7 +166,7 @@ export function Header() {
               className="inline-block" 
               aria-label="Homepage"
             >
-              <TesteryLogo className="h-32" />
+              <TesteryLogo className="h-10 w-auto" />
             </Link>
         </div>
         
@@ -184,7 +184,7 @@ export function Header() {
                         <SheetTitle className="sr-only">Menu</SheetTitle>
                     </SheetHeader>
                     <Link href="/" className="mr-6 flex items-center space-x-2" onClick={handleLinkClick}>
-                        <TesteryLogo className="h-20 w-auto" />
+                        <TesteryLogo className="h-10 w-auto" />
                     </Link>
                     <div className="flex flex-col space-y-4 p-4">
                     <nav className="flex flex-col space-y-3">
