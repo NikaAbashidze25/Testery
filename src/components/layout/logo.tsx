@@ -4,6 +4,27 @@ import { cn } from '@/lib/utils';
 
 export function TesteryLogo({ className }: { className?: string }) {
     return (
-        <Image src="/logo.png" alt="Testery Logo" width={150} height={48} className={cn("w-auto", className)} priority data-ai-hint="logo" />
+        <>
+            {/* Light mode logo */}
+            <Image 
+                src="/logo.png" 
+                alt="Testery Logo" 
+                width={150} 
+                height={48} 
+                className={cn("w-auto dark:hidden", className)} 
+                priority 
+                data-ai-hint="logo" 
+            />
+            {/* Dark mode logo */}
+            <Image 
+                src="/logo-dark.png" 
+                alt="Testery Logo" 
+                width={150} 
+                height={48} 
+                className={cn("w-auto hidden dark:block", className)} 
+                priority 
+                data-ai-hint="logo dark" 
+            />
+        </>
     );
 }
