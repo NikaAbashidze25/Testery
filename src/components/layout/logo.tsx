@@ -4,23 +4,13 @@ import { cn } from '@/lib/utils';
 
 export function TesteryLogo({ className }: { className?: string }) {
     return (
-        <>
-            <Image 
-                src="/logo.png" 
-                alt="Testery Logo" 
-                width={150} 
-                height={40}
-                className={cn("w-auto dark:hidden", className)} 
-                data-ai-hint="logo light" 
-            />
-            <Image 
-                src="/logo-dark.png" 
-                alt="Testery Logo" 
-                width={150} 
-                height={40}
-                className={cn("w-auto hidden dark:block", className)} 
-                data-ai-hint="logo dark" 
-            />
-        </>
+        <Image 
+            src="/logo-dark.png" 
+            alt="Testery Logo" 
+            width={150} 
+            height={40}
+            className={cn("w-auto", className)} 
+            data-ai-hint="logo dark" 
+        />
     );
 }
