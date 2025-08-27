@@ -31,12 +31,12 @@ export default function Home() {
               </div>
             </div>
             <Image
-              src="https://picsum.photos/600/400"
+              src="/facebook_testery.png"
               width="600"
               height="400"
-              alt="Testery platform screenshot"
+              alt="Testery hero banner"
               className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last"
-              data-ai-hint="app testing platform interface"
+              data-ai-hint="hero banner"
             />
           </div>
         </div>
