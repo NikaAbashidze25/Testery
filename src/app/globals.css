@@ -39,7 +39,7 @@
   }
 
   .midnight {
-    --background: 220 13% 18%;
+    --background: 220 13% 10%;
     --foreground: 210 40% 98%;
 
     --card: 220 13% 18%;
@@ -51,7 +51,7 @@
     --primary: 195 53% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 13% 10%;
+    --secondary: 220 13% 18%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 216 12% 24%;
