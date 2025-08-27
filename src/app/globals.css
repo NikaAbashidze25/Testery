@@ -19,8 +19,8 @@
     --primary: 195 53% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 90%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 218 73% 17%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
@@ -39,7 +39,7 @@
   }
 
   .midnight {
-    --background: 220 13% 10%;
+    --background: 220 13% 18%;
     --foreground: 210 40% 98%;
 
     --card: 220 13% 18%;
@@ -51,7 +51,7 @@
     --primary: 195 53% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 13% 18%;
+    --secondary: 220 13% 10%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 216 12% 24%;
