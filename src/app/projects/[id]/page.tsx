@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, use } from 'react';
 import { doc, getDoc, type DocumentData } from 'firebase/firestore';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
@@ -30,8 +30,8 @@ interface Project extends DocumentData {
     };
 }
 
-export default function ProjectDetailPage() {
-  const { id } = useParams();
+export default function ProjectDetailPage({ params }: { params: { id: string } }) {
+  const { id } = use(Promise.resolve(params));
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
