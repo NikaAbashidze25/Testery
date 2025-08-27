@@ -51,7 +51,7 @@
     --primary: 195 53% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 216 12% 24%;
+    --secondary: 216 12% 15%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 216 12% 24%;
@@ -74,7 +74,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground transition-colors duration-300;
+    @apply bg-background text-foreground;
   }
   h1, h2, h3, h4, h5, h6, .font-headline {
     font-family: 'Inter', sans-serif;
