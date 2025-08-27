@@ -31,7 +31,7 @@ export default function Home() {
               </div>
             </div>
             <Image
-              src="https://placehold.co/600x400.png"
+              src="https://picsum.photos/600/400"
               width="600"
               height="400"
               alt="Testery platform screenshot"
