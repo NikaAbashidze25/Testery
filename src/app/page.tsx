@@ -25,7 +25,7 @@ export default function Home() {
                 <Button asChild size="lg">
                   <Link href="/projects">Find a Project</Link>
                 </Button>
-                <Button asChild size="lg" variant="secondary">
+                <Button asChild size="lg" variant="outline" className="border-0">
                   <Link href="/projects/post">Post a Project</Link>
                 </Button>
               </div>
