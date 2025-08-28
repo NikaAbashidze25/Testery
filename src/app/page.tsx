@@ -16,7 +16,7 @@ export default function Home() {
               <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none font-headline">
                 Quality Testing, On Demand.
               </h1>
-              <p className="max-w-[600px] text-muted-foreground md:text-xl">
+              <p className="max-w-[600px] text-muted-foreground md:text-xl mx-auto">
                 Testery connects you with a global network of skilled software testers to ensure your product is bug-free and user-ready.
               </p>
             </div>
