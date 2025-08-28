@@ -11,24 +11,22 @@ export default function Home() {
       {/* Hero Section */}
       <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-secondary">
         <div className="container px-4 md:px-6">
-          <div className="grid gap-6 lg:grid-cols-1 lg:gap-12 justify-items-center">
-            <div className="flex flex-col justify-center space-y-4 text-center items-center">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none font-headline">
-                  Quality Testing, On Demand.
-                </h1>
-                <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                  Testery connects you with a global network of skilled software testers to ensure your product is bug-free and user-ready.
-                </p>
-              </div>
-              <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                <Button asChild size="lg">
-                  <Link href="/projects">Find a Project</Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="border-0">
-                  <Link href="/projects/post">Post a Project</Link>
-                </Button>
-              </div>
+          <div className="flex flex-col items-center justify-center space-y-4 text-center">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none font-headline">
+                Quality Testing, On Demand.
+              </h1>
+              <p className="max-w-[600px] text-muted-foreground md:text-xl">
+                Testery connects you with a global network of skilled software testers to ensure your product is bug-free and user-ready.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 min-[400px]:flex-row">
+              <Button asChild size="lg">
+                <Link href="/projects">Find a Project</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="border-0">
+                <Link href="/projects/post">Post a Project</Link>
+              </Button>
             </div>
           </div>
         </div>
