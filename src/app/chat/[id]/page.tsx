@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy, addDoc, serverTimestamp, doc, getDoc, DocumentData, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, addDoc, serverTimestamp, doc, getDoc, DocumentData, updateDoc, Timestamp, deleteDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
@@ -11,7 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -19,6 +19,7 @@ import Image from 'next/image';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
 import { useTheme } from 'next-themes';
 
@@ -30,6 +31,7 @@ interface Message {
     senderId: string;
     timestamp: Timestamp;
     editedAt?: Timestamp;
+    isPinned?: boolean;
     replyTo?: {
         id: string;
         text: string;
@@ -80,15 +82,15 @@ export default function ChatPage() {
         return () => unsubscribe();
     }, [router]);
 
-     const scrollToBottom = () => {
+    const scrollToBottom = useCallback(() => {
         if (messagesEndRef.current) {
             messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
         }
-    };
+    }, []);
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages]);
+    }, [messages, scrollToBottom]);
 
 
     useEffect(() => {
@@ -268,6 +270,29 @@ export default function ChatPage() {
         setNewMessage('');
     }
 
+    const handleDeleteMessage = async (messageId: string) => {
+        try {
+            const messageRef = doc(db, 'applications', applicationId, 'messages', messageId);
+            await deleteDoc(messageRef);
+            toast({ title: "Message Deleted", description: "The message has been removed."});
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not delete message.' });
+        }
+    };
+    
+    const handleTogglePinMessage = async (message: Message) => {
+        try {
+            const messageRef = doc(db, 'applications', applicationId, 'messages', message.id);
+            await updateDoc(messageRef, {
+                isPinned: !message.isPinned
+            });
+            toast({ title: message.isPinned ? "Message Unpinned" : "Message Pinned" });
+        } catch (error) {
+             toast({ variant: 'destructive', title: 'Error', description: 'Could not update pin status.' });
+        }
+    };
+
+
     const getInitials = (name: string | undefined) => {
         if (!name) return '?';
         const names = name.split(' ');
@@ -300,6 +325,8 @@ export default function ChatPage() {
         )
     }
 
+    const pinnedMessages = messages.filter(m => m.isPinned);
+
     return (
         <div className="container mx-auto max-w-3xl py-12">
             <div className="mb-6">
@@ -319,6 +346,17 @@ export default function ChatPage() {
                          <p className="text-sm text-muted-foreground">Regarding project: {projectTitle}</p>
                     </div>
                 </CardHeader>
+                 {pinnedMessages.length > 0 && (
+                    <div className="p-2 border-b bg-secondary/50">
+                        {pinnedMessages.map(msg => (
+                             <div key={`pin-${msg.id}`} className="p-2 rounded-md text-xs text-muted-foreground flex items-center gap-2">
+                                <Pin className="h-3 w-3 text-primary flex-shrink-0" />
+                                <span className="font-semibold">{msg.senderId === user?.uid ? "You" : otherUser?.name}:</span>
+                                <p className="truncate">{msg.text || "Image"}</p>
+                            </div>
+                        ))}
+                    </div>
+                 )}
                 <CardContent ref={messagesEndRef} className="flex-1 p-6 overflow-y-auto space-y-4">
                     {messages.map((msg) => {
                         const isSender = msg.senderId === user?.uid;
@@ -331,7 +369,11 @@ export default function ChatPage() {
                                 <AvatarFallback>{getInitials(isSender ? user?.displayName! : otherUser?.name)}</AvatarFallback>
                             </Avatar>
                             <div className={cn("group relative flex flex-col items-start")}>
-                               <div className={cn("rounded-lg px-4 py-2 text-sm", isSender ? "bg-primary text-primary-foreground" : "bg-secondary")}>
+                               <div className={cn(
+                                   "rounded-lg px-4 py-2 text-sm", 
+                                   isSender ? "bg-primary text-primary-foreground" : "bg-secondary",
+                                   msg.isPinned && "bg-primary/20 dark:bg-primary/30"
+                                )}>
                                     {msg.replyTo && (
                                         <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
                                             <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
@@ -345,10 +387,12 @@ export default function ChatPage() {
                                             <Image src={msg.imageUrl} alt="Sent image" width={200} height={200} className="rounded-md max-w-xs cursor-pointer" />
                                         </Link>
                                     )}
-
-                                    {msg.editedAt && (
-                                        <span className="text-xs text-muted-foreground/70 ml-2">(edited)</span>
-                                    )}
+                                    <div className="flex items-center gap-2 mt-1">
+                                        {msg.isPinned && <Pin className="h-3 w-3 text-primary" />}
+                                        {msg.editedAt && (
+                                            <span className="text-xs text-muted-foreground/70">(edited)</span>
+                                        )}
+                                    </div>
                                </div>
 
                                  <DropdownMenu>
@@ -362,11 +406,35 @@ export default function ChatPage() {
                                             <Reply className="mr-2 h-4 w-4" />
                                             <span>Reply</span>
                                         </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleTogglePinMessage(msg)}>
+                                            <Pin className="mr-2 h-4 w-4" />
+                                            <span>{msg.isPinned ? 'Unpin' : 'Pin'}</span>
+                                        </DropdownMenuItem>
                                         {isSender && canEdit && msg.text && (
                                             <DropdownMenuItem onClick={() => handleStartEdit(msg)}>
                                                 <Edit className="mr-2 h-4 w-4" />
                                                 <span>Edit</span>
                                             </DropdownMenuItem>
+                                        )}
+                                        {isSender && (
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                                        <span className="text-destructive">Delete</span>
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>This action cannot be undone. This will permanently delete the message.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
