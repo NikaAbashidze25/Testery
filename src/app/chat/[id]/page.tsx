@@ -53,6 +53,7 @@ export default function ChatPage() {
     const applicationId = params.id as string;
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
     const { resolvedTheme } = useTheme();
 
 
@@ -66,6 +67,17 @@ export default function ChatPage() {
         });
         return () => unsubscribe();
     }, [router]);
+
+     const scrollToBottom = () => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+        }
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
 
     useEffect(() => {
         if (user && applicationId) {
@@ -235,7 +247,7 @@ export default function ChatPage() {
                          <p className="text-sm text-muted-foreground">Regarding project: {projectTitle}</p>
                     </div>
                 </CardHeader>
-                <CardContent className="flex-1 p-6 overflow-y-auto space-y-4">
+                <CardContent ref={messagesEndRef} className="flex-1 p-6 overflow-y-auto space-y-4">
                     {messages.map((msg) => (
                          <div key={msg.id} className={cn("flex items-end gap-2 max-w-[75%]", msg.senderId === user?.uid ? "ml-auto flex-row-reverse" : "mr-auto")}>
                              <Avatar className="h-8 w-8">
