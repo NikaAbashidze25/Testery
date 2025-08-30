@@ -36,6 +36,9 @@ interface OtherUser {
     avatarUrl: string;
 }
 
+const MAX_IMAGE_SIZE_MB = 10;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+
 export default function ChatPage() {
     const [user, setUser] = useState<User | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -49,7 +52,6 @@ export default function ChatPage() {
     const params = useParams();
     const applicationId = params.id as string;
     const { toast } = useToast();
-    const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { resolvedTheme } = useTheme();
 
@@ -121,13 +123,6 @@ export default function ChatPage() {
         }
     }, [user, applicationId, router, toast]);
 
-    useEffect(() => {
-        if (!isLoading) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, [messages, isLoading]);
-
-
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !newMessage.trim() || isSending) return;
@@ -153,6 +148,18 @@ export default function ChatPage() {
         
         const file = e.target.files[0];
         if (!file) return;
+
+        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+            toast({
+                variant: 'destructive',
+                title: 'Upload Failed',
+                description: `Image is too large. Maximum allowed size is ${MAX_IMAGE_SIZE_MB} MB.`
+            });
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+            return;
+        }
 
         setIsSending(true);
         try {
@@ -245,7 +252,6 @@ export default function ChatPage() {
                            </div>
                         </div>
                     ))}
-                    <div ref={messagesEndRef} />
                 </CardContent>
                 <CardFooter className="p-4 border-t">
                     <form onSubmit={handleSendMessage} className="flex w-full items-center gap-2">
