@@ -11,9 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check, Send } from 'lucide-react';
+import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface Project extends DocumentData {
     id: string;
@@ -31,6 +32,11 @@ interface Project extends DocumentData {
     };
 }
 
+interface Application {
+    status: 'pending' | 'accepted' | 'declined';
+}
+
+
 export default function ProjectDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -40,7 +46,7 @@ export default function ProjectDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [hasApplied, setHasApplied] = useState(false);
+  const [application, setApplication] = useState<Application | null>(null);
   const [isApplying, setIsApplying] = useState(false);
 
 
@@ -78,7 +84,7 @@ export default function ProjectDetailPage() {
             const q = query(applicationsRef, where('projectId', '==', project.id), where('testerId', '==', user.uid));
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
-                setHasApplied(true);
+                setApplication(querySnapshot.docs[0].data() as Application);
             }
         }
     };
@@ -98,15 +104,16 @@ export default function ProjectDetailPage() {
     setIsApplying(true);
     try {
         const applicationsRef = collection(db, 'applications');
+        const newApplication: Application = { status: 'pending' };
         await addDoc(applicationsRef, {
             projectId: project.id,
             projectTitle: project.title,
             testerId: user.uid,
             ownerId: project.authorId,
-            status: 'pending',
+            ...newApplication,
             appliedAt: serverTimestamp(),
         });
-        setHasApplied(true);
+        setApplication(newApplication);
         toast({
             title: 'Application Sent!',
             description: "You have successfully applied for this project.",
@@ -130,6 +137,19 @@ export default function ProjectDetailPage() {
 
   const isOwner = user && project && user.uid === project.authorId;
 
+  const getStatusBadge = (status: Application['status']) => {
+    switch (status) {
+        case 'pending':
+            return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"><Clock className="mr-1 h-3 w-3" />Pending</Badge>;
+        case 'accepted':
+            return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"><CheckCircle className="mr-1 h-3 w-3" />Accepted</Badge>;
+        case 'declined':
+            return <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"><XCircle className="mr-1 h-3 w-3" />Declined</Badge>;
+        default:
+            return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
   const renderApplyButton = () => {
       if (isCheckingAuth) {
           return <Skeleton className="h-11 w-48" />;
@@ -151,12 +171,11 @@ export default function ProjectDetailPage() {
           );
       }
       if (user) {
-          if (hasApplied) {
+          if (application) {
             return (
-                <Button size="lg" disabled>
-                    <Check className="mr-2 h-4 w-4" />
-                    Applied
-                </Button>
+                <div className="flex items-center gap-2 rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                   <span className="font-medium text-foreground">Your Status:</span> {getStatusBadge(application.status)}
+                </div>
             );
           }
           return <Button size="lg" onClick={handleApply} disabled={isApplying}>
