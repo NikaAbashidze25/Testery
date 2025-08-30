@@ -49,9 +49,11 @@ export default function MyApplicationsPage() {
         setIsLoading(true);
         try {
           const appsCollection = collection(db, 'applications');
-          const q = query(appsCollection, where('testerId', '==', user.uid), orderBy('appliedAt', 'desc'));
+          const q = query(appsCollection, where('testerId', '==', user.uid));
           const querySnapshot = await getDocs(q);
-          const appsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
+          const appsData = querySnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Application))
+            .sort((a, b) => b.appliedAt.seconds - a.appliedAt.seconds);
           setApplications(appsData);
         } catch (error) {
           console.error("Error fetching user's applications: ", error);
