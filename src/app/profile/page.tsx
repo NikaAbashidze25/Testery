@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, Edit, FileText } from 'lucide-react';
+import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, Edit, FileText, Send } from 'lucide-react';
 
 
 type UserProfile = {
@@ -179,11 +179,20 @@ export default function ProfilePage() {
                     <Edit className="mr-2 h-4 w-4" /> Edit Profile
                 </Link>
             </Button>
-            <Button asChild variant="outline">
-                <Link href="/profile/my-projects">
-                    <FileText className="mr-2 h-4 w-4" /> My Projects
-                </Link>
-            </Button>
+            {userProfile.accountType === 'company' ? (
+                 <Button asChild variant="outline">
+                    <Link href="/profile/my-projects">
+                        <FileText className="mr-2 h-4 w-4" /> My Projects
+                    </Link>
+                </Button>
+            ) : (
+                 <Button asChild variant="outline">
+                    <Link href="/profile/my-applications">
+                        <Send className="mr-2 h-4 w-4" /> My Applications
+                    </Link>
+                </Button>
+            )}
+           
         </CardFooter>
       </Card>
     </div>

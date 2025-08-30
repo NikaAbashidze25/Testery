@@ -3,7 +3,7 @@
 
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, type DocumentData } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, query, where, getDocs, serverTimestamp, type DocumentData } from 'firebase/firestore';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check } from 'lucide-react';
+import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check, Send } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 interface Project extends DocumentData {
     id: string;
@@ -34,11 +35,13 @@ export default function ProjectDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
+  const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [hasApplied, setHasApplied] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
 
 
   useEffect(() => {
@@ -67,10 +70,56 @@ export default function ProjectDetailPage() {
     }
   }, [id]);
 
-  const handleApply = () => {
-    // In a real application, you would save this to a database.
-    // For now, we'll just update the UI state.
-    setHasApplied(true);
+  useEffect(() => {
+    // Check if the user has already applied
+    const checkApplication = async () => {
+        if (user && project) {
+            const applicationsRef = collection(db, 'applications');
+            const q = query(applicationsRef, where('projectId', '==', project.id), where('testerId', '==', user.uid));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                setHasApplied(true);
+            }
+        }
+    };
+    checkApplication();
+  }, [user, project]);
+
+
+  const handleApply = async () => {
+    if (!user || !project) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'You must be logged in to apply.',
+        });
+        return;
+    }
+    setIsApplying(true);
+    try {
+        const applicationsRef = collection(db, 'applications');
+        await addDoc(applicationsRef, {
+            projectId: project.id,
+            projectTitle: project.title,
+            testerId: user.uid,
+            ownerId: project.authorId,
+            status: 'pending',
+            appliedAt: serverTimestamp(),
+        });
+        setHasApplied(true);
+        toast({
+            title: 'Application Sent!',
+            description: "You have successfully applied for this project.",
+        });
+    } catch (error: any) {
+         toast({
+            variant: 'destructive',
+            title: 'Application Failed',
+            description: error.message,
+        });
+    } finally {
+        setIsApplying(false);
+    }
   };
 
   const formatPostedDate = (timestamp: Project['postedAt']) => {
@@ -110,7 +159,14 @@ export default function ProjectDetailPage() {
                 </Button>
             );
           }
-          return <Button size="lg" onClick={handleApply}>Apply for this Project</Button>;
+          return <Button size="lg" onClick={handleApply} disabled={isApplying}>
+              {isApplying ? 'Submitting...' : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Apply for this Project
+                  </>
+              )}
+            </Button>;
       }
       return (
           <Button size="lg" asChild>
