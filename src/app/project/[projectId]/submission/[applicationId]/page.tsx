@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 const submissionSchema = z.object({
   comments: z.string().optional(),
@@ -145,8 +146,8 @@ export default function SubmissionPage() {
         setIsSubmitting(true);
         try {
             const uploadedFiles: SubmissionFile[] = [];
-            if (values.files && values.files.length > 0) {
-                for (const file of values.files) {
+            if (selectedFiles.length > 0) {
+                for (const file of selectedFiles) {
                      const storageRef = ref(storage, `submissions/${applicationId}/${file.name}`);
                      await uploadBytes(storageRef, file);
                      const url = await getDownloadURL(storageRef);
@@ -177,10 +178,18 @@ export default function SubmissionPage() {
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
-            const filesArray = Array.from(event.target.files);
-            setSelectedFiles(filesArray);
-            submissionForm.setValue('files', filesArray);
+            const newFiles = Array.from(event.target.files);
+            setSelectedFiles(prevFiles => [...prevFiles, ...newFiles]);
+            submissionForm.setValue('files', [...selectedFiles, ...newFiles]);
+            // Clear the input value to allow selecting the same file again if removed
+            event.target.value = '';
         }
+    };
+
+    const handleRemoveFile = (indexToRemove: number) => {
+        const updatedFiles = selectedFiles.filter((_, index) => index !== indexToRemove);
+        setSelectedFiles(updatedFiles);
+        submissionForm.setValue('files', updatedFiles);
     };
     
     const handleFeedback = async (values: FeedbackFormValues) => {
@@ -271,11 +280,17 @@ export default function SubmissionPage() {
                                          {selectedFiles.length > 0 && (
                                             <div className="mt-4 space-y-2">
                                                 <h4 className="text-sm font-medium">Selected files:</h4>
-                                                <ul className="list-disc list-inside bg-muted/50 p-3 rounded-md">
+                                                <ul className="space-y-2 bg-muted/50 p-3 rounded-md">
                                                     {selectedFiles.map((file, index) => (
-                                                        <li key={index} className="text-sm text-muted-foreground flex items-center gap-2">
-                                                           <Paperclip className="h-4 w-4" />
-                                                           {file.name}
+                                                        <li key={index} className="text-sm text-muted-foreground flex items-center justify-between gap-2 bg-background p-2 rounded-md">
+                                                           <div className="flex items-center gap-2 truncate">
+                                                                <Paperclip className="h-4 w-4 flex-shrink-0" />
+                                                                <span className="truncate">{file.name}</span>
+                                                           </div>
+                                                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveFile(index)}>
+                                                                <X className="h-4 w-4 text-destructive" />
+                                                                <span className="sr-only">Remove file</span>
+                                                            </Button>
                                                         </li>
                                                     ))}
                                                 </ul>
@@ -339,7 +354,7 @@ export default function SubmissionPage() {
                                             <p className="text-sm font-medium">Rating:</p>
                                             <div className="flex items-center gap-1 mt-1">
                                                 {[...Array(5)].map((_, i) => (
-                                                    <Star key={i} className={`h-6 w-6 ${i < submission.feedback!.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+                                                    <Star key={i} className={cn('h-6 w-6', i < submission.feedback!.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300')} />
                                                 ))}
                                             </div>
                                         </div>
@@ -364,7 +379,7 @@ export default function SubmissionPage() {
                                                             {[...Array(5)].map((_, i) => (
                                                                 <Star 
                                                                     key={i} 
-                                                                    className={`h-8 w-8 cursor-pointer ${i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 hover:text-yellow-300'}`}
+                                                                    className={cn('h-8 w-8 cursor-pointer', i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 hover:text-yellow-300')}
                                                                     onClick={() => {
                                                                         setRating(i + 1);
                                                                         field.onChange(i + 1);
@@ -418,5 +433,7 @@ export default function SubmissionPage() {
     )
 
 }
+
+    
 
     
