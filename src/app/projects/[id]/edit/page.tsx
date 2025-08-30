@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, serverTimestamp, type DocumentData } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,8 +36,9 @@ const projectFormSchema = z.object({
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
-export default function EditProjectPage({ params }: { params: { id: string } }) {
-  const { id: projectId } = params;
+export default function EditProjectPage() {
+  const params = useParams();
+  const projectId = params.id as string;
   const [user, setUser] = useState<User | null>(null);
   const [project, setProject] = useState<DocumentData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
