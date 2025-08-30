@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Download, Star, Upload, FileText } from 'lucide-react';
+import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X } from 'lucide-react';
 import Link from 'next/link';
 
 const submissionSchema = z.object({
@@ -33,14 +33,18 @@ const feedbackSchema = z.object({
 type SubmissionFormValues = z.infer<typeof submissionSchema>;
 type FeedbackFormValues = z.infer<typeof feedbackSchema>;
 
+interface SubmissionFile {
+    name: string;
+    url: string;
+}
+
 interface Submission extends DocumentData {
     id: string;
     testerId: string;
     clientId: string;
     projectId: string;
     comments: string;
-    fileUrl?: string;
-    fileName?: string;
+    files?: SubmissionFile[];
     submittedAt: any;
     feedback?: FeedbackFormValues;
 }
@@ -52,6 +56,8 @@ export default function SubmissionPage() {
     const [submission, setSubmission] = useState<Submission | null>(null);
     const [project, setProject] = useState<DocumentData | null>(null);
     const [application, setApplication] = useState<DocumentData | null>(null);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+
 
     const router = useRouter();
     const params = useParams();
@@ -138,23 +144,23 @@ export default function SubmissionPage() {
         if (!user || !application) return;
         setIsSubmitting(true);
         try {
-            let fileUrl, fileName;
+            const uploadedFiles: SubmissionFile[] = [];
             if (values.files && values.files.length > 0) {
-                const file = values.files[0];
-                const storageRef = ref(storage, `submissions/${applicationId}/${file.name}`);
-                await uploadBytes(storageRef, file);
-                fileUrl = await getDownloadURL(storageRef);
-                fileName = file.name;
+                for (const file of values.files) {
+                     const storageRef = ref(storage, `submissions/${applicationId}/${file.name}`);
+                     await uploadBytes(storageRef, file);
+                     const url = await getDownloadURL(storageRef);
+                     uploadedFiles.push({ name: file.name, url });
+                }
             }
 
-            const submissionData: Omit<Submission, 'id'> = {
+            const submissionData: Omit<Submission, 'id' | 'submittedAt'> & { submittedAt: any } = {
                 testerId: user.uid,
                 clientId: application.ownerId,
                 projectId,
                 comments: values.comments || '',
                 submittedAt: serverTimestamp(),
-                ...(fileUrl && { fileUrl }),
-                ...(fileName && { fileName })
+                files: uploadedFiles,
             };
             
             await setDoc(doc(db, 'submissions', applicationId), submissionData);
@@ -166,6 +172,14 @@ export default function SubmissionPage() {
             toast({ variant: 'destructive', title: 'Submission Failed', description: error.message });
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files) {
+            const filesArray = Array.from(event.target.files);
+            setSelectedFiles(filesArray);
+            submissionForm.setValue('files', filesArray);
         }
     };
     
@@ -244,10 +258,29 @@ export default function SubmissionPage() {
                                     <FormItem>
                                         <FormLabel>Upload Files</FormLabel>
                                         <FormControl>
-                                            <Input type="file" {...submissionForm.register('files')} disabled={isSubmitting} />
+                                            <Input 
+                                                type="file" 
+                                                multiple 
+                                                onChange={handleFileChange}
+                                                disabled={isSubmitting} 
+                                                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                                            />
                                         </FormControl>
                                         <FormDescription>Upload any relevant files (documents, screenshots, etc.)</FormDescription>
                                         <FormMessage />
+                                         {selectedFiles.length > 0 && (
+                                            <div className="mt-4 space-y-2">
+                                                <h4 className="text-sm font-medium">Selected files:</h4>
+                                                <ul className="list-disc list-inside bg-muted/50 p-3 rounded-md">
+                                                    {selectedFiles.map((file, index) => (
+                                                        <li key={index} className="text-sm text-muted-foreground flex items-center gap-2">
+                                                           <Paperclip className="h-4 w-4" />
+                                                           {file.name}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
                                     </FormItem>
                                     )}
                                 />
@@ -281,14 +314,18 @@ export default function SubmissionPage() {
                                         <p className="text-sm font-medium">Tester Comments:</p>
                                         <p className="text-muted-foreground">{submission.comments || 'No comments provided.'}</p>
                                     </div>
-                                    {submission.fileUrl && (
+                                    {submission.files && submission.files.length > 0 && (
                                         <div>
-                                            <p className="text-sm font-medium mb-2">Submitted File:</p>
-                                            <Button asChild variant="outline">
-                                                <Link href={submission.fileUrl} target="_blank" download={submission.fileName}>
-                                                    <Download className="mr-2 h-4 w-4" /> {submission.fileName}
-                                                </Link>
-                                            </Button>
+                                            <p className="text-sm font-medium mb-2">Submitted Files:</p>
+                                            <div className="space-y-2">
+                                                {submission.files.map((file, index) => (
+                                                     <Button asChild variant="outline" key={index} className="mr-2">
+                                                        <Link href={file.url} target="_blank" download={file.name}>
+                                                            <Download className="mr-2 h-4 w-4" /> {file.name}
+                                                        </Link>
+                                                    </Button>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -381,3 +418,5 @@ export default function SubmissionPage() {
     )
 
 }
+
+    
