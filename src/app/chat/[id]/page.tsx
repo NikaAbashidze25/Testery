@@ -557,7 +557,3 @@ export default function ChatPage() {
     )
 
 }
-
-    
-
-    
