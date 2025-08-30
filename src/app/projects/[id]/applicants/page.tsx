@@ -148,7 +148,7 @@ export default function ProjectApplicantsPage() {
         <div className="flex justify-between items-center mb-8">
             <div className="space-y-2">
                 <h1 className="text-4xl font-bold font-headline">Applicants</h1>
-                <p className="text-muted-foreground">Testers who applied for: <span className="font-semibold text-foreground">{projectTitle || <Skeleton className="h-5 w-48 inline-block" />}</span></p>
+                <div className="text-muted-foreground">Testers who applied for: <span className="font-semibold text-foreground">{projectTitle || <Skeleton className="h-5 w-48 inline-block" />}</span></div>
             </div>
       </div>
 
