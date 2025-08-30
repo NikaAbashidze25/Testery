@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy, addDoc, serverTimestamp, doc, getDoc, DocumentData, updateDoc, Timestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, addDoc, serverTimestamp, doc, getDoc, DocumentData, updateDoc, Timestamp, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
@@ -11,7 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin } from 'lucide-react';
+import { ArrowLeft, Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, ThumbsUp, Heart, Laugh } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -36,6 +36,9 @@ interface Message {
         id: string;
         text: string;
         senderName: string;
+    };
+    reactions?: {
+        [emoji: string]: string[]; // emoji: list of user UIDs who reacted
     }
 }
 
@@ -48,6 +51,8 @@ interface OtherUser {
 const MAX_IMAGE_SIZE_MB = 10;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 const EDIT_TIME_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+
+const availableReactions = ['👍', '❤️', '😂'];
 
 
 export default function ChatPage() {
@@ -156,7 +161,6 @@ export default function ChatPage() {
         setIsSending(true);
 
         if (editingMessage) {
-            // Handle editing a message
             const messageRef = doc(db, 'applications', applicationId, 'messages', editingMessage.id);
             try {
                 await updateDoc(messageRef, {
@@ -172,7 +176,6 @@ export default function ChatPage() {
             }
 
         } else {
-             // Handle sending a new message
             const messagesColRef = collection(db, 'applications', applicationId, 'messages');
             
             const messageData: any = {
@@ -292,6 +295,31 @@ export default function ChatPage() {
         }
     };
 
+    const handleReaction = async (message: Message, emoji: string) => {
+        if (!user) return;
+        
+        const messageRef = doc(db, 'applications', applicationId, 'messages', message.id);
+        const reactionPath = `reactions.${emoji}`;
+        const userHasReacted = message.reactions?.[emoji]?.includes(user.uid);
+
+        try {
+            if (userHasReacted) {
+                // Atomically remove a value from an array
+                await updateDoc(messageRef, {
+                    [reactionPath]: arrayRemove(user.uid)
+                });
+            } else {
+                // Atomically add a new value to an array
+                 await updateDoc(messageRef, {
+                    [reactionPath]: arrayUnion(user.uid)
+                });
+            }
+        } catch (error) {
+            console.error("Error updating reaction:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not update reaction.' });
+        }
+    };
+
 
     const getInitials = (name: string | undefined) => {
         if (!name) return '?';
@@ -357,87 +385,117 @@ export default function ChatPage() {
                         ))}
                     </div>
                  )}
-                <CardContent ref={messagesEndRef} className="flex-1 p-6 overflow-y-auto space-y-4">
+                <CardContent ref={messagesEndRef} className="flex-1 p-6 overflow-y-auto space-y-1">
                     {messages.map((msg) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
                         
                         return (
-                         <div key={msg.id} className={cn("flex items-end gap-2 max-w-[75%]", isSender ? "ml-auto flex-row-reverse" : "mr-auto")}>
-                             <Avatar className="h-8 w-8 self-end">
+                         <div key={msg.id} className={cn("group flex items-end gap-2 max-w-[75%] w-fit", isSender ? "ml-auto flex-row-reverse" : "mr-auto")}>
+                             <Avatar className="h-8 w-8 self-end mb-4">
                                 <AvatarImage src={isSender ? user?.photoURL! : otherUser?.avatarUrl} />
                                 <AvatarFallback>{getInitials(isSender ? user?.displayName! : otherUser?.name)}</AvatarFallback>
                             </Avatar>
-                            <div className={cn("group relative flex flex-col items-start")}>
-                               <div className={cn(
-                                   "rounded-lg px-4 py-2 text-sm", 
-                                   isSender ? "bg-primary text-primary-foreground" : "bg-secondary",
-                                   msg.isPinned && "bg-primary/20 dark:bg-primary/30"
+                            <div className="flex flex-col gap-1">
+                                <div className={cn("relative flex flex-col items-start")}>
+                                <div className={cn(
+                                    "rounded-lg px-4 py-2 text-sm", 
+                                    isSender ? "bg-primary text-primary-foreground" : "bg-secondary",
+                                    msg.isPinned && "bg-primary/20 dark:bg-primary/30"
                                 )}>
-                                    {msg.replyTo && (
-                                        <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
-                                            <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
-                                            <p className="truncate">{msg.replyTo.text}</p>
+                                        {msg.replyTo && (
+                                            <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
+                                                <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
+                                                <p className="truncate">{msg.replyTo.text}</p>
+                                            </div>
+                                        )}
+
+                                        {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
+                                        {msg.imageUrl && (
+                                            <Link href={msg.imageUrl} target="_blank">
+                                                <Image src={msg.imageUrl} alt="Sent image" width={200} height={200} className="rounded-md max-w-xs cursor-pointer" />
+                                            </Link>
+                                        )}
+                                        <div className="flex items-center gap-2 mt-1">
+                                            {msg.isPinned && <Pin className="h-3 w-3 text-primary" />}
+                                            {msg.editedAt && (
+                                                <span className="text-xs text-muted-foreground/70">(edited)</span>
+                                            )}
                                         </div>
-                                    )}
-
-                                    {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
-                                    {msg.imageUrl && (
-                                        <Link href={msg.imageUrl} target="_blank">
-                                            <Image src={msg.imageUrl} alt="Sent image" width={200} height={200} className="rounded-md max-w-xs cursor-pointer" />
-                                        </Link>
-                                    )}
-                                    <div className="flex items-center gap-2 mt-1">
-                                        {msg.isPinned && <Pin className="h-3 w-3 text-primary" />}
-                                        {msg.editedAt && (
-                                            <span className="text-xs text-muted-foreground/70">(edited)</span>
-                                        )}
-                                    </div>
-                               </div>
-
-                                 <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="absolute top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" style={isSender ? {left: '-2.5rem'} : {right: '-2.5rem'}}>
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                        <DropdownMenuItem onClick={() => setReplyingTo(msg)}>
-                                            <Reply className="mr-2 h-4 w-4" />
-                                            <span>Reply</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleTogglePinMessage(msg)}>
-                                            <Pin className="mr-2 h-4 w-4" />
-                                            <span>{msg.isPinned ? 'Unpin' : 'Pin'}</span>
-                                        </DropdownMenuItem>
-                                        {isSender && canEdit && msg.text && (
-                                            <DropdownMenuItem onClick={() => handleStartEdit(msg)}>
-                                                <Edit className="mr-2 h-4 w-4" />
-                                                <span>Edit</span>
+                                </div>
+                                <div className={cn("flex items-center p-1 bg-card border rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity absolute -top-4", isSender ? "right-2" : "left-2")}>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                                                <Smile className="h-4 w-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-1">
+                                            <div className="flex gap-1">
+                                            {availableReactions.map(emoji => (
+                                                <Button key={emoji} variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleReaction(msg, emoji)}>
+                                                    <span className="text-lg">{emoji}</span>
+                                                </Button>
+                                            ))}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setReplyingTo(msg)}>
+                                        <Reply className="h-4 w-4" />
+                                    </Button>
+                                     <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <DropdownMenuItem onClick={() => handleTogglePinMessage(msg)}>
+                                                <Pin className="mr-2 h-4 w-4" />
+                                                <span>{msg.isPinned ? 'Unpin' : 'Pin'}</span>
                                             </DropdownMenuItem>
-                                        )}
-                                        {isSender && (
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                                                        <span className="text-destructive">Delete</span>
-                                                    </DropdownMenuItem>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>This action cannot be undone. This will permanently delete the message.</AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Delete</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                            {isSender && canEdit && msg.text && (
+                                                <DropdownMenuItem onClick={() => handleStartEdit(msg)}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    <span>Edit</span>
+                                                </DropdownMenuItem>
+                                            )}
+                                            {isSender && (
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                                            <span className="text-destructive">Delete</span>
+                                                        </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>This action cannot be undone. This will permanently delete the message.</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Delete</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                                </div>
+                                {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                                     <div className="flex gap-1 items-center">
+                                        {Object.entries(msg.reactions).map(([emoji, uids]) => (
+                                            uids.length > 0 && (
+                                                <div key={emoji} className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs flex items-center gap-1">
+                                                    <span>{emoji}</span>
+                                                    <span>{uids.length}</span>
+                                                </div>
+                                            )
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                         )
@@ -501,3 +559,5 @@ export default function ChatPage() {
     )
 
 }
+
+    
