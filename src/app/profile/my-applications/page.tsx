@@ -166,7 +166,7 @@ export default function MyApplicationsPage() {
                     </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">
-                   <Button asChild variant="secondary">
+                   <Button asChild variant="outline">
                      <Link href={`/projects/${app.projectId}`}>View Project</Link>
                   </Button>
                   {app.status === 'accepted' && (
