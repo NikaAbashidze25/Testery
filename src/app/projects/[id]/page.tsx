@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { doc, getDoc, collection, addDoc, query, where, getDocs, serverTimestamp, type DocumentData } from 'firebase/firestore';
 import { onAuthStateChanged, type User } from 'firebase/auth';
@@ -37,7 +37,8 @@ interface Application {
 }
 
 
-export default function ProjectDetailPage({ params }: { params: { id: string } }) {
+export default function ProjectDetailPage() {
+  const params = useParams();
   const id = params.id as string;
   const router = useRouter();
   const { toast } = useToast();

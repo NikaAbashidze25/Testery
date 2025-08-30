@@ -9,7 +9,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, updateDoc, type DocumentData } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
@@ -50,7 +50,7 @@ interface Submission extends DocumentData {
     feedback?: FeedbackFormValues;
 }
 
-export default function SubmissionPage({ params }: { params: { projectId: string, applicationId: string } }) {
+export default function SubmissionPage() {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,7 +63,7 @@ export default function SubmissionPage({ params }: { params: { projectId: string
 
     const router = useRouter();
     const { toast } = useToast();
-
+    const params = useParams();
     const projectId = params.projectId as string;
     const applicationId = params.applicationId as string;
 
