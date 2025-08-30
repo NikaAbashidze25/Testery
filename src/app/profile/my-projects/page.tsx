@@ -162,13 +162,13 @@ export default function MyProjectsPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">
-                  <Button asChild variant="secondary">
+                  <Button asChild>
                      <Link href={`/projects/${project.id}/applicants`}>
                         <Users className="mr-2 h-4 w-4" />
                         View Applicants
                       </Link>
                   </Button>
-                   <Button asChild>
+                   <Button asChild variant="outline">
                       <Link href={`/projects/${project.id}/edit`}>
                         <Edit className="mr-2 h-4 w-4" /> Edit
                       </Link>
