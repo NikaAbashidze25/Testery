@@ -179,21 +179,16 @@ export default function ProfilePage() {
                     <Edit className="mr-2 h-4 w-4" /> Edit Profile
                 </Link>
             </Button>
-            {userProfile.accountType === 'company' && (
-                 <Button asChild variant="outline">
-                    <Link href="/profile/my-projects">
-                        <FileText className="mr-2 h-4 w-4" /> My Projects
-                    </Link>
-                </Button>
-            )}
-            {userProfile.accountType === 'individual' && (
-                 <Button asChild variant="outline">
-                    <Link href="/profile/my-applications">
-                        <Send className="mr-2 h-4 w-4" /> My Applications
-                    </Link>
-                </Button>
-            )}
-           
+            <Button asChild variant="outline">
+                <Link href="/profile/my-projects">
+                    <FileText className="mr-2 h-4 w-4" /> My Projects
+                </Link>
+            </Button>
+            <Button asChild variant="outline">
+                <Link href="/profile/my-applications">
+                    <Send className="mr-2 h-4 w-4" /> My Applications
+                </Link>
+            </Button>
         </CardFooter>
       </Card>
     </div>
