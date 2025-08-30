@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Menu, User, LogOut, Search, FilePlus } from 'lucide-react';
+import { Menu, User, LogOut, Search, FilePlus, MessageSquare } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -81,6 +81,12 @@ export function Header() {
               <Link href="/profile">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
+              </Link>
+            </DropdownMenuItem>
+             <DropdownMenuItem asChild>
+              <Link href="/chat">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                <span>My Chats</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

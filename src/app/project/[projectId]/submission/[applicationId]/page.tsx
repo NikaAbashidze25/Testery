@@ -1,0 +1,383 @@
+
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc, type DocumentData } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { auth, db, storage } from '@/lib/firebase';
+import { useParams, useRouter } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowLeft, Download, Star, Upload, FileText } from 'lucide-react';
+import Link from 'next/link';
+
+const submissionSchema = z.object({
+  comments: z.string().optional(),
+  files: z.any().optional(),
+});
+
+const feedbackSchema = z.object({
+    rating: z.number().min(1, "Rating is required").max(5),
+    comment: z.string().min(10, "Comment must be at least 10 characters")
+});
+
+type SubmissionFormValues = z.infer<typeof submissionSchema>;
+type FeedbackFormValues = z.infer<typeof feedbackSchema>;
+
+interface Submission extends DocumentData {
+    id: string;
+    testerId: string;
+    clientId: string;
+    projectId: string;
+    comments: string;
+    fileUrl?: string;
+    fileName?: string;
+    submittedAt: any;
+    feedback?: FeedbackFormValues;
+}
+
+export default function SubmissionPage() {
+    const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submission, setSubmission] = useState<Submission | null>(null);
+    const [project, setProject] = useState<DocumentData | null>(null);
+    const [application, setApplication] = useState<DocumentData | null>(null);
+
+    const router = useRouter();
+    const params = useParams();
+    const { toast } = useToast();
+
+    const projectId = params.projectId as string;
+    const applicationId = params.applicationId as string;
+
+    const submissionForm = useForm<SubmissionFormValues>({
+        resolver: zodResolver(submissionSchema),
+        defaultValues: { comments: '' }
+    });
+
+    const feedbackForm = useForm<FeedbackFormValues>({
+        resolver: zodResolver(feedbackSchema),
+        defaultValues: { rating: 0, comment: '' }
+    });
+    
+    const [rating, setRating] = useState(0);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (!currentUser) {
+                router.push('/login');
+                return;
+            }
+            setUser(currentUser);
+        });
+        return () => unsubscribe();
+    }, [router]);
+
+    useEffect(() => {
+        const fetchInitialData = async () => {
+            if (!user || !applicationId) return;
+            setIsLoading(true);
+
+            try {
+                // Fetch Project and Application
+                const projectDoc = await getDoc(doc(db, 'projects', projectId));
+                if (projectDoc.exists()) setProject(projectDoc.data());
+
+                const appDoc = await getDoc(doc(db, 'applications', applicationId));
+                 if (appDoc.exists()) {
+                    const appData = appDoc.data();
+                    setApplication(appData);
+
+                    // Authorization check
+                    const isTester = user.uid === appData.testerId;
+                    const isClient = user.uid === appData.ownerId;
+                    if (!isTester && !isClient) {
+                         toast({ variant: 'destructive', title: 'Unauthorized', description: 'You cannot view this page.' });
+                         router.push('/');
+                         return;
+                    }
+
+                } else {
+                    toast({ variant: 'destructive', title: 'Not Found', description: 'Application not found.' });
+                    router.push('/');
+                    return;
+                }
+
+                // Fetch Submission
+                const submissionDoc = await getDoc(doc(db, 'submissions', applicationId));
+                if (submissionDoc.exists()) {
+                    const subData = submissionDoc.data() as Submission;
+                    setSubmission(subData);
+                    if(subData.feedback) {
+                        feedbackForm.reset(subData.feedback);
+                        setRating(subData.feedback.rating);
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                toast({ variant: 'destructive', title: 'Error', description: 'Failed to load page data.' });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchInitialData();
+    }, [user, applicationId, projectId, router, toast, feedbackForm]);
+
+
+    const handleSubmission = async (values: SubmissionFormValues) => {
+        if (!user || !application) return;
+        setIsSubmitting(true);
+        try {
+            let fileUrl, fileName;
+            if (values.files && values.files.length > 0) {
+                const file = values.files[0];
+                const storageRef = ref(storage, `submissions/${applicationId}/${file.name}`);
+                await uploadBytes(storageRef, file);
+                fileUrl = await getDownloadURL(storageRef);
+                fileName = file.name;
+            }
+
+            const submissionData: Omit<Submission, 'id'> = {
+                testerId: user.uid,
+                clientId: application.ownerId,
+                projectId,
+                comments: values.comments || '',
+                submittedAt: serverTimestamp(),
+                ...(fileUrl && { fileUrl }),
+                ...(fileName && { fileName })
+            };
+            
+            await setDoc(doc(db, 'submissions', applicationId), submissionData);
+
+            toast({ title: 'Success', description: 'Your work has been submitted.' });
+            setSubmission({ id: applicationId, ...submissionData });
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Submission Failed', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    const handleFeedback = async (values: FeedbackFormValues) => {
+         if (!user || !submission) return;
+         setIsSubmitting(true);
+         try {
+             const submissionRef = doc(db, 'submissions', applicationId);
+             await updateDoc(submissionRef, { feedback: values });
+
+             const clientUser = await getDoc(doc(db, 'users', user.uid));
+             const clientData = clientUser.data();
+             
+             // Add review to a separate collection for querying on profile page
+             await setDoc(doc(db, 'reviews', `${applicationId}`), {
+                 ...values,
+                 testerId: submission.testerId,
+                 clientId: user.uid,
+                 clientName: clientData?.companyName || clientData?.fullName,
+                 clientAvatar: clientData?.companyLogoUrl || clientData?.profilePictureUrl,
+                 projectId: submission.projectId,
+                 createdAt: serverTimestamp()
+             });
+
+             toast({ title: 'Feedback Submitted', description: 'Thank you for your feedback.' });
+             setSubmission(prev => prev ? {...prev, feedback: values} : null);
+
+         } catch(error: any) {
+              toast({ variant: 'destructive', title: 'Failed to submit feedback', description: error.message });
+         } finally {
+            setIsSubmitting(false);
+         }
+    };
+    
+    const isClient = user?.uid === application?.ownerId;
+    const isTester = user?.uid === application?.testerId;
+
+     if (isLoading) {
+        return (
+             <div className="container py-12">
+                <Skeleton className="h-10 w-32 mb-8" />
+                 <Card className="max-w-3xl mx-auto">
+                     <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+                     <CardContent className="space-y-4">
+                         <Skeleton className="h-6 w-1/4" />
+                         <Skeleton className="h-20 w-full" />
+                         <Skeleton className="h-10 w-32" />
+                     </CardContent>
+                 </Card>
+            </div>
+        )
+     }
+
+    return (
+        <div className="container py-12">
+             <div className="mb-8">
+                <Button variant="outline" onClick={() => router.back()}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                </Button>
+            </div>
+            
+            <Card className="max-w-3xl mx-auto">
+                 <CardHeader>
+                    <CardTitle className="text-2xl">Project Submission</CardTitle>
+                    <CardDescription>Project: {project?.title || 'Loading...'}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {!submission && isTester && (
+                        <Form {...submissionForm}>
+                            <form onSubmit={submissionForm.handleSubmit(handleSubmission)} className="space-y-8">
+                                 <FormField
+                                    control={submissionForm.control}
+                                    name="files"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Upload Files</FormLabel>
+                                        <FormControl>
+                                            <Input type="file" {...submissionForm.register('files')} disabled={isSubmitting} />
+                                        </FormControl>
+                                        <FormDescription>Upload any relevant files (documents, screenshots, etc.)</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={submissionForm.control}
+                                    name="comments"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Comments</FormLabel>
+                                        <FormControl>
+                                            <Textarea placeholder="Add any comments about your submission..." {...field} disabled={isSubmitting} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <Button type="submit" disabled={isSubmitting}>
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    {isSubmitting ? 'Submitting...' : 'Submit Work'}
+                                </Button>
+                            </form>
+                        </Form>
+                    )}
+
+                    {submission && (
+                        <div className="space-y-6">
+                            <div>
+                                <h3 className="font-semibold text-lg mb-4">Submission Details</h3>
+                                <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
+                                     <div>
+                                        <p className="text-sm font-medium">Tester Comments:</p>
+                                        <p className="text-muted-foreground">{submission.comments || 'No comments provided.'}</p>
+                                    </div>
+                                    {submission.fileUrl && (
+                                        <div>
+                                            <p className="text-sm font-medium mb-2">Submitted File:</p>
+                                            <Button asChild variant="outline">
+                                                <Link href={submission.fileUrl} target="_blank" download={submission.fileName}>
+                                                    <Download className="mr-2 h-4 w-4" /> {submission.fileName}
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="border-t pt-6">
+                                <h3 className="font-semibold text-lg mb-4">Feedback</h3>
+                                {submission.feedback && (
+                                     <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
+                                        <div>
+                                            <p className="text-sm font-medium">Rating:</p>
+                                            <div className="flex items-center gap-1 mt-1">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star key={i} className={`h-6 w-6 ${i < submission.feedback!.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                         <div>
+                                            <p className="text-sm font-medium">Client Comments:</p>
+                                            <p className="text-muted-foreground">{submission.feedback.comment}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!submission.feedback && isClient && (
+                                    <Form {...feedbackForm}>
+                                        <form onSubmit={feedbackForm.handleSubmit(handleFeedback)} className="space-y-6">
+                                            <FormField
+                                                control={feedbackForm.control}
+                                                name="rating"
+                                                render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Rating</FormLabel>
+                                                    <FormControl>
+                                                        <div className="flex items-center gap-2">
+                                                            {[...Array(5)].map((_, i) => (
+                                                                <Star 
+                                                                    key={i} 
+                                                                    className={`h-8 w-8 cursor-pointer ${i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 hover:text-yellow-300'}`}
+                                                                    onClick={() => {
+                                                                        setRating(i + 1);
+                                                                        field.onChange(i + 1);
+                                                                    }}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={feedbackForm.control}
+                                                name="comment"
+                                                render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Comments</FormLabel>
+                                                    <FormControl>
+                                                        <Textarea placeholder="Provide feedback on the tester's work..." {...field} disabled={isSubmitting} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                                )}
+                                            />
+                                            <Button type="submit" disabled={isSubmitting}>
+                                                {isSubmitting ? 'Submitting Feedback...' : 'Submit Feedback'}
+                                            </Button>
+                                        </form>
+                                    </Form>
+                                )}
+                                {!submission.feedback && isTester && (
+                                     <div className="text-center text-muted-foreground py-8">
+                                        <FileText className="mx-auto h-12 w-12 mb-4" />
+                                        <p>Waiting for client to provide feedback.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                     {!submission && isClient && (
+                         <div className="text-center text-muted-foreground py-8">
+                            <FileText className="mx-auto h-12 w-12 mb-4" />
+                            <p>The tester has not submitted their work yet.</p>
+                        </div>
+                    )}
+
+                </CardContent>
+            </Card>
+        </div>
+    )
+
+}

@@ -4,5 +4,5 @@ export default function ChatLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <div className="h-screen">{children}</div>;
+  return <div className="h-screen bg-background">{children}</div>;
 }

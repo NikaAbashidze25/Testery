@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Inbox, Check, X, Clock, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Inbox, Check, X, Clock, CheckCircle, XCircle, MessageSquare, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
@@ -29,6 +29,7 @@ interface Application extends DocumentData {
         fullName: string;
         profilePictureUrl: string;
     };
+    hasSubmission?: boolean;
 }
 
 export default function ProjectApplicantsPage() {
@@ -45,7 +46,6 @@ export default function ProjectApplicantsPage() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        // Verify user is project owner
         const projectDocRef = doc(db, 'projects', projectId);
         const projectDoc = await getDoc(projectDocRef);
         if (projectDoc.exists() && projectDoc.data().authorId !== currentUser.uid) {
@@ -91,6 +91,11 @@ export default function ProjectApplicantsPage() {
             if (userDocSnap.exists()) {
               application.testerInfo = userDocSnap.data() as Application['testerInfo'];
             }
+            
+            const submissionDocRef = doc(db, 'submissions', appDoc.id);
+            const submissionDoc = await getDoc(submissionDocRef);
+            application.hasSubmission = submissionDoc.exists();
+
             return application;
           });
           
@@ -194,8 +199,8 @@ export default function ProjectApplicantsPage() {
                         {getStatusBadge(app.status)}
                     </div>
                 </CardContent>
-                <CardFooter className="flex justify-end gap-4">
-                  {app.status === 'pending' ? (
+                <CardFooter className="flex justify-end gap-2">
+                  {app.status === 'pending' && (
                     <>
                         <Button variant="outline" onClick={() => handleApplicationStatus(app.id, 'declined')}>
                             <X className="mr-2 h-4 w-4" /> Decline
@@ -204,14 +209,26 @@ export default function ProjectApplicantsPage() {
                             <Check className="mr-2 h-4 w-4" /> Accept
                         </Button>
                     </>
-                  ) : app.status === 'accepted' ? (
-                    <Button asChild>
-                        <Link href={`/chat/${app.id}`}>
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            Chat with Tester
-                        </Link>
-                    </Button>
-                  ) : (
+                  )}
+                  {app.status === 'accepted' && (
+                    <>
+                      {app.hasSubmission && (
+                        <Button asChild variant="secondary">
+                           <Link href={`/project/${projectId}/submission/${app.id}`}>
+                               <FileText className="mr-2 h-4 w-4" />
+                               View Submission
+                           </Link>
+                       </Button>
+                      )}
+                      <Button asChild>
+                          <Link href={`/chat/${app.id}`}>
+                              <MessageSquare className="mr-2 h-4 w-4" />
+                              Chat
+                          </Link>
+                      </Button>
+                    </>
+                  )}
+                  {app.status === 'declined' && (
                     <p className="text-sm text-muted-foreground">You have declined this application.</p>
                   )}
                 </CardFooter>

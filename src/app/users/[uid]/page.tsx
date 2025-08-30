@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, ArrowLeft, Inbox } from 'lucide-react';
+import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, ArrowLeft, Inbox, Star } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -39,6 +39,17 @@ interface Project extends DocumentData {
     };
 }
 
+interface Review extends DocumentData {
+    id: string;
+    rating: number;
+    comment: string;
+    clientName: string;
+    clientAvatar: string;
+    createdAt: {
+        seconds: number;
+        nanoseconds: number;
+    }
+}
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -46,6 +57,7 @@ export default function UserProfilePage() {
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -56,15 +68,28 @@ export default function UserProfilePage() {
             const userDocSnap = await getDoc(userDocRef);
 
             if (userDocSnap.exists()) {
-                setUserProfile(userDocSnap.data() as UserProfile);
+                const profileData = userDocSnap.data() as UserProfile;
+                setUserProfile(profileData);
                 
-                const projectsCollection = collection(db, 'projects');
-                const q = query(projectsCollection, where('authorId', '==', uid));
-                const querySnapshot = await getDocs(q);
-                const projectsData = querySnapshot.docs
-                  .map(doc => ({ id: doc.id, ...doc.data() } as Project))
-                  .sort((a, b) => b.postedAt.seconds - a.postedAt.seconds);
-                setProjects(projectsData);
+                // Fetch Projects for Companies
+                if (profileData.accountType === 'company') {
+                    const projectsCollection = collection(db, 'projects');
+                    const q = query(projectsCollection, where('authorId', '==', uid));
+                    const querySnapshot = await getDocs(q);
+                    const projectsData = querySnapshot.docs
+                      .map(doc => ({ id: doc.id, ...doc.data() } as Project))
+                      .sort((a, b) => b.postedAt.seconds - a.postedAt.seconds);
+                    setProjects(projectsData);
+                }
+
+                // Fetch Reviews for Testers
+                if (profileData.accountType === 'individual') {
+                    const reviewsCollection = collection(db, 'reviews');
+                    const q = query(reviewsCollection, where('testerId', '==', uid), orderBy('createdAt', 'desc'));
+                    const querySnapshot = await getDocs(q);
+                    const reviewsData = querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Review));
+                    setReviews(reviewsData);
+                }
 
             } else {
                 console.error("No such user!");
@@ -88,6 +113,16 @@ export default function UserProfilePage() {
     if (!timestamp) return '...';
     const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
     return formatDistanceToNow(date, { addSuffix: true });
+  }
+
+  const renderStars = (rating: number) => {
+    return (
+        <div className="flex items-center gap-1">
+            {[...Array(5)].map((_, i) => (
+                <Star key={i} className={`h-5 w-5 ${i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+            ))}
+        </div>
+    )
   }
 
   if (isLoading) {
@@ -207,42 +242,88 @@ export default function UserProfilePage() {
                 </Card>
             </div>
             <div className="lg:col-span-2 space-y-6">
-                <h2 className="text-3xl font-bold font-headline">Posted Projects</h2>
-                {projects.length > 0 ? (
-                    <div className="space-y-4">
-                        {projects.map(project => (
-                            <Card key={project.id}>
-                                <CardHeader>
-                                    <CardTitle>{project.title}</CardTitle>
-                                    <CardDescription>Posted {formatPostedDate(project.postedAt)}</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                     <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{project.description}</p>
-                                      <div className="flex flex-wrap gap-2">
-                                        {project.skills.map(skill => (
-                                        <Badge key={skill} variant="secondary">{skill}</Badge>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                                <CardFooter>
-                                    <Button asChild variant="secondary">
-                                        <Link href={`/projects/${project.id}`}>View Project</Link>
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-                        ))}
-                    </div>
-                ) : (
-                    <Card className="text-center py-12">
-                        <CardHeader>
-                             <div className="mx-auto bg-secondary rounded-full h-16 w-16 flex items-center justify-center">
-                                <Inbox className="h-8 w-8 text-muted-foreground" />
+                {userProfile.accountType === 'company' && (
+                    <>
+                        <h2 className="text-3xl font-bold font-headline">Posted Projects</h2>
+                        {projects.length > 0 ? (
+                            <div className="space-y-4">
+                                {projects.map(project => (
+                                    <Card key={project.id}>
+                                        <CardHeader>
+                                            <CardTitle>{project.title}</CardTitle>
+                                            <CardDescription>Posted {formatPostedDate(project.postedAt)}</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                             <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{project.description}</p>
+                                              <div className="flex flex-wrap gap-2">
+                                                {project.skills.map(skill => (
+                                                <Badge key={skill} variant="secondary">{skill}</Badge>
+                                                ))}
+                                            </div>
+                                        </CardContent>
+                                        <CardFooter>
+                                            <Button asChild variant="secondary">
+                                                <Link href={`/projects/${project.id}`}>View Project</Link>
+                                            </Button>
+                                        </CardFooter>
+                                    </Card>
+                                ))}
                             </div>
-                            <CardTitle className="mt-4">No Projects Posted</CardTitle>
-                            <CardDescription>This user hasn't posted any projects yet.</CardDescription>
-                        </CardHeader>
-                    </Card>
+                        ) : (
+                            <Card className="text-center py-12">
+                                <CardHeader>
+                                     <div className="mx-auto bg-secondary rounded-full h-16 w-16 flex items-center justify-center">
+                                        <Inbox className="h-8 w-8 text-muted-foreground" />
+                                    </div>
+                                    <CardTitle className="mt-4">No Projects Posted</CardTitle>
+                                    <CardDescription>This user hasn't posted any projects yet.</CardDescription>
+                                </CardHeader>
+                            </Card>
+                        )}
+                    </>
                 )}
+
+                 {userProfile.accountType === 'individual' && (
+                    <>
+                        <h2 className="text-3xl font-bold font-headline">Reviews</h2>
+                        {reviews.length > 0 ? (
+                            <div className="space-y-4">
+                                {reviews.map(review => (
+                                    <Card key={review.id}>
+                                        <CardHeader>
+                                            <div className="flex items-center gap-4">
+                                                <Avatar className="h-12 w-12">
+                                                    <AvatarImage src={review.clientAvatar} />
+                                                    <AvatarFallback>{getInitials(review.clientName)}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <CardTitle className="text-lg">{review.clientName}</CardTitle>
+                                                    <CardDescription>
+                                                        {formatDistanceToNow(new Date(review.createdAt.seconds * 1000), { addSuffix: true })}
+                                                    </CardDescription>
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {renderStars(review.rating)}
+                                            <p className="text-muted-foreground mt-2">{review.comment}</p>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : (
+                             <Card className="text-center py-12">
+                                <CardHeader>
+                                     <div className="mx-auto bg-secondary rounded-full h-16 w-16 flex items-center justify-center">
+                                        <Inbox className="h-8 w-8 text-muted-foreground" />
+                                    </div>
+                                    <CardTitle className="mt-4">No Reviews Yet</CardTitle>
+                                    <CardDescription>This tester hasn't received any reviews yet.</CardDescription>
+                                </CardHeader>
+                            </Card>
+                        )}
+                    </>
+                 )}
             </div>
         </div>
     </div>

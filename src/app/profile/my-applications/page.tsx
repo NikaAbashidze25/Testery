@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { collection, query, where, getDocs, orderBy, type DocumentData } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, type DocumentData, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Inbox, FileText, Clock, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Inbox, FileText, Clock, CheckCircle, XCircle, MessageSquare, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Application extends DocumentData {
@@ -24,6 +24,7 @@ interface Application extends DocumentData {
         seconds: number;
         nanoseconds: number;
     };
+    hasSubmission?: boolean;
 }
 
 export default function MyApplicationsPage() {
@@ -51,9 +52,21 @@ export default function MyApplicationsPage() {
           const appsCollection = collection(db, 'applications');
           const q = query(appsCollection, where('testerId', '==', user.uid));
           const querySnapshot = await getDocs(q);
-          const appsData = querySnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() } as Application))
-            .sort((a, b) => b.appliedAt.seconds - a.appliedAt.seconds);
+
+          const appsDataPromises = querySnapshot.docs.map(async (appDoc) => {
+              const appData = { id: appDoc.id, ...appDoc.data() } as Application;
+              
+              // Check for submission
+              const submissionDocRef = doc(db, 'submissions', appDoc.id);
+              const submissionDoc = await getDoc(submissionDocRef);
+              appData.hasSubmission = submissionDoc.exists();
+
+              return appData;
+          });
+
+          const appsData = await Promise.all(appsDataPromises);
+          appsData.sort((a, b) => b.appliedAt.seconds - a.appliedAt.seconds);
+
           setApplications(appsData);
         } catch (error) {
           console.error("Error fetching user's applications: ", error);
@@ -165,17 +178,33 @@ export default function MyApplicationsPage() {
                         {getStatusBadge(app.status)}
                     </div>
                 </CardContent>
-                <CardFooter className="flex justify-between">
+                <CardFooter className="flex justify-between items-center">
                    <Button asChild variant="outline">
                      <Link href={`/projects/${app.projectId}`}>View Project</Link>
                   </Button>
                   {app.status === 'accepted' && (
-                    <Button asChild>
-                       <Link href={`/chat/${app.id}`}>
-                           <MessageSquare className="mr-2 h-4 w-4" />
-                           Chat with Client
-                       </Link>
-                   </Button>
+                    <div className="flex gap-2">
+                        {app.hasSubmission ? (
+                             <Button asChild variant="secondary">
+                               <Link href={`/project/${app.projectId}/submission/${app.id}`}>
+                                   View Submission
+                               </Link>
+                           </Button>
+                        ) : (
+                             <Button asChild>
+                               <Link href={`/project/${app.projectId}/submission/${app.id}`}>
+                                   <Upload className="mr-2 h-4 w-4" />
+                                   Submit Work
+                               </Link>
+                           </Button>
+                        )}
+                        <Button asChild>
+                           <Link href={`/chat/${app.id}`}>
+                               <MessageSquare className="mr-2 h-4 w-4" />
+                               Chat
+                           </Link>
+                       </Button>
+                    </div>
                   )}
                 </CardFooter>
               </Card>
@@ -185,4 +214,3 @@ export default function MyApplicationsPage() {
     </div>
   );
 }
-
