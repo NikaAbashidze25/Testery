@@ -332,23 +332,20 @@ export default function ChatPage() {
     
     if (isLoading) {
         return (
-             <div className="container mx-auto max-w-3xl py-12">
-                 <Skeleton className="h-10 w-24 mb-6" />
-                <Card className="h-[70vh] flex flex-col">
-                    <CardHeader className="flex flex-row items-center gap-4 border-b">
-                         <Skeleton className="h-12 w-12 rounded-full" />
-                         <div className="space-y-2">
-                             <Skeleton className="h-5 w-32" />
-                             <Skeleton className="h-4 w-48" />
-                         </div>
-                    </CardHeader>
-                    <CardContent className="flex-1 p-6 space-y-4 overflow-y-hidden">
-                        <Skeleton className="h-10 w-3/4" />
-                        <div className="flex justify-end w-full"><Skeleton className="h-10 w-1/2" /></div>
-                        <Skeleton className="h-8 w-3/5" />
-                    </CardContent>
-                    <CardFooter className="p-4 border-t"><Skeleton className="h-11 w-full" /></CardFooter>
-                </Card>
+             <div className="flex flex-col h-screen bg-background">
+                <header className="flex items-center gap-4 border-b p-4 h-20">
+                     <Skeleton className="h-12 w-12 rounded-full" />
+                     <div className="space-y-2">
+                         <Skeleton className="h-5 w-32" />
+                         <Skeleton className="h-4 w-48" />
+                     </div>
+                </header>
+                <main className="flex-1 p-6 space-y-4 overflow-y-hidden">
+                    <Skeleton className="h-10 w-3/4" />
+                    <div className="flex justify-end w-full"><Skeleton className="h-10 w-1/2" /></div>
+                    <Skeleton className="h-8 w-3/5" />
+                </main>
+                <footer className="p-4 border-t"><Skeleton className="h-11 w-full" /></footer>
             </div>
         )
     }
@@ -356,36 +353,35 @@ export default function ChatPage() {
     const pinnedMessages = messages.filter(m => m.isPinned);
 
     return (
-        <div className="container mx-auto max-w-3xl py-12">
-            <div className="mb-6">
-                 <Button variant="outline" onClick={() => router.back()}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
+        <div className="flex flex-col h-screen bg-background">
+            <header className="flex items-center gap-4 border-b p-4 h-20 flex-shrink-0">
+                 <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                    <ArrowLeft className="h-6 w-6" />
                 </Button>
+                <Avatar>
+                    <AvatarImage src={otherUser?.avatarUrl} alt={otherUser?.name} />
+                    <AvatarFallback>{getInitials(otherUser?.name)}</AvatarFallback>
+                </Avatar>
+                <div>
+                    <h2 className="text-lg font-semibold">{otherUser?.name || 'Chat'}</h2>
+                    <p className="text-sm text-muted-foreground">Regarding project: {projectTitle}</p>
+                </div>
+            </header>
+
+            {pinnedMessages.length > 0 && (
+            <div className="p-2 border-b bg-secondary/50">
+                {pinnedMessages.map(msg => (
+                        <div key={`pin-${msg.id}`} className="p-2 rounded-md text-xs text-muted-foreground flex items-center gap-2 container">
+                        <Pin className="h-3 w-3 text-primary flex-shrink-0" />
+                        <span className="font-semibold">{msg.senderId === user?.uid ? "You" : otherUser?.name}:</span>
+                        <p className="truncate">{msg.text || "Image"}</p>
+                    </div>
+                ))}
             </div>
-            <Card className="h-[calc(100vh-10rem)] flex flex-col">
-                <CardHeader className="flex flex-row items-center gap-4 border-b">
-                     <Avatar>
-                        <AvatarImage src={otherUser?.avatarUrl} alt={otherUser?.name} />
-                        <AvatarFallback>{getInitials(otherUser?.name)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <CardTitle className="text-lg">{otherUser?.name || 'Chat'}</CardTitle>
-                         <p className="text-sm text-muted-foreground">Regarding project: {projectTitle}</p>
-                    </div>
-                </CardHeader>
-                 {pinnedMessages.length > 0 && (
-                    <div className="p-2 border-b bg-secondary/50">
-                        {pinnedMessages.map(msg => (
-                             <div key={`pin-${msg.id}`} className="p-2 rounded-md text-xs text-muted-foreground flex items-center gap-2">
-                                <Pin className="h-3 w-3 text-primary flex-shrink-0" />
-                                <span className="font-semibold">{msg.senderId === user?.uid ? "You" : otherUser?.name}:</span>
-                                <p className="truncate">{msg.text || "Image"}</p>
-                            </div>
-                        ))}
-                    </div>
-                 )}
-                <CardContent ref={messagesEndRef} className="flex-1 p-6 overflow-y-auto space-y-1">
+            )}
+            
+            <main ref={messagesEndRef} className="flex-1 overflow-y-auto p-6 space-y-1">
+                <div className="container">
                     {messages.map((msg) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
@@ -500,8 +496,10 @@ export default function ChatPage() {
                         </div>
                         )
                     })}
-                </CardContent>
-                <CardFooter className="p-4 border-t flex flex-col items-start">
+                </div>
+            </main>
+            <footer className="p-4 border-t flex-shrink-0 bg-background">
+                <div className="container">
                     {(replyingTo || editingMessage) && (
                         <div className="bg-secondary/70 w-full p-2 mb-2 rounded-md text-sm text-muted-foreground flex justify-between items-center">
                             <div>
@@ -553,11 +551,13 @@ export default function ChatPage() {
                             <span className="sr-only">{editingMessage ? 'Save Changes' : 'Send'}</span>
                         </Button>
                     </form>
-                </CardFooter>
-            </Card>
+                </div>
+            </footer>
         </div>
     )
 
 }
+
+    
 
     
