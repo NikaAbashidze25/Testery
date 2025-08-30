@@ -332,7 +332,7 @@ export default function ChatPage() {
     
     if (isLoading) {
         return (
-             <div className="flex flex-col h-screen bg-background">
+             <div className="flex flex-col h-full bg-background">
                 <header className="flex items-center gap-4 border-b p-4 h-20">
                      <Skeleton className="h-12 w-12 rounded-full" />
                      <div className="space-y-2">
@@ -353,7 +353,7 @@ export default function ChatPage() {
     const pinnedMessages = messages.filter(m => m.isPinned);
 
     return (
-        <div className="flex flex-col h-screen bg-background">
+        <div className="flex flex-col h-full bg-background">
             <header className="flex items-center gap-4 border-b p-4 h-20 flex-shrink-0">
                  <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ArrowLeft className="h-6 w-6" />
