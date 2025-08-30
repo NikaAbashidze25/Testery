@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X } from 'lucide-react';
+import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -58,6 +58,7 @@ export default function SubmissionPage() {
     const [project, setProject] = useState<DocumentData | null>(null);
     const [application, setApplication] = useState<DocumentData | null>(null);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [isDragging, setIsDragging] = useState(false);
 
 
     const router = useRouter();
@@ -175,16 +176,46 @@ export default function SubmissionPage() {
             setIsSubmitting(false);
         }
     };
-
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files) {
-            const newFiles = Array.from(event.target.files);
-            setSelectedFiles(prevFiles => [...prevFiles, ...newFiles]);
-            submissionForm.setValue('files', [...selectedFiles, ...newFiles]);
-            // Clear the input value to allow selecting the same file again if removed
-            event.target.value = '';
+    
+    const addFilesToList = (files: FileList | null) => {
+        if (files) {
+            const newFiles = Array.from(files);
+            const updatedFiles = [...selectedFiles, ...newFiles];
+            setSelectedFiles(updatedFiles);
+            submissionForm.setValue('files', updatedFiles);
         }
     };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        addFilesToList(event.target.files);
+        event.target.value = ''; // Clear input to allow re-selecting same file
+    };
+    
+    const handleDragEnter = (e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // This is necessary to show the drop cursor
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        addFilesToList(e.dataTransfer.files);
+    };
+
 
     const handleRemoveFile = (indexToRemove: number) => {
         const updatedFiles = selectedFiles.filter((_, index) => index !== indexToRemove);
@@ -267,22 +298,38 @@ export default function SubmissionPage() {
                                     <FormItem>
                                         <FormLabel>Upload Files</FormLabel>
                                         <FormControl>
-                                            <Input 
-                                                type="file" 
-                                                multiple 
-                                                onChange={handleFileChange}
-                                                disabled={isSubmitting} 
-                                                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                                            />
+                                            <label
+                                                onDragEnter={handleDragEnter}
+                                                onDragLeave={handleDragLeave}
+                                                onDragOver={handleDragOver}
+                                                onDrop={handleDrop}
+                                                className={cn(
+                                                    "flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/80 transition-colors",
+                                                    isDragging && "border-primary bg-primary/10"
+                                                )}
+                                            >
+                                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                    <UploadCloud className={cn("w-10 h-10 mb-3 text-muted-foreground", isDragging && "text-primary")} />
+                                                    <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                                    <p className="text-xs text-muted-foreground">Any relevant project files</p>
+                                                </div>
+                                                <Input 
+                                                    id="dropzone-file" 
+                                                    type="file" 
+                                                    className="hidden" 
+                                                    multiple
+                                                    onChange={handleFileChange}
+                                                    disabled={isSubmitting} 
+                                                />
+                                            </label>
                                         </FormControl>
-                                        <FormDescription>Upload any relevant files (documents, screenshots, etc.)</FormDescription>
                                         <FormMessage />
                                          {selectedFiles.length > 0 && (
                                             <div className="mt-4 space-y-2">
                                                 <h4 className="text-sm font-medium">Selected files:</h4>
                                                 <ul className="space-y-2 bg-muted/50 p-3 rounded-md">
                                                     {selectedFiles.map((file, index) => (
-                                                        <li key={index} className="text-sm text-muted-foreground flex items-center justify-between gap-2 bg-background p-2 rounded-md">
+                                                        <li key={index} className="text-sm text-muted-foreground flex items-center justify-between gap-2 bg-background p-2 rounded-md border">
                                                            <div className="flex items-center gap-2 truncate">
                                                                 <Paperclip className="h-4 w-4 flex-shrink-0" />
                                                                 <span className="truncate">{file.name}</span>
@@ -312,7 +359,7 @@ export default function SubmissionPage() {
                                     </FormItem>
                                     )}
                                 />
-                                <Button type="submit" disabled={isSubmitting}>
+                                <Button type="submit" disabled={isSubmitting || selectedFiles.length === 0}>
                                     <Upload className="mr-2 h-4 w-4" />
                                     {isSubmitting ? 'Submitting...' : 'Submit Work'}
                                 </Button>
@@ -433,6 +480,8 @@ export default function SubmissionPage() {
     )
 
 }
+
+    
 
     
 
