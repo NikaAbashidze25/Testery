@@ -463,9 +463,9 @@ export default function ChatPage() {
                                                 {isSender && (
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
-                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                                <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                                                                <span className="text-destructive">Delete</span>
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                <span>Delete</span>
                                                             </DropdownMenuItem>
                                                         </AlertDialogTrigger>
                                                         <AlertDialogContent>
@@ -540,7 +540,7 @@ export default function ChatPage() {
                             onChange={(e) => setNewMessage(e.target.value)}
                             placeholder="Type a message..."
                             autoComplete="off"
-                            className="flex-1 resize-none border-0 bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-2 py-1.5"
+                            className="flex-1 resize-none border-0 bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-2 py-3"
                             maxRows={5}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -559,3 +559,5 @@ export default function ChatPage() {
     )
 
 }
+
+    
