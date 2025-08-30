@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Inbox, Check, X, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Inbox, Check, X, Clock, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
@@ -204,8 +204,15 @@ export default function ProjectApplicantsPage() {
                             <Check className="mr-2 h-4 w-4" /> Accept
                         </Button>
                     </>
+                  ) : app.status === 'accepted' ? (
+                    <Button asChild>
+                        <Link href={`/chat/${app.id}`}>
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            Chat with Tester
+                        </Link>
+                    </Button>
                   ) : (
-                    <p className="text-sm text-muted-foreground">You have already responded to this application.</p>
+                    <p className="text-sm text-muted-foreground">You have declined this application.</p>
                   )}
                 </CardFooter>
               </Card>
