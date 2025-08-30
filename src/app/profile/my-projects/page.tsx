@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Inbox, ArrowLeft, Edit } from 'lucide-react';
+import { PlusCircle, Inbox, ArrowLeft, Edit, Users } from 'lucide-react';
 
 interface Project extends DocumentData {
     id: string;
@@ -163,7 +163,10 @@ export default function MyProjectsPage() {
                 </CardContent>
                 <CardFooter className="flex justify-between">
                   <Button asChild variant="secondary">
-                    <Link href={`/projects/${project.id}`}>View Details</Link>
+                     <Link href={`/projects/${project.id}/applicants`}>
+                        <Users className="mr-2 h-4 w-4" />
+                        View Applicants
+                      </Link>
                   </Button>
                    <Button asChild>
                       <Link href={`/projects/${project.id}/edit`}>
