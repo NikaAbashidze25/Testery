@@ -3,22 +3,29 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, doc, getDoc, DocumentData } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { collection, query, onSnapshot, orderBy, addDoc, serverTimestamp, doc, getDoc, DocumentData } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { auth, db, storage } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, Send, Image as ImageIcon, Smile } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import Image from 'next/image';
+import TextareaAutosize from 'react-textarea-autosize';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
+import { useTheme } from 'next-themes';
+
 
 interface Message {
     id: string;
-    text: string;
+    text?: string;
+    imageUrl?: string;
     senderId: string;
     timestamp: any;
 }
@@ -36,12 +43,15 @@ export default function ChatPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
     const [projectTitle, setProjectTitle] = useState<string>('');
+    const [isSending, setIsSending] = useState(false);
 
     const router = useRouter();
     const params = useParams();
     const applicationId = params.id as string;
     const { toast } = useToast();
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { resolvedTheme } = useTheme();
 
 
     useEffect(() => {
@@ -93,11 +103,15 @@ export default function ChatPage() {
                 }
                 
                 const messagesColRef = collection(db, 'applications', applicationId, 'messages');
-                const q = query(messagesColRef, orderBy('timestamp'));
+                const q = query(messagesColRef, orderBy('timestamp', 'asc'));
 
                 const unsubscribeMessages = onSnapshot(q, (querySnapshot) => {
                     const msgs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
                     setMessages(msgs);
+                    setIsLoading(false);
+                }, (error) => {
+                    console.error("Error fetching messages:", error);
+                    toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.' });
                     setIsLoading(false);
                 });
 
@@ -108,22 +122,59 @@ export default function ChatPage() {
     }, [user, applicationId, router, toast]);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        if (!isLoading) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages, isLoading]);
 
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user || !newMessage.trim()) return;
+        if (!user || !newMessage.trim() || isSending) return;
 
+        setIsSending(true);
         const messagesColRef = collection(db, 'applications', applicationId, 'messages');
-        await addDoc(messagesColRef, {
-            text: newMessage,
-            senderId: user.uid,
-            timestamp: serverTimestamp()
-        });
+        try {
+            await addDoc(messagesColRef, {
+                text: newMessage,
+                senderId: user.uid,
+                timestamp: serverTimestamp()
+            });
+            setNewMessage('');
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
+        } finally {
+            setIsSending(false);
+        }
+    };
+    
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || !user || isSending) return;
+        
+        const file = e.target.files[0];
+        if (!file) return;
 
-        setNewMessage('');
+        setIsSending(true);
+        try {
+            const storageRef = ref(storage, `chat_images/${applicationId}/${Date.now()}_${file.name}`);
+            await uploadBytes(storageRef, file);
+            const imageUrl = await getDownloadURL(storageRef);
+
+            const messagesColRef = collection(db, 'applications', applicationId, 'messages');
+            await addDoc(messagesColRef, {
+                imageUrl: imageUrl,
+                senderId: user.uid,
+                timestamp: serverTimestamp()
+            });
+
+        } catch (error) {
+             toast({ variant: 'destructive', title: 'Error', description: 'Could not upload image.' });
+        } finally {
+            setIsSending(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
     };
 
     const getInitials = (name: string | undefined) => {
@@ -137,9 +188,9 @@ export default function ChatPage() {
     
     if (isLoading) {
         return (
-             <div className="container py-12">
+             <div className="container mx-auto max-w-3xl py-12">
                  <Skeleton className="h-10 w-24 mb-6" />
-                <Card className="max-w-3xl mx-auto h-[70vh] flex flex-col">
+                <Card className="h-[70vh] flex flex-col">
                     <CardHeader className="flex flex-row items-center gap-4 border-b">
                          <Skeleton className="h-12 w-12 rounded-full" />
                          <div className="space-y-2">
@@ -147,26 +198,26 @@ export default function ChatPage() {
                              <Skeleton className="h-4 w-48" />
                          </div>
                     </CardHeader>
-                    <CardContent className="flex-1 p-6 space-y-4">
+                    <CardContent className="flex-1 p-6 space-y-4 overflow-y-hidden">
                         <Skeleton className="h-10 w-3/4" />
-                        <Skeleton className="h-10 w-1/2 self-end" />
+                        <div className="flex justify-end w-full"><Skeleton className="h-10 w-1/2" /></div>
                         <Skeleton className="h-8 w-3/5" />
                     </CardContent>
-                    <CardFooter><Skeleton className="h-11 w-full" /></CardFooter>
+                    <CardFooter className="p-4 border-t"><Skeleton className="h-11 w-full" /></CardFooter>
                 </Card>
             </div>
         )
     }
 
     return (
-        <div className="container py-12">
+        <div className="container mx-auto max-w-3xl py-12">
             <div className="mb-6">
                  <Button variant="outline" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
                 </Button>
             </div>
-            <Card className="max-w-3xl mx-auto h-[70vh] flex flex-col">
+            <Card className="h-[calc(100vh-10rem)] flex flex-col">
                 <CardHeader className="flex flex-row items-center gap-4 border-b">
                      <Avatar>
                         <AvatarImage src={otherUser?.avatarUrl} alt={otherUser?.name} />
@@ -185,7 +236,12 @@ export default function ChatPage() {
                                 <AvatarFallback>{getInitials(msg.senderId === user?.uid ? user.displayName! : otherUser?.name)}</AvatarFallback>
                             </Avatar>
                            <div className={cn("rounded-lg px-4 py-2 text-sm", msg.senderId === user?.uid ? "bg-primary text-primary-foreground" : "bg-secondary")}>
-                                <p>{msg.text}</p>
+                                {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
+                                {msg.imageUrl && (
+                                    <Link href={msg.imageUrl} target="_blank">
+                                        <Image src={msg.imageUrl} alt="Sent image" width={200} height={200} className="rounded-md max-w-xs cursor-pointer" />
+                                    </Link>
+                                )}
                            </div>
                         </div>
                     ))}
@@ -193,13 +249,41 @@ export default function ChatPage() {
                 </CardContent>
                 <CardFooter className="p-4 border-t">
                     <form onSubmit={handleSendMessage} className="flex w-full items-center gap-2">
-                        <Input
+                         <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" disabled={isSending} />
+                         <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isSending}>
+                            <ImageIcon className="h-5 w-5" />
+                            <span className="sr-only">Upload Image</span>
+                         </Button>
+
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <Button type="button" variant="ghost" size="icon" disabled={isSending}>
+                                    <Smile className="h-5 w-5" />
+                                    <span className="sr-only">Add Emoji</span>
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 border-none">
+                               <EmojiPicker 
+                                  onEmojiClick={(emoji) => setNewMessage(prev => prev + emoji.emoji)}
+                                  theme={resolvedTheme === 'dark' || resolvedTheme === 'midnight' ? EmojiTheme.DARK : EmojiTheme.LIGHT}
+                               />
+                            </PopoverContent>
+                         </Popover>
+
+                        <TextareaAutosize
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             placeholder="Type a message..."
                             autoComplete="off"
+                            className="flex-1 resize-none border-0 bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-2 py-1.5"
+                            maxRows={5}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    handleSendMessage(e);
+                                }
+                            }}
                         />
-                        <Button type="submit" size="icon" disabled={!newMessage.trim()}>
+                        <Button type="submit" size="icon" disabled={!newMessage.trim() || isSending}>
                             <Send className="h-4 w-4" />
                             <span className="sr-only">Send</span>
                         </Button>
