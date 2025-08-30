@@ -6,7 +6,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { collection, query, onSnapshot, orderBy, addDoc, serverTimestamp, doc, getDoc, DocumentData, updateDoc, Timestamp, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -55,7 +55,7 @@ const EDIT_TIME_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
 const availableReactions = ['👍', '❤️', '😂'];
 
 
-export default function ChatPage() {
+export default function ChatPage({ params }: { params: { id: string } }) {
     const [user, setUser] = useState<User | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -68,7 +68,6 @@ export default function ChatPage() {
 
 
     const router = useRouter();
-    const params = useParams();
     const applicationId = params.id as string;
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);

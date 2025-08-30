@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc, type DocumentData } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -32,13 +32,12 @@ interface Application extends DocumentData {
     hasSubmission?: boolean;
 }
 
-export default function ProjectApplicantsPage() {
+export default function ProjectApplicantsPage({ params }: { params: { id: string } }) {
   const [user, setUser] = useState<User | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [projectTitle, setProjectTitle] = useState('');
   const router = useRouter();
-  const params = useParams();
   const projectId = params.id as string;
   const { toast } = useToast();
 

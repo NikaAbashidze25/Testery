@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -51,8 +51,7 @@ interface Review extends DocumentData {
     }
 }
 
-export default function UserProfilePage() {
-  const params = useParams();
+export default function UserProfilePage({ params }: { params: { uid: string } }) {
   const uid = params.uid as string;
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
