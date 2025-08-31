@@ -40,7 +40,6 @@ import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
 import { useTheme } from 'next-themes';
 import { Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip, Menu } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
-import { SidebarProvider, Sidebar, SidebarTrigger, SidebarContent, SidebarInset } from '../ui/sidebar';
 
 // Interfaces
 interface Message {
@@ -212,6 +211,8 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const [isSending, setIsSending] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(true);
   
   // Hooks
   const router = useRouter();
@@ -219,9 +220,6 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [leftPanelOpen, setLeftPanelOpen] = useState(false);
-
 
   // Effects
   useEffect(() => {
@@ -341,7 +339,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     }
     setActiveChat({ id: applicationId, otherUser: otherUserInfo, projectTitle: appData.projectTitle });
     router.replace(`/chat/${applicationId}`, { scroll: false });
-    setLeftPanelOpen(false);
+    setIsMobileMenuOpen(false);
   }, [user, toast, router]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -467,161 +465,162 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-        <SidebarProvider>
-            <Sidebar>
-                <SidebarContent className="p-0 overflow-y-auto">
-                    {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
-                </SidebarContent>
-            </Sidebar>
-            <SidebarInset className="max-w-full">
-            <div className="flex flex-1 h-screen">
-                {/* Center Panel */}
-                <div className="flex-1 flex flex-col h-full">
-                    {!activeChat ? (
-                    <div className="flex flex-col h-full items-center justify-center text-center bg-muted/50 p-8">
-                        <SidebarTrigger className="md:hidden absolute top-4 left-4" />
-                        <Paperclip className="h-16 w-16 text-muted-foreground mb-4" />
-                        <h2 className="text-xl font-semibold">Select a chat to start messaging</h2>
-                        <p className="text-muted-foreground">Your conversations will appear here.</p>
+        {/* Left Panel: Chat List */}
+        <div className={cn(
+            "w-full md:w-1/4 md:flex flex-col flex-shrink-0",
+            activeChat && !isMobileMenuOpen ? "hidden md:flex" : "flex",
+            isMobileMenuOpen ? "flex" : "hidden"
+        )}>
+            {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
+        </div>
+        
+        {/* Center & Right Panels */}
+        <div className={cn(
+            "flex-1 flex flex-col",
+            activeChat ? "flex" : "hidden md:flex"
+        )}>
+            {!activeChat ? (
+            <div className="flex flex-col h-full items-center justify-center text-center bg-muted/50 p-8">
+                <Button className="md:hidden absolute top-4 left-4" variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
+                    <Menu />
+                </Button>
+                <Paperclip className="h-16 w-16 text-muted-foreground mb-4" />
+                <h2 className="text-xl font-semibold">Select a chat to start messaging</h2>
+                <p className="text-muted-foreground">Your conversations will appear here.</p>
+            </div>
+            ) : (
+            <div className="flex flex-1 h-full min-h-0">
+                {/* Center Panel: Messages */}
+                <div className="flex flex-col flex-1 h-full min-h-0">
+                    {/* Header */}
+                    <header className="flex items-center gap-3 border-b p-3 h-16 flex-shrink-0">
+                        <Button className="md:hidden" variant="ghost" size="icon" onClick={() => setActiveChat(null)}>
+                            <Menu />
+                        </Button>
+                    <Avatar>
+                        <AvatarImage src={activeChat.otherUser?.avatarUrl} />
+                        <AvatarFallback>{getInitials(activeChat.otherUser?.name)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <h2 className="text-lg font-semibold">{activeChat.otherUser?.name || 'Chat'}</h2>
                     </div>
-                    ) : (
-                    <div className="flex flex-col h-full flex-1">
-                        {/* Header */}
-                        <header className="flex items-center gap-3 border-b p-3 h-16 flex-shrink-0">
-                            <SidebarTrigger className="md:hidden" />
-                        <Avatar>
-                            <AvatarImage src={activeChat.otherUser?.avatarUrl} />
-                            <AvatarFallback>{getInitials(activeChat.otherUser?.name)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <h2 className="text-lg font-semibold">{activeChat.otherUser?.name || 'Chat'}</h2>
-                        </div>
-                        <div className="ml-auto flex items-center gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => setRightPanelOpen(prev => !prev)} className={cn("lg:hidden", rightPanelOpen && "bg-accent")}>
-                                <Info className="h-5 w-5" />
-                                <span className="sr-only">Chat Info</span>
-                            </Button>
-                        </div>
-                        </header>
+                    <div className="ml-auto flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => setIsInfoPanelOpen(prev => !prev)} className={cn(isInfoPanelOpen && "bg-accent")}>
+                            <Info className="h-5 w-5" />
+                            <span className="sr-only">Chat Info</span>
+                        </Button>
+                    </div>
+                    </header>
 
-                        {/* Messages */}
-                        <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-1 text-sm md:text-base">
-                        {messages.map((msg) => {
-                            const isSender = msg.senderId === user?.uid;
-                            const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
-                            return (
-                            <div key={msg.id} className={cn("group flex items-start gap-2.5 max-w-[85%]", isSender ? "ml-auto flex-row-reverse" : "mr-auto")}>
-                                <Avatar className="h-8 w-8 self-end mb-1">
-                                <AvatarImage src={isSender ? user?.photoURL! : activeChat.otherUser?.avatarUrl} />
-                                <AvatarFallback>{getInitials(isSender ? user?.displayName! : activeChat.otherUser?.name)}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex flex-col gap-0.5 w-full">
-                                <div className={cn("flex items-center gap-2", isSender ? "flex-row-reverse" : "")}>
-                                    <div className={cn("rounded-xl px-3.5 py-2.5 max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30")}>
-                                    {msg.replyTo && (
-                                        <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
-                                        <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
-                                        <p className="truncate">{msg.replyTo.text}</p>
-                                        </div>
-                                    )}
-                                    {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
-                                    {msg.imageUrl && (
-                                        <Link href={msg.imageUrl} target="_blank">
-                                        <Image src={msg.imageUrl} alt="Sent image" width={200} height={200} className="rounded-md max-w-xs cursor-pointer" />
-                                        </Link>
-                                    )}
-                                    <div className="flex items-center gap-2 mt-1">
-                                        {msg.isPinned && <Pin className="h-3 w-3 text-primary" />}
-                                        {msg.editedAt && <span className="text-xs text-muted-foreground/70">(edited)</span>}
-                                    </div>
-                                    </div>
-                                    <div className={cn("flex items-center self-center opacity-0 group-hover:opacity-100 transition-opacity", isSender ? "flex-row-reverse" : "")}>
-                                    <Popover>
-                                        <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><Smile className="h-4 w-4" /></Button></PopoverTrigger>
-                                        <PopoverContent className="w-auto p-1"><div className="flex gap-1">{availableReactions.map(emoji => (<Button key={emoji} variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleReaction(msg, emoji)}><span className="text-lg">{emoji}</span></Button>))}</div></PopoverContent>
-                                    </Popover>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setReplyingTo(msg)}><Reply className="h-4 w-4" /></Button>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                        <DropdownMenuItem onClick={() => handleTogglePinMessage(msg)}><Pin className="mr-2 h-4 w-4" /><span>{msg.isPinned ? 'Unpin' : 'Pin'}</span></DropdownMenuItem>
-                                        {isSender && canEdit && msg.text && (<DropdownMenuItem onClick={() => handleStartEdit(msg)}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>)}
-                                        {isSender && (
-                                            <AlertDialog>
-                                            <AlertDialogTrigger asChild><DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem></AlertDialogTrigger>
-                                            <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the message.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                                            </AlertDialog>
-                                        )}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                    </div>
-                                </div>
-                                {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                                    <div className={cn("flex gap-1 items-center", isSender ? "justify-end" : "justify-start")}>
-                                    {Object.entries(msg.reactions).map(([emoji, uids]) => (uids.length > 0 && (
-                                        <div key={emoji} className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs flex items-center gap-1 shadow-sm"><span>{emoji}</span><span>{uids.length}</span></div>
-                                    )))}
+                    {/* Messages */}
+                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-1 text-sm md:text-base">
+                    {messages.map((msg) => {
+                        const isSender = msg.senderId === user?.uid;
+                        const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
+                        return (
+                        <div key={msg.id} className={cn("group flex items-start gap-2.5 max-w-[85%]", isSender ? "ml-auto flex-row-reverse" : "mr-auto")}>
+                            <Avatar className="h-8 w-8 self-end mb-1">
+                            <AvatarImage src={isSender ? user?.photoURL! : activeChat.otherUser?.avatarUrl} />
+                            <AvatarFallback>{getInitials(isSender ? user?.displayName! : activeChat.otherUser?.name)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col gap-0.5 w-full">
+                            <div className={cn("flex items-center gap-2", isSender ? "flex-row-reverse" : "")}>
+                                <div className={cn("rounded-xl px-3.5 py-2.5 max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30")}>
+                                {msg.replyTo && (
+                                    <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
+                                    <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
+                                    <p className="truncate">{msg.replyTo.text}</p>
                                     </div>
                                 )}
+                                {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
+                                {msg.imageUrl && (
+                                    <Link href={msg.imageUrl} target="_blank">
+                                    <Image src={msg.imageUrl} alt="Sent image" width={200} height={200} className="rounded-md max-w-xs cursor-pointer" />
+                                    </Link>
+                                )}
+                                <div className="flex items-center gap-2 mt-1">
+                                    {msg.isPinned && <Pin className="h-3 w-3 text-primary" />}
+                                    {msg.editedAt && <span className="text-xs text-muted-foreground/70">(edited)</span>}
+                                </div>
+                                </div>
+                                <div className={cn("flex items-center self-center opacity-0 group-hover:opacity-100 transition-opacity", isSender ? "flex-row-reverse" : "")}>
+                                <Popover>
+                                    <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><Smile className="h-4 w-4" /></Button></PopoverTrigger>
+                                    <PopoverContent className="w-auto p-1"><div className="flex gap-1">{availableReactions.map(emoji => (<Button key={emoji} variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleReaction(msg, emoji)}><span className="text-lg">{emoji}</span></Button>))}</div></PopoverContent>
+                                </Popover>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setReplyingTo(msg)}><Reply className="h-4 w-4" /></Button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => handleTogglePinMessage(msg)}><Pin className="mr-2 h-4 w-4" /><span>{msg.isPinned ? 'Unpin' : 'Pin'}</span></DropdownMenuItem>
+                                    {isSender && canEdit && msg.text && (<DropdownMenuItem onClick={() => handleStartEdit(msg)}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>)}
+                                    {isSender && (
+                                        <AlertDialog>
+                                        <AlertDialogTrigger asChild><DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem></AlertDialogTrigger>
+                                        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the message.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                        </AlertDialog>
+                                    )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                                 </div>
                             </div>
-                            );
-                        })}
-                        </main>
+                            {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                                <div className={cn("flex gap-1 items-center", isSender ? "justify-end" : "justify-start")}>
+                                {Object.entries(msg.reactions).map(([emoji, uids]) => (uids.length > 0 && (
+                                    <div key={emoji} className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs flex items-center gap-1 shadow-sm"><span>{emoji}</span><span>{uids.length}</span></div>
+                                )))}
+                                </div>
+                            )}
+                            </div>
+                        </div>
+                        );
+                    })}
+                    </main>
 
-                        {/* Footer */}
-                        <footer className="p-4 border-t flex-shrink-0 bg-background">
-                        {(replyingTo || editingMessage) && (
-                            <div className="bg-secondary/70 p-2 mb-2 rounded-md text-sm text-muted-foreground flex justify-between items-center">
-                            <div>
-                                <p className="font-semibold">{editingMessage ? 'Editing Message' : `Replying to ${replyingTo?.senderId === user?.uid ? 'yourself' : activeChat.otherUser?.name}`}</p>
-                                <p className="truncate max-w-sm">{editingMessage?.text || replyingTo?.text || 'Image'}</p>
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setReplyingTo(null); cancelEdit(); }}><X className="h-4 w-4" /></Button>
-                            </div>
-                        )}
-                        <form onSubmit={handleSendMessage} className="flex w-full items-end gap-2">
-                            <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" disabled={isSending} />
-                            <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isSending}><ImageIcon className="h-5 w-5" /></Button>
-                            <div className="flex-1 relative">
-                                <TextareaAutosize
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    placeholder="Type a message..."
-                                    autoComplete="off"
-                                    className="flex-1 resize-none border rounded-xl border-input bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-4 py-3 min-h-[50px] text-base pr-20"
-                                    maxRows={5}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }}
-                                />
-                                <div className="absolute right-2 bottom-2 flex items-center">
-                                    <Popover>
-                                        <PopoverTrigger asChild><Button type="button" variant="ghost" size="icon" disabled={isSending}><Smile className="h-5 w-5" /></Button></PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0 border-none mb-2"><EmojiPicker onEmojiClick={(emoji) => setNewMessage(prev => prev + emoji.emoji)} theme={resolvedTheme === 'dark' || resolvedTheme === 'midnight' ? EmojiTheme.DARK : EmojiTheme.LIGHT} /></PopoverContent>
-                                    </Popover>
-                                    <Button type="submit" size="icon" variant="ghost" disabled={!newMessage.trim() || isSending}><Send className="h-5 w-5" /><span className="sr-only">{editingMessage ? 'Save' : 'Send'}</span></Button>
-                                </div>
-                            </div>
-                            
-                        </form>
-                        </footer>
-                    </div>
+                    {/* Footer */}
+                    <footer className="p-4 border-t flex-shrink-0 bg-background">
+                    {(replyingTo || editingMessage) && (
+                        <div className="bg-secondary/70 p-2 mb-2 rounded-md text-sm text-muted-foreground flex justify-between items-center">
+                        <div>
+                            <p className="font-semibold">{editingMessage ? 'Editing Message' : `Replying to ${replyingTo?.senderId === user?.uid ? 'yourself' : activeChat.otherUser?.name}`}</p>
+                            <p className="truncate max-w-sm">{editingMessage?.text || replyingTo?.text || 'Image'}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setReplyingTo(null); cancelEdit(); }}><X className="h-4 w-4" /></Button>
+                        </div>
                     )}
+                    <form onSubmit={handleSendMessage} className="flex w-full items-end gap-2">
+                        <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" disabled={isSending} />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isSending}><ImageIcon className="h-5 w-5" /></Button>
+                        <div className="flex-1 relative">
+                            <TextareaAutosize
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                placeholder="Type a message..."
+                                autoComplete="off"
+                                className="flex-1 resize-none border rounded-xl border-input bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-4 py-3 min-h-[50px] text-base pr-20"
+                                maxRows={5}
+                                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }}
+                            />
+                            <div className="absolute right-2 bottom-2 flex items-center">
+                                <Popover>
+                                    <PopoverTrigger asChild><Button type="button" variant="ghost" size="icon" disabled={isSending}><Smile className="h-5 w-5" /></Button></PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 border-none mb-2"><EmojiPicker onEmojiClick={(emoji) => setNewMessage(prev => prev + emoji.emoji)} theme={resolvedTheme === 'dark' || resolvedTheme === 'midnight' ? EmojiTheme.DARK : EmojiTheme.LIGHT} /></PopoverContent>
+                                </Popover>
+                                <Button type="submit" size="icon" variant="ghost" disabled={!newMessage.trim() || isSending}><Send className="h-5 w-5" /><span className="sr-only">{editingMessage ? 'Save' : 'Send'}</span></Button>
+                            </div>
+                        </div>
+                        
+                    </form>
+                    </footer>
                 </div>
-                
-                {/* Right Panel */}
-                {activeChat && (
-                    <div className={cn(
-                        "w-full lg:w-1/4 flex-col flex-shrink-0 h-full",
-                        rightPanelOpen ? "flex" : "hidden lg:flex"
-                    )}>
+
+                {/* Right Panel: Chat Info */}
+                <div className={cn("w-1/4 flex-col flex-shrink-0 h-full", isInfoPanelOpen ? "flex" : "hidden")}>
                     <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
-                    </div>
-                )}
+                </div>
             </div>
-            </SidebarInset>
-        </SidebarProvider>
+            )}
+        </div>
     </div>
   );
 }
-
-    
