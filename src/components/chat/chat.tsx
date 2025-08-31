@@ -26,19 +26,6 @@ import { auth, db, storage } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import Link from 'next/link';
-import Image from 'next/image';
-import TextareaAutosize from 'react-textarea-autosize';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
-import { useTheme } from 'next-themes';
 import {
   Sidebar,
   SidebarContent,
@@ -54,6 +41,17 @@ import {
 } from '@/components/ui/sidebar';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import Image from 'next/image';
+import TextareaAutosize from 'react-textarea-autosize';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
+import { useTheme } from 'next-themes';
+import { ArrowLeft, Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip } from 'lucide-react';
 
 // Interfaces
 interface Message {
@@ -165,7 +163,7 @@ const ChatList = ({ user, chats, activeChatId, onSelectChat }: { user: User; cha
   );
 };
 
-const ChatInfoPanel = ({ messages, otherUser, projectTitle }: { messages: Message[]; otherUser: OtherUser | null, projectTitle: string }) => {
+const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { messages: Message[]; otherUser: OtherUser | null, projectTitle: string, onTogglePin: (message: Message) => void }) => {
   const pinnedMessages = messages.filter(m => m.isPinned);
   const sharedImages = messages.filter(m => m.imageUrl);
 
@@ -184,9 +182,14 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle }: { messages: Messag
           <SidebarGroupLabel>Pinned Messages</SidebarGroupLabel>
            <div className="space-y-2">
              {pinnedMessages.length > 0 ? pinnedMessages.map(msg => (
-                <div key={`pin-info-${msg.id}`} className="text-xs p-2 bg-muted rounded-md text-muted-foreground">
-                    <span className="font-semibold">{msg.senderId === otherUser?.uid ? otherUser.name : "You"}: </span>
-                    <p className="truncate">{msg.text || 'Image'}</p>
+                <div key={`pin-info-${msg.id}`} className="group/pin text-xs p-2 bg-muted rounded-md text-muted-foreground flex justify-between items-start gap-2">
+                   <div className="flex-grow">
+                        <span className="font-semibold">{msg.senderId === otherUser?.uid ? otherUser.name : "You"}: </span>
+                        <p className="truncate">{msg.text || 'Image'}</p>
+                   </div>
+                   <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0 opacity-50 group-hover/pin:opacity-100" onClick={() => onTogglePin(msg)}>
+                        <X className="h-3 w-3" />
+                   </Button>
                 </div>
             )) : <p className="text-xs text-muted-foreground text-center py-2">No pinned messages.</p>}
            </div>
@@ -593,7 +596,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Type a message..."
                     autoComplete="off"
-                    className="flex-1 resize-none border-0 bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-2 py-3"
+                    className="flex-1 resize-none border-0 bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-2 py-4"
                     maxRows={5}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleSendMessage(e); }}
                   />
@@ -603,8 +606,8 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
             </div>
 
             {rightPanelOpen && (
-              <div className="h-full border-l w-[320px] hidden lg:block flex-shrink-0">
-                 <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} />
+              <div className="h-full border-l w-[300px] hidden lg:block flex-shrink-0">
+                 <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
               </div>
             )}
           </div>
@@ -613,3 +616,5 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
+
+    
