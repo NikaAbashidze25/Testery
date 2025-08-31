@@ -497,7 +497,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full w-full">
         {/* Mobile menu sheet */}
         <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -512,7 +512,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
              {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </aside>
         
-        <main className="flex-1 flex">
+        <main className="flex-1 flex flex-col min-h-0">
             {!activeChat ? (
             <div className="flex flex-col h-full items-center justify-center text-center p-8 w-full">
                 <button className="md:hidden absolute top-4 left-4" onClick={() => setIsMobileMenuOpen(true)}>
@@ -523,8 +523,8 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                 <p className="text-muted-foreground">Your conversations will appear here.</p>
             </div>
             ) : (
-            <div className="flex flex-1">
-                <div className="flex flex-col flex-1 h-full">
+            <div className={cn("flex flex-1 min-h-0", isInfoPanelOpen && "grid grid-cols-[1fr_360px]")}>
+                <div className="flex flex-col flex-1 h-full min-h-0">
                     {/* Header */}
                     <header className="flex items-center gap-3 border-b p-3 flex-shrink-0">
                         <Button className="md:hidden" variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
@@ -546,7 +546,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </header>
 
                      {/* Messages */}
-                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-1 text-sm md:text-base">
+                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-1 text-sm md:text-base min-h-0">
                     {messages.map((msg) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
@@ -653,7 +653,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </footer>
                 </div>
                 {isInfoPanelOpen && (
-                    <aside className="w-1/4 lg:w-[360px] flex-shrink-0 h-full">
+                    <aside className="h-full">
                         <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
                     </aside>
                 )}
@@ -663,5 +663,3 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
-
-    
