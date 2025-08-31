@@ -474,7 +474,8 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
   return (
     <div className="flex h-screen bg-background">
-      <div className="w-full md:w-1/4 h-full border-r hidden md:block flex-shrink-0">
+      {/* Left Panel: Chat List */}
+      <div className="w-full md:w-1/4 lg:w-1/4 h-full border-r hidden md:block flex-shrink-0">
           {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
       </div>
       <Sidebar side="left" collapsible="offcanvas">
@@ -494,7 +495,8 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
           </div>
         ) : (
           <div className="flex h-full">
-            <div className="flex flex-col h-full flex-1 w-full md:w-1/2">
+            {/* Center Panel: Main Chat Area */}
+            <div className="flex flex-col h-full flex-1 w-full md:w-1/2 lg:w-1/2">
               {/* Chat Header */}
               <header className="flex items-center gap-3 border-b p-3 h-16 flex-shrink-0">
                 <SidebarTrigger className="md:hidden" />
@@ -611,8 +613,9 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
               </footer>
             </div>
 
+            {/* Right Panel: Chat Info */}
             {rightPanelOpen && (
-              <div className="h-full border-l w-full md:w-1/4 hidden lg:block flex-shrink-0">
+              <div className="h-full border-l w-full md:w-1/4 lg:w-1/4 hidden lg:block flex-shrink-0">
                  <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
               </div>
             )}
