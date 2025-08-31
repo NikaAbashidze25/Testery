@@ -149,10 +149,10 @@ const ChatList = ({ user, chats, activeChatId, onSelectChat }: { user: User; cha
                 </Avatar>
                 <div className="flex-1 truncate">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold truncate">{chat.otherUserName}</span>
+                    <span className="font-semibold truncate text-sm">{chat.otherUserName}</span>
                     <span className="text-xs text-muted-foreground">{formatTimestamp(chat.lastMessageTimestamp)}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{chat.lastMessage || '...'}</p>
+                  <p className="text-sm text-muted-foreground truncate">{chat.lastMessage || '...'}</p>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -180,9 +180,9 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Pinned Messages</SidebarGroupLabel>
-           <div className="space-y-2">
+           <div className="space-y-2 text-sm">
              {pinnedMessages.length > 0 ? pinnedMessages.map(msg => (
-                <div key={`pin-info-${msg.id}`} className="group/pin text-xs p-2 bg-muted rounded-md text-muted-foreground flex justify-between items-start gap-2">
+                <div key={`pin-info-${msg.id}`} className="group/pin p-2 bg-muted rounded-md text-muted-foreground flex justify-between items-start gap-2">
                    <div className="flex-grow">
                         <span className="font-semibold">{msg.senderId === otherUser?.uid ? otherUser.name : "You"}: </span>
                         <p className="truncate">{msg.text || 'Image'}</p>
@@ -471,9 +471,13 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
   return (
     <div className="flex h-full">
+      <div className="w-1/4 h-full border-r hidden md:block flex-shrink-0">
+          {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
+      </div>
       <Sidebar side="left" collapsible="offcanvas">
         {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
       </Sidebar>
+
 
       <SidebarInset>
         {!activeChat ? (
@@ -488,7 +492,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
           </div>
         ) : (
           <div className="flex h-full">
-            <div className="flex flex-col h-full flex-1">
+            <div className="flex flex-col h-full flex-1 w-1/2">
               {/* Chat Header */}
               <header className="flex items-center gap-3 border-b p-3 h-16 flex-shrink-0">
                 <SidebarTrigger />
@@ -520,9 +524,9 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                       </Avatar>
                       <div className="flex flex-col gap-0.5 w-full">
                          <div className={cn("flex items-center gap-2", isSender ? "flex-row-reverse" : "")}>
-                            <div className={cn("rounded-xl px-3 py-2 text-sm max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30")}>
+                            <div className={cn("rounded-xl px-4 py-2.5 text-base max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30")}>
                                 {msg.replyTo && (
-                                    <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
+                                    <div className="border-l-2 border-primary/50 pl-2 mb-2 text-sm opacity-80">
                                         <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
                                         <p className="truncate">{msg.replyTo.text}</p>
                                     </div>
@@ -596,7 +600,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Type a message..."
                     autoComplete="off"
-                    className="flex-1 resize-none border-0 bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-2 py-4"
+                    className="flex-1 resize-none border-0 bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-2 py-4 text-base"
                     maxRows={5}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleSendMessage(e); }}
                   />
@@ -606,7 +610,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
             </div>
 
             {rightPanelOpen && (
-              <div className="h-full border-l w-[300px] hidden lg:block flex-shrink-0">
+              <div className="h-full border-l w-1/4 hidden lg:block flex-shrink-0">
                  <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
               </div>
             )}
@@ -616,5 +620,3 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
-
-    
