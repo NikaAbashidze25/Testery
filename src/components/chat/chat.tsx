@@ -497,7 +497,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   };
 
   return (
-    <div className="flex h-full bg-background overflow-hidden w-full">
+    <div className="flex h-full w-full">
         {/* Mobile menu sheet */}
         <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -512,7 +512,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
              {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </aside>
         
-        <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", isInfoPanelOpen ? "md:grid md:grid-cols-[1fr_360px]" : "md:grid md:grid-cols-[1fr_0px]")}>
+        <div className={cn("flex-1 flex min-w-0 transition-all duration-300", isInfoPanelOpen ? "grid grid-cols-[1fr_360px]" : "grid grid-cols-[1fr_0px]")}>
             {!activeChat ? (
             <div className="flex flex-col h-full items-center justify-center text-center bg-muted/50 p-8">
                 <button className="md:hidden absolute top-4 left-4" onClick={() => setIsMobileMenuOpen(true)}>
@@ -524,9 +524,9 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
             </div>
             ) : (
             <>
-                <div className="flex flex-col flex-1 h-full min-h-0">
+                <div className="grid grid-rows-[auto_1fr_auto] h-full overflow-hidden">
                     {/* Header */}
-                    <header className="flex items-center gap-3 border-b p-3 h-16 flex-shrink-0">
+                    <header className="flex items-center gap-3 border-b p-3 flex-shrink-0">
                         <Button className="md:hidden" variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
                             <Menu />
                         </Button>
@@ -546,7 +546,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </header>
 
                     {/* Messages */}
-                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-1 text-sm md:text-base">
+                    <main ref={messagesContainerRef} className="overflow-y-auto p-4 md:p-6 space-y-1 text-sm md:text-base">
                     {messages.map((msg) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
@@ -617,7 +617,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </main>
 
                     {/* Footer */}
-                    <footer className="p-4 border-t flex-shrink-0 bg-background">
+                    <footer className="p-4 border-t bg-background">
                     {(replyingTo || editingMessage) && (
                         <div className="bg-secondary/70 p-2 mb-2 rounded-md text-sm text-muted-foreground flex justify-between items-center">
                         <div>
@@ -662,3 +662,5 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
+
+    
