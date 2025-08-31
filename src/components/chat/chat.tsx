@@ -38,7 +38,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
 import { useTheme } from 'next-themes';
-import { Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip, Menu } from 'lucide-react';
+import { Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip, Menu, File as FileIcon } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 
 // Interfaces
@@ -46,6 +46,8 @@ interface Message {
   id: string;
   text?: string;
   imageUrl?: string;
+  fileUrl?: string;
+  fileName?: string;
   senderId: string;
   timestamp: Timestamp;
   editedAt?: Timestamp;
@@ -81,8 +83,8 @@ interface ChatListItem extends DocumentData {
 }
 
 // Constants
-const MAX_IMAGE_SIZE_MB = 10;
-const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const EDIT_TIME_LIMIT_MS = 5 * 60 * 1000;
 const availableReactions = ['👍', '❤️', '😂'];
 
@@ -148,6 +150,7 @@ const ChatList = ({ user, chats, activeChatId, onSelectChat }: { user: User; cha
 const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { messages: Message[]; otherUser: OtherUser | null, projectTitle: string, onTogglePin: (message: Message) => void }) => {
   const pinnedMessages = messages.filter(m => m.isPinned);
   const sharedImages = messages.filter(m => m.imageUrl);
+  const sharedFiles = messages.filter(m => m.fileUrl);
 
   return (
     <div className="flex flex-col h-full bg-secondary/50 border-l">
@@ -162,7 +165,7 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
          </div>
       </div>
       <div className="flex-1 overflow-y-auto p-2">
-        <Accordion type="multiple" defaultValue={['pinned', 'photos']} className="w-full">
+        <Accordion type="multiple" defaultValue={['pinned', 'photos', 'files']} className="w-full">
             <AccordionItem value="pinned">
                 <AccordionTrigger className="px-2">Pinned Messages</AccordionTrigger>
                 <AccordionContent className="px-2">
@@ -171,7 +174,7 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
                             <div key={`pin-info-${msg.id}`} className="group/pin p-2 bg-muted rounded-md text-muted-foreground flex justify-between items-start gap-2">
                                 <div className="flex-grow">
                                     <span className="font-semibold">{msg.senderId === otherUser?.uid ? otherUser.name : "You"}: </span>
-                                    <p className="truncate">{msg.text || 'Image'}</p>
+                                    <p className="truncate">{msg.text || 'Shared Media'}</p>
                                 </div>
                                 <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0 opacity-50 group-hover/pin:opacity-100" onClick={() => onTogglePin(msg)}>
                                     <X className="h-3 w-3" />
@@ -190,6 +193,19 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
                                 <Image src={msg.imageUrl!} alt="Shared media" width={100} height={100} className="rounded-md object-cover w-full h-full" />
                             </Link>
                         )) : <p className="text-xs text-muted-foreground text-center py-2 col-span-3">No shared photos.</p>}
+                    </div>
+                </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="files">
+                <AccordionTrigger className="px-2">Shared Files</AccordionTrigger>
+                <AccordionContent className="px-2">
+                    <div className="space-y-2 text-sm">
+                        {sharedFiles.length > 0 ? sharedFiles.map(msg => (
+                           <a href={msg.fileUrl} key={msg.id} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-2 bg-muted rounded-md hover:bg-muted/80 transition-colors">
+                             <FileIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground"/>
+                             <span className="truncate text-muted-foreground">{msg.fileName}</span>
+                           </a>
+                        )) : <p className="text-xs text-muted-foreground text-center py-2">No shared files.</p>}
                     </div>
                 </AccordionContent>
             </AccordionItem>
@@ -268,7 +284,10 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
               const lastMessageSnapshot = await getDocs(lastMessageQuery);
               if (!lastMessageSnapshot.empty) {
                 const lastMessage = lastMessageSnapshot.docs[0].data();
-                app.lastMessage = lastMessage.text || 'Image';
+                 if (lastMessage.text) app.lastMessage = lastMessage.text;
+                 else if (lastMessage.imageUrl) app.lastMessage = 'Photo';
+                 else if (lastMessage.fileUrl) app.lastMessage = 'File';
+                 else app.lastMessage = '...';
                 app.lastMessageTimestamp = lastMessage.timestamp;
               }
               return app;
@@ -380,38 +399,51 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !user || isSending || !activeChat) return;
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      toast({ variant: 'destructive', title: 'Upload Failed', description: `Image is too large. Maximum allowed size is ${MAX_IMAGE_SIZE_MB} MB.` });
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      toast({ variant: 'destructive', title: 'Upload Failed', description: `File is too large. Maximum allowed size is ${MAX_FILE_SIZE_MB} MB.` });
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
     setIsSending(true);
+
+    const isImage = file.type.startsWith('image/');
+    const storagePath = isImage ? `chat_images/${activeChat.id}/${Date.now()}_${file.name}` : `chat_files/${activeChat.id}/${Date.now()}_${file.name}`;
+    
     try {
-      const storageRef = ref(storage, `chat_images/${activeChat.id}/${Date.now()}_${file.name}`);
+      const storageRef = ref(storage, storagePath);
       await uploadBytes(storageRef, file);
-      const imageUrl = await getDownloadURL(storageRef);
+      const url = await getDownloadURL(storageRef);
       const messagesColRef = collection(db, 'applications', activeChat.id, 'messages');
-      const messageData: any = { imageUrl, senderId: user.uid, timestamp: serverTimestamp() };
+      
+      const messageData: any = { senderId: user.uid, timestamp: serverTimestamp() };
+      if (isImage) {
+        messageData.imageUrl = url;
+      } else {
+        messageData.fileUrl = url;
+        messageData.fileName = file.name;
+      }
+
       if (replyingTo) {
         messageData.replyTo = {
           id: replyingTo.id,
-          text: replyingTo.text || 'Image',
+          text: replyingTo.text || (replyingTo.imageUrl ? 'Image' : 'File'),
           senderName: replyingTo.senderId === user.uid ? 'You' : activeChat.otherUser?.name || 'User'
         };
       }
       await addDoc(messagesColRef, messageData);
       setReplyingTo(null);
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not upload image.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not upload file.' });
     } finally {
       setIsSending(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
+
 
   const handleStartEdit = (message: Message) => {
     const now = Date.now();
@@ -466,7 +498,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   return (
     <div className="flex h-screen bg-background overflow-hidden w-full">
         <div className={cn(
-            "w-full md:w-1/4 md:flex flex-col flex-shrink-0",
+            "w-full md:w-1/4 lg:w-1/5 md:flex flex-col flex-shrink-0",
             activeChat && !isMobileMenuOpen ? "hidden md:flex" : "flex",
             isMobileMenuOpen ? "flex" : "hidden"
         )}>
@@ -535,6 +567,12 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                     <Image src={msg.imageUrl} alt="Sent image" width={200} height={200} className="rounded-md max-w-xs cursor-pointer" />
                                     </Link>
                                 )}
+                                {msg.fileUrl && (
+                                  <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-2 bg-background/50 rounded-md hover:bg-background/80 transition-colors">
+                                     <FileIcon className="h-6 w-6 flex-shrink-0"/>
+                                     <span className="truncate">{msg.fileName}</span>
+                                   </a>
+                                )}
                                 <div className="flex items-center gap-2 mt-1">
                                     {msg.isPinned && <Pin className="h-3 w-3 text-primary" />}
                                     {msg.editedAt && <span className="text-xs text-muted-foreground/70">(edited)</span>}
@@ -580,14 +618,14 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                         <div className="bg-secondary/70 p-2 mb-2 rounded-md text-sm text-muted-foreground flex justify-between items-center">
                         <div>
                             <p className="font-semibold">{editingMessage ? 'Editing Message' : `Replying to ${replyingTo?.senderId === user?.uid ? 'yourself' : activeChat.otherUser?.name}`}</p>
-                            <p className="truncate max-w-sm">{editingMessage?.text || replyingTo?.text || 'Image'}</p>
+                            <p className="truncate max-w-sm">{editingMessage?.text || replyingTo?.text || (replyingTo?.imageUrl ? 'Image' : 'File')}</p>
                         </div>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setReplyingTo(null); cancelEdit(); }}><X className="h-4 w-4" /></Button>
                         </div>
                     )}
                     <form onSubmit={handleSendMessage} className="flex w-full items-end gap-2">
-                        <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" disabled={isSending} />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isSending}><ImageIcon className="h-5 w-5" /></Button>
+                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="*/*" disabled={isSending} />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isSending}><Paperclip className="h-5 w-5" /></Button>
                         <div className="flex-1 relative">
                             <TextareaAutosize
                                 value={newMessage}
@@ -612,7 +650,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                 </div>
 
                 {isInfoPanelOpen && (
-                    <div className="hidden md:flex w-1/4 flex-col flex-shrink-0 h-full">
+                    <div className="hidden md:flex w-1/4 lg:w-1/5 flex-col flex-shrink-0 h-full">
                        <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
                     </div>
                 )}
@@ -622,4 +660,3 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
-
