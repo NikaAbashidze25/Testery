@@ -154,7 +154,7 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
   const sharedFiles = messages.filter(m => m.fileUrl);
 
   return (
-    <div className="flex flex-col h-full bg-secondary/50 border-l overflow-y-auto">
+    <div className="flex flex-col h-full bg-secondary/50 border-l overflow-y-auto w-[320px]">
        <div className="p-4 text-center border-b">
          <Avatar className="h-20 w-20 mx-auto">
             <AvatarImage src={otherUser?.avatarUrl} />
@@ -236,6 +236,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { resolvedTheme } = useTheme();
 
   // Effects
@@ -456,6 +457,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     setEditingMessage(message);
     setNewMessage(message.text || '');
     setReplyingTo(null);
+    inputRef.current?.focus();
   };
 
   const cancelEdit = () => {
@@ -495,6 +497,11 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update reaction.' });
     }
   };
+  
+  const handleStartReply = (message: Message) => {
+    setReplyingTo(message);
+    inputRef.current?.focus();
+  };
 
   return (
     <div className="flex h-full w-full">
@@ -523,8 +530,8 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                 <p className="text-muted-foreground">Your conversations will appear here.</p>
             </div>
             ) : (
-             <div className={`grid h-full transition-all duration-300 ${isInfoPanelOpen ? 'grid-cols-[1fr_320px]' : 'grid-cols-[1fr_0px]'}`}>
-                 <div className="flex flex-col h-full min-h-0">
+             <div className="flex h-full">
+                 <div className="flex flex-col flex-1 h-full min-h-0">
                      {/* Header */}
                     <header className="flex items-center gap-3 border-b p-3 flex-shrink-0">
                         <Button className="md:hidden" variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
@@ -587,7 +594,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                     <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><Smile className="h-4 w-4" /></Button></PopoverTrigger>
                                     <PopoverContent className="w-auto p-1"><div className="flex gap-1">{availableReactions.map(emoji => (<Button key={emoji} variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleReaction(msg, emoji)}><span className="text-lg">{emoji}</span></Button>))}</div></PopoverContent>
                                 </Popover>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setReplyingTo(msg)}><Reply className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleStartReply(msg)}><Reply className="h-4 w-4" /></Button>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                     <DropdownMenuContent>
@@ -632,6 +639,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                         <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isSending}><Paperclip className="h-5 w-5" /></Button>
                         <div className="flex-1 relative">
                             <TextareaAutosize
+                                ref={inputRef}
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
                                 placeholder="Type a message..."
@@ -653,7 +661,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </form>
                     </footer>
                  </div>
-                <aside className={cn("h-full transition-all duration-300 overflow-hidden", isInfoPanelOpen ? "w-full" : "w-0")}>
+                <aside className={cn("h-full transition-all duration-300 overflow-hidden", isInfoPanelOpen ? "block" : "hidden")}>
                     {isInfoPanelOpen && <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />}
                 </aside>
             </div>
