@@ -508,7 +508,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
         </div>
 
         {/* Desktop Sidebar */}
-        <aside className="hidden md:block md:w-1/4 lg:w-[360px] flex-shrink-0 h-full">
+        <aside className="hidden md:block md:w-1/4 lg:w-[320px] flex-shrink-0 h-full">
              {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </aside>
         
@@ -523,7 +523,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                 <p className="text-muted-foreground">Your conversations will appear here.</p>
             </div>
             ) : (
-             <div className={`grid h-full transition-all duration-300 ${isInfoPanelOpen ? 'grid-cols-[1fr_360px]' : 'grid-cols-[1fr_0px]'}`}>
+             <div className={`grid h-full transition-all duration-300 ${isInfoPanelOpen ? 'grid-cols-[1fr_320px]' : 'grid-cols-[1fr_0px]'}`}>
                  <div className="flex flex-col h-full min-h-0">
                      {/* Header */}
                     <header className="flex items-center gap-3 border-b p-3 flex-shrink-0">
@@ -546,7 +546,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </header>
 
                      {/* Messages */}
-                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-2 space-y-2 text-sm min-h-0" style={{ fontSize: '14px', lineHeight: '1.3' }}>
+                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 text-sm min-h-0" style={{ fontSize: '14px', lineHeight: '1.4' }}>
                     {messages.map((msg) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
@@ -637,6 +637,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                 placeholder="Type a message..."
                                 autoComplete="off"
                                 className="flex-1 resize-none border rounded-xl border-input bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-4 py-2 text-base pr-20"
+                                minRows={1}
                                 maxRows={5}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }}
                             />
@@ -661,5 +662,3 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
-
-    
