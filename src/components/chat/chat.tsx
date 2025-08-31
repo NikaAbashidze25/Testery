@@ -53,6 +53,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { formatDistanceToNow } from 'date-fns';
+import { Input } from '@/components/ui/input';
 
 // Interfaces
 interface Message {
