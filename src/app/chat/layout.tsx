@@ -11,3 +11,5 @@ export default function ChatLayout({
     <div className="h-[calc(100vh-4rem)] bg-background overflow-hidden">{children}</div>
   );
 }
+
+    

@@ -154,7 +154,7 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
   const sharedFiles = messages.filter(m => m.fileUrl);
 
   return (
-    <div className="flex flex-col h-full bg-secondary/50 border-l overflow-y-auto w-[320px]">
+    <div className="flex flex-col h-full bg-secondary/50 border-l overflow-y-auto w-[280px]">
        <div className="p-4 text-center border-b">
          <Avatar className="h-20 w-20 mx-auto">
             <AvatarImage src={otherUser?.avatarUrl} />
@@ -515,7 +515,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
         </div>
 
         {/* Desktop Sidebar */}
-        <aside className="hidden md:block md:w-1/4 lg:w-[320px] flex-shrink-0 h-full">
+        <aside className="hidden md:block md:w-[280px] lg:w-[320px] flex-shrink-0 h-full">
              {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </aside>
         
@@ -553,7 +553,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </header>
 
                      {/* Messages */}
-                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 text-sm min-h-0" style={{ fontSize: '14px', lineHeight: '1.4' }}>
+                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-2 text-sm min-h-0" style={{lineHeight: '1.3'}}>
                     {messages.map((msg) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
@@ -670,3 +670,5 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
+
+    
