@@ -479,9 +479,3 @@ export default function SubmissionPage() {
     )
 
 }
-
-    
-
-    
-
-    
