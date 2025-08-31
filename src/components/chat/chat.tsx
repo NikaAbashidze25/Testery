@@ -512,19 +512,19 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
              {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </aside>
         
-        <main className="flex-1 flex flex-col min-h-0">
+        <main className="flex-1 flex flex-col h-full min-h-0">
             {!activeChat ? (
             <div className="flex flex-col h-full items-center justify-center text-center p-8 w-full">
                 <button className="md:hidden absolute top-4 left-4" onClick={() => setIsMobileMenuOpen(true)}>
                     <Menu />
                 </button>
-                <Paperclip className="h-16 w-16 text-muted-foreground mb-4" />
+                <MessageSquare className="h-16 w-16 text-muted-foreground mb-4" />
                 <h2 className="text-xl font-semibold">Select a chat to start messaging</h2>
                 <p className="text-muted-foreground">Your conversations will appear here.</p>
             </div>
             ) : (
-            <div className={cn("flex flex-1 min-h-0", isInfoPanelOpen && "grid grid-cols-[1fr_360px]")}>
-                <div className="flex flex-col flex-1 h-full min-h-0">
+            <div className={cn("grid h-full", isInfoPanelOpen ? "grid-cols-[1fr_360px]" : "grid-cols-[1fr_0px]")}>
+                <div className="flex flex-col h-full min-h-0">
                     {/* Header */}
                     <header className="flex items-center gap-3 border-b p-3 flex-shrink-0">
                         <Button className="md:hidden" variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
@@ -652,11 +652,9 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </form>
                     </footer>
                 </div>
-                {isInfoPanelOpen && (
-                    <aside className="h-full">
-                        <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
-                    </aside>
-                )}
+                <aside className={cn("h-full transition-all duration-300", isInfoPanelOpen ? "w-full" : "w-0")}>
+                    {isInfoPanelOpen && <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />}
+                </aside>
             </div>
             )}
         </main>
