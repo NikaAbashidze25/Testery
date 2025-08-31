@@ -497,33 +497,36 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden w-full">
-        <div className={cn(
-            "w-full md:w-1/4 lg:w-1/5 md:flex flex-col flex-shrink-0",
-            activeChat && !isMobileMenuOpen ? "hidden md:flex" : "flex",
-            isMobileMenuOpen ? "flex" : "hidden"
-        )}>
-            {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
+        {/* Mobile menu sheet */}
+        <div className="md:hidden">
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <SheetContent side="left" className="p-0 w-3/4">
+                    {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
+                </SheetContent>
+            </Sheet>
+        </div>
+
+        {/* Desktop Sidebar */}
+        <div className="hidden md:block md:w-1/4 lg:w-1/5 flex-shrink-0">
+             {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </div>
         
-        <div className={cn(
-            "flex-1 flex flex-col",
-            activeChat ? "flex" : "hidden md:flex"
-        )}>
+        <div className="flex-1 flex flex-col min-w-0">
             {!activeChat ? (
             <div className="flex flex-col h-full items-center justify-center text-center bg-muted/50 p-8">
-                <Button className="md:hidden absolute top-4 left-4" variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
+                <button className="md:hidden absolute top-4 left-4" onClick={() => setIsMobileMenuOpen(true)}>
                     <Menu />
-                </Button>
+                </button>
                 <Paperclip className="h-16 w-16 text-muted-foreground mb-4" />
                 <h2 className="text-xl font-semibold">Select a chat to start messaging</h2>
                 <p className="text-muted-foreground">Your conversations will appear here.</p>
             </div>
             ) : (
-            <div className="flex flex-1 h-full min-h-0">
+            <div className="flex flex-1 min-h-0">
                 <div className="flex flex-col flex-1 h-full min-h-0">
                     {/* Header */}
                     <header className="flex items-center gap-3 border-b p-3 h-16 flex-shrink-0">
-                        <Button className="md:hidden" variant="ghost" size="icon" onClick={() => setActiveChat(null)}>
+                        <Button className="md:hidden" variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
                             <Menu />
                         </Button>
                     <Avatar>
@@ -650,7 +653,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                 </div>
 
                 {isInfoPanelOpen && (
-                    <div className="hidden md:flex w-1/4 lg:w-1/5 flex-col flex-shrink-0 h-full">
+                    <div className="hidden md:block w-1/4 lg:w-1/5 flex-shrink-0 h-full">
                        <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
                     </div>
                 )}
@@ -660,3 +663,4 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
+
