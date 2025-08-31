@@ -497,7 +497,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   };
 
   return (
-    <div className="flex h-full w-full">
+    <div className="flex h-full">
         {/* Mobile menu sheet */}
         <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -512,7 +512,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
              {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </aside>
         
-        <div className={cn("flex-1 flex min-w-0 transition-all duration-300", isInfoPanelOpen ? "grid grid-cols-[1fr_360px]" : "grid grid-cols-[1fr_0px]")}>
+        <div className={cn("flex-1 grid transition-all duration-300", isInfoPanelOpen ? "grid-cols-[1fr_360px]" : "grid-cols-[1fr_0px]")}>
             {!activeChat ? (
             <div className="flex flex-col h-full items-center justify-center text-center bg-muted/50 p-8">
                 <button className="md:hidden absolute top-4 left-4" onClick={() => setIsMobileMenuOpen(true)}>
@@ -524,7 +524,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
             </div>
             ) : (
             <>
-                <div className="grid grid-rows-[auto_1fr_auto] h-full overflow-hidden">
+                <div className="grid grid-rows-[auto_1fr_auto] h-full min-h-0">
                     {/* Header */}
                     <header className="flex items-center gap-3 border-b p-3 flex-shrink-0">
                         <Button className="md:hidden" variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
@@ -662,5 +662,3 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
-
-    
