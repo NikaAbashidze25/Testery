@@ -497,7 +497,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   };
 
   return (
-    <div className="flex h-full w-full">
+    <div className="flex h-full">
         {/* Mobile menu sheet */}
         <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -663,3 +663,5 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
+
+    
