@@ -38,7 +38,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
 import { useTheme } from 'next-themes';
-import { Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip, Menu, File as FileIcon } from 'lucide-react';
+import { Send, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip, Menu, File as FileIcon } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 
@@ -664,3 +664,5 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
+
+    
