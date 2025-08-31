@@ -464,7 +464,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden w-full">
         <div className={cn(
             "w-full md:w-1/4 md:flex flex-col flex-shrink-0",
             activeChat && !isMobileMenuOpen ? "hidden md:flex" : "flex",
@@ -623,4 +623,3 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   );
 }
 
-    
