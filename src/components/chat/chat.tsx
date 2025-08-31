@@ -523,7 +523,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                 <p className="text-muted-foreground">Your conversations will appear here.</p>
             </div>
             ) : (
-             <div className="grid h-full" style={{ gridTemplateColumns: isInfoPanelOpen ? '1fr 360px' : '1fr 0px' }}>
+             <div className={`grid h-full transition-all duration-300 ${isInfoPanelOpen ? 'grid-cols-[1fr_360px]' : 'grid-cols-[1fr_0px]'}`}>
                  <div className="flex flex-col h-full min-h-0">
                      {/* Header */}
                     <header className="flex items-center gap-3 border-b p-3 flex-shrink-0">
@@ -546,7 +546,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </header>
 
                      {/* Messages */}
-                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-3 space-y-2 text-sm min-h-0">
+                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-2 space-y-2 text-sm min-h-0" style={{ fontSize: '14px', lineHeight: '1.3' }}>
                     {messages.map((msg) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
@@ -558,7 +558,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                             </Avatar>
                             <div className="flex flex-col gap-0.5 w-full">
                             <div className={cn("flex items-center gap-2", isSender ? "flex-row-reverse" : "")}>
-                                <div className={cn("rounded-xl px-3 py-2 max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30")}>
+                                <div className={cn("rounded-xl px-3 py-1.5 max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30")}>
                                 {msg.replyTo && (
                                     <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
                                     <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
@@ -617,7 +617,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </main>
 
                      {/* Footer */}
-                    <footer className="p-4 border-t bg-background flex-shrink-0">
+                    <footer className="p-2.5 border-t bg-background flex-shrink-0">
                     {(replyingTo || editingMessage) && (
                         <div className="bg-secondary/70 p-2 mb-2 rounded-md text-sm text-muted-foreground flex justify-between items-center">
                         <div>
@@ -636,7 +636,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                 onChange={(e) => setNewMessage(e.target.value)}
                                 placeholder="Type a message..."
                                 autoComplete="off"
-                                className="flex-1 resize-none border rounded-xl border-input bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-4 py-3 min-h-[80px] text-base pr-20"
+                                className="flex-1 resize-none border rounded-xl border-input bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-4 py-2 text-base pr-20"
                                 maxRows={5}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }}
                             />
