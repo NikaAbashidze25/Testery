@@ -226,7 +226,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
   const { setOpenMobile } = useSidebar();
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
@@ -244,8 +244,8 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   }, [router]);
 
   const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, []);
 
@@ -475,7 +475,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   return (
     <div className="flex h-screen bg-background">
       {/* Left Panel: Chat List */}
-      <div className="w-full md:w-1/4 lg:w-1/4 h-full border-r hidden md:block flex-shrink-0">
+      <div className="w-full md:w-1/4 lg:w-[25%] h-full border-r hidden md:flex flex-col flex-shrink-0">
           {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
       </div>
       <Sidebar side="left" collapsible="offcanvas">
@@ -496,7 +496,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
         ) : (
           <div className="flex h-full">
             {/* Center Panel: Main Chat Area */}
-            <div className="flex flex-col h-full flex-1 w-full md:w-1/2 lg:w-1/2">
+            <div className="flex flex-col h-full flex-1">
               {/* Chat Header */}
               <header className="flex items-center gap-3 border-b p-3 h-16 flex-shrink-0">
                 <SidebarTrigger className="md:hidden" />
@@ -516,7 +516,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
               </header>
 
               {/* Messages */}
-              <main ref={messagesEndRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-1 text-sm md:text-base">
+              <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-1 text-sm md:text-base">
                 {messages.map((msg) => {
                   const isSender = msg.senderId === user?.uid;
                   const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
@@ -615,7 +615,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
             {/* Right Panel: Chat Info */}
             {rightPanelOpen && (
-              <div className="h-full border-l w-full md:w-1/4 lg:w-1/4 hidden lg:block flex-shrink-0">
+              <div className="h-full border-l w-full lg:w-[25%] hidden lg:flex flex-col flex-shrink-0">
                  <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
               </div>
             )}
@@ -625,3 +625,5 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
+
+    
