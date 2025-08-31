@@ -466,7 +466,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Left Panel */}
       <div className={cn(
-        "fixed md:relative z-20 md:z-auto h-full w-full md:w-1/4 md:flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out",
+        "fixed md:relative z-20 md:z-auto h-full w-full md:w-1/4 lg:w-1/4 md:flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out",
         leftPanelOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
@@ -498,8 +498,6 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                 <h2 className="text-lg font-semibold">{activeChat.otherUser?.name || 'Chat'}</h2>
               </div>
               <div className="ml-auto flex items-center gap-2">
-                 <Button variant="ghost" size="icon"><Phone className="h-5 w-5" /></Button>
-                 <Button variant="ghost" size="icon"><Video className="h-5 w-5" /></Button>
                 <Button variant="ghost" size="icon" onClick={() => setRightPanelOpen(prev => !prev)} className="hidden lg:inline-flex">
                   <Info className="h-5 w-5" />
                   <span className="sr-only">Chat Info</span>
@@ -625,5 +623,3 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
-
-    
