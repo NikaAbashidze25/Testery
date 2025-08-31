@@ -110,8 +110,8 @@ const ChatList = ({ user, chats, activeChatId, onSelectChat }: { user: User; cha
   };
 
   return (
-     <div className="flex flex-col h-full bg-secondary/50 border-r">
-      <div className="p-4 border-b">
+     <div className="flex flex-col h-full bg-secondary/50 border-r overflow-y-auto">
+      <div className="p-4 border-b sticky top-0 bg-secondary/50 z-10">
         <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Chats</h2>
         </div>
@@ -120,7 +120,7 @@ const ChatList = ({ user, chats, activeChatId, onSelectChat }: { user: User; cha
             <Input placeholder="Search chats..." className="pl-9 bg-background" />
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1">
         {chats.map(chat => (
           <button
             key={chat.id}
@@ -154,7 +154,7 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
   const sharedFiles = messages.filter(m => m.fileUrl);
 
   return (
-    <div className="flex flex-col h-full bg-secondary/50 border-l">
+    <div className="flex flex-col h-full bg-secondary/50 border-l overflow-y-auto">
        <div className="p-4 text-center border-b">
          <Avatar className="h-20 w-20 mx-auto">
             <AvatarImage src={otherUser?.avatarUrl} />
@@ -165,7 +165,7 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
             <p className="text-sm text-muted-foreground">Project: {projectTitle}</p>
          </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 p-2">
         <Accordion type="multiple" defaultValue={['pinned', 'photos', 'files']} className="w-full">
             <AccordionItem value="pinned">
                 <AccordionTrigger className="px-2">Pinned Messages</AccordionTrigger>
@@ -206,7 +206,7 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
                              <FileIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground"/>
                              <span className="truncate text-muted-foreground">{msg.fileName}</span>
                            </a>
-                        )) : <p className="text-xs text-muted-foreground text-center py-2">No shared files.</p>}
+                        )) : <p className="text-xs text-muted-foreground text-center py-2">No files shared yet.</p>}
                     </div>
                 </AccordionContent>
             </AccordionItem>
@@ -497,7 +497,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full w-full">
         {/* Mobile menu sheet */}
         <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -512,9 +512,9 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
              {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </aside>
         
-        <div className={cn("flex-1 grid transition-all duration-300", isInfoPanelOpen ? "grid-cols-[1fr_360px]" : "grid-cols-[1fr_0px]")}>
+        <main className="flex-1 flex">
             {!activeChat ? (
-            <div className="flex flex-col h-full items-center justify-center text-center bg-muted/50 p-8">
+            <div className="flex flex-col h-full items-center justify-center text-center p-8 w-full">
                 <button className="md:hidden absolute top-4 left-4" onClick={() => setIsMobileMenuOpen(true)}>
                     <Menu />
                 </button>
@@ -523,8 +523,8 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                 <p className="text-muted-foreground">Your conversations will appear here.</p>
             </div>
             ) : (
-            <>
-                <div className="grid grid-rows-[auto_1fr_auto] h-full min-h-0">
+            <div className="flex flex-1">
+                <div className="flex flex-col flex-1 h-full">
                     {/* Header */}
                     <header className="flex items-center gap-3 border-b p-3 flex-shrink-0">
                         <Button className="md:hidden" variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
@@ -545,8 +545,8 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                         </div>
                     </header>
 
-                    {/* Messages */}
-                    <main ref={messagesContainerRef} className="overflow-y-auto p-4 md:p-6 space-y-1 text-sm md:text-base">
+                     {/* Messages */}
+                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-1 text-sm md:text-base">
                     {messages.map((msg) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
@@ -617,7 +617,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </main>
 
                     {/* Footer */}
-                    <footer className="p-4 border-t bg-background">
+                    <footer className="p-4 border-t bg-background flex-shrink-0">
                     {(replyingTo || editingMessage) && (
                         <div className="bg-secondary/70 p-2 mb-2 rounded-md text-sm text-muted-foreground flex justify-between items-center">
                         <div>
@@ -652,13 +652,14 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </form>
                     </footer>
                 </div>
-
-                <aside className="h-full overflow-hidden transition-all duration-300">
-                    <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
-                </aside>
-            </>
+                {isInfoPanelOpen && (
+                    <aside className="w-1/4 lg:w-[360px] flex-shrink-0 h-full">
+                        <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
+                    </aside>
+                )}
+            </div>
             )}
-        </div>
+        </main>
     </div>
   );
 }
