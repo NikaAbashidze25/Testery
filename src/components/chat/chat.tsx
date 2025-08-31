@@ -465,7 +465,6 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-        {/* Left Panel: Chat List */}
         <div className={cn(
             "w-full md:w-1/4 md:flex flex-col flex-shrink-0",
             activeChat && !isMobileMenuOpen ? "hidden md:flex" : "flex",
@@ -474,7 +473,6 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
             {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </div>
         
-        {/* Center & Right Panels */}
         <div className={cn(
             "flex-1 flex flex-col",
             activeChat ? "flex" : "hidden md:flex"
@@ -490,7 +488,6 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
             </div>
             ) : (
             <div className="flex flex-1 h-full min-h-0">
-                {/* Center Panel: Messages */}
                 <div className="flex flex-col flex-1 h-full min-h-0">
                     {/* Header */}
                     <header className="flex items-center gap-3 border-b p-3 h-16 flex-shrink-0">
@@ -614,13 +611,16 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </footer>
                 </div>
 
-                {/* Right Panel: Chat Info */}
-                <div className={cn("w-1/4 flex-col flex-shrink-0 h-full", isInfoPanelOpen ? "flex" : "hidden")}>
-                    <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
-                </div>
+                {isInfoPanelOpen && (
+                    <div className="hidden md:flex w-1/4 flex-col flex-shrink-0 h-full">
+                       <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
+                    </div>
+                )}
             </div>
             )}
         </div>
     </div>
   );
 }
+
+    
