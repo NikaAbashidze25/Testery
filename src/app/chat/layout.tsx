@@ -8,6 +8,6 @@ export default function ChatLayout({
 }>) {
   // The h-screen and overflow-hidden here are critical to prevent page scroll.
   return (
-    <div className="h-screen bg-background overflow-hidden">{children}</div>
+    <div className="h-[calc(100vh-4rem)] bg-background overflow-hidden">{children}</div>
   );
 }

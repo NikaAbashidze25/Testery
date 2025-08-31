@@ -523,7 +523,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                 <p className="text-muted-foreground">Your conversations will appear here.</p>
             </div>
             ) : (
-             <div className="grid h-full transition-all duration-300" style={{ gridTemplateColumns: isInfoPanelOpen ? '1fr 360px' : '1fr 0px' }}>
+             <div className="grid h-full" style={{ gridTemplateColumns: isInfoPanelOpen ? '1fr 360px' : '1fr 0px' }}>
                  <div className="flex flex-col h-full min-h-0">
                      {/* Header */}
                     <header className="flex items-center gap-3 border-b p-3 flex-shrink-0">
