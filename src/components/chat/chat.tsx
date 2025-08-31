@@ -473,15 +473,9 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-        {/* Mobile Sidebar Trigger */}
         <Sidebar side="left" collapsible="offcanvas">
             {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </Sidebar>
-
-        {/* Left Panel: Chat List (Desktop) */}
-        <div className="w-1/4 h-full border-r hidden md:flex flex-col flex-shrink-0">
-            {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
-        </div>
 
         {/* Center & Right Panels Container */}
         <div className="flex-1 flex flex-col h-screen">
@@ -628,4 +622,3 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   );
 }
 
-    
