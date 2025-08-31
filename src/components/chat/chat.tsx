@@ -546,7 +546,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </header>
 
                      {/* Messages */}
-                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-1 text-sm md:text-base min-h-0">
+                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-3 space-y-2 text-sm min-h-0">
                     {messages.map((msg) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
@@ -558,7 +558,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                             </Avatar>
                             <div className="flex flex-col gap-0.5 w-full">
                             <div className={cn("flex items-center gap-2", isSender ? "flex-row-reverse" : "")}>
-                                <div className={cn("rounded-xl px-3.5 py-2.5 max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30")}>
+                                <div className={cn("rounded-xl px-3 py-2 max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30")}>
                                 {msg.replyTo && (
                                     <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
                                     <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
@@ -636,7 +636,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                 onChange={(e) => setNewMessage(e.target.value)}
                                 placeholder="Type a message..."
                                 autoComplete="off"
-                                className="flex-1 resize-none border rounded-xl border-input bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-4 py-3 min-h-[50px] text-base pr-20"
+                                className="flex-1 resize-none border rounded-xl border-input bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-4 py-3 min-h-[80px] text-base pr-20"
                                 maxRows={5}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }}
                             />
@@ -661,3 +661,5 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
+
+    
