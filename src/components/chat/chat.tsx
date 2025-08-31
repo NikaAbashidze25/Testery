@@ -229,7 +229,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(true);
+  const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
   
   // Hooks
   const router = useRouter();
@@ -497,7 +497,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden w-full">
+    <div className="flex h-full bg-background overflow-hidden w-full">
         {/* Mobile menu sheet */}
         <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -508,11 +508,11 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
         </div>
 
         {/* Desktop Sidebar */}
-        <div className="hidden md:block md:w-1/4 lg:w-1/5 flex-shrink-0">
+        <aside className="hidden md:block md:w-1/4 lg:w-[360px] flex-shrink-0 h-full">
              {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
-        </div>
+        </aside>
         
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", isInfoPanelOpen ? "md:grid md:grid-cols-[1fr_360px]" : "md:grid md:grid-cols-[1fr_0px]")}>
             {!activeChat ? (
             <div className="flex flex-col h-full items-center justify-center text-center bg-muted/50 p-8">
                 <button className="md:hidden absolute top-4 left-4" onClick={() => setIsMobileMenuOpen(true)}>
@@ -523,26 +523,26 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                 <p className="text-muted-foreground">Your conversations will appear here.</p>
             </div>
             ) : (
-            <div className="flex flex-1 min-h-0">
+            <>
                 <div className="flex flex-col flex-1 h-full min-h-0">
                     {/* Header */}
                     <header className="flex items-center gap-3 border-b p-3 h-16 flex-shrink-0">
                         <Button className="md:hidden" variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
                             <Menu />
                         </Button>
-                    <Avatar>
-                        <AvatarImage src={activeChat.otherUser?.avatarUrl} />
-                        <AvatarFallback>{getInitials(activeChat.otherUser?.name)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <h2 className="text-lg font-semibold">{activeChat.otherUser?.name || 'Chat'}</h2>
-                    </div>
-                    <div className="ml-auto flex items-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => setIsInfoPanelOpen(prev => !prev)} className={cn(isInfoPanelOpen && "bg-accent")}>
-                            <Info className="h-5 w-5" />
-                            <span className="sr-only">Chat Info</span>
-                        </Button>
-                    </div>
+                        <Avatar>
+                            <AvatarImage src={activeChat.otherUser?.avatarUrl} />
+                            <AvatarFallback>{getInitials(activeChat.otherUser?.name)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <h2 className="text-lg font-semibold">{activeChat.otherUser?.name || 'Chat'}</h2>
+                        </div>
+                        <div className="ml-auto flex items-center gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => setIsInfoPanelOpen(prev => !prev)} className={cn(isInfoPanelOpen && "bg-accent")}>
+                                <Info className="h-5 w-5" />
+                                <span className="sr-only">Chat Info</span>
+                            </Button>
+                        </div>
                     </header>
 
                     {/* Messages */}
@@ -653,16 +653,12 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </footer>
                 </div>
 
-                {isInfoPanelOpen && (
-                    <div className="hidden md:block w-1/4 lg:w-1/5 flex-shrink-0 h-full">
-                       <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
-                    </div>
-                )}
-            </div>
+                <aside className="h-full overflow-hidden transition-all duration-300">
+                    <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />
+                </aside>
+            </>
             )}
         </div>
     </div>
   );
 }
-
-    

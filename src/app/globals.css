@@ -67,6 +67,25 @@
     --input: 216 12% 24%;
     --ring: 195 53% 40%;
   }
+
+  /* Rules to disable page scroll */
+  html, body {
+    height: 100%;
+    overflow: hidden !important;
+    overscroll-behavior: none;
+  }
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  html::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  html {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
 }
 
 @layer base {
