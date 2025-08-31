@@ -85,9 +85,11 @@ export default function UserProfilePage() {
                 // Fetch Reviews for Testers
                 if (profileData.accountType === 'individual') {
                     const reviewsCollection = collection(db, 'reviews');
-                    const q = query(reviewsCollection, where('testerId', '==', uid), orderBy('createdAt', 'desc'));
+                    const q = query(reviewsCollection, where('testerId', '==', uid));
                     const querySnapshot = await getDocs(q);
-                    const reviewsData = querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Review));
+                    const reviewsData = querySnapshot.docs
+                        .map(doc => ({id: doc.id, ...doc.data()} as Review))
+                        .sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
                     setReviews(reviewsData);
                 }
 
