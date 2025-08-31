@@ -30,7 +30,6 @@ import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -51,7 +50,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
 import { useTheme } from 'next-themes';
-import { ArrowLeft, Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip } from 'lucide-react';
+import { Send, Image as ImageIcon, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip } from 'lucide-react';
 
 // Interfaces
 interface Message {
@@ -131,7 +130,7 @@ const ChatList = ({ user, chats, activeChatId, onSelectChat }: { user: User; cha
             <Input placeholder="Search chats..." className="pl-9" />
         </div>
       </SidebarHeader>
-      <SidebarContent className="p-0">
+      <SidebarContent className="p-0 overflow-y-auto">
         <SidebarMenu>
           {chats.map(chat => (
             <SidebarMenuItem key={chat.id}>
@@ -177,7 +176,7 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
          <h3 className="text-lg font-semibold mt-2">{otherUser?.name}</h3>
          <p className="text-sm text-muted-foreground">Project: {projectTitle}</p>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="overflow-y-auto">
         <SidebarGroup>
           <SidebarGroupLabel>Pinned Messages</SidebarGroupLabel>
            <div className="space-y-2 text-sm">
@@ -474,15 +473,17 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-        {/* Left Panel: Chat List */}
-        <div className="w-full md:w-1/4 lg:w-[25%] h-full border-r hidden md:flex flex-col flex-shrink-0">
-            {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
-        </div>
+        {/* Mobile Sidebar Trigger */}
         <Sidebar side="left" collapsible="offcanvas">
             {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </Sidebar>
 
-        {/* Center Panel: Main Chat Area or Placeholder */}
+        {/* Left Panel: Chat List (Desktop) */}
+        <div className="w-1/4 h-full border-r hidden md:flex flex-col flex-shrink-0">
+            {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
+        </div>
+
+        {/* Center & Right Panels Container */}
         <div className="flex-1 flex flex-col h-screen">
             {!activeChat ? (
                 <div className="flex flex-col h-full items-center justify-center text-center bg-muted/50 p-8">
@@ -496,6 +497,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                 </div>
             ) : (
                 <div className="flex h-full">
+                    {/* Center Panel: Main Chat Area */}
                     <div className="flex flex-col h-full w-full lg:w-1/2">
                          {/* Chat Header */}
                         <header className="flex items-center gap-3 border-b p-3 h-16 flex-shrink-0">
@@ -592,7 +594,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setReplyingTo(null); cancelEdit(); }}><X className="h-4 w-4" /></Button>
                             </div>
                             )}
-                            <form onSubmit={handleSendMessage} className="flex w-full items-center gap-2">
+                            <form onSubmit={handleSendMessage} className="flex w-full items-end gap-2">
                             <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" disabled={isSending} />
                             <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isSending}><ImageIcon className="h-5 w-5" /></Button>
                             <Popover>
@@ -604,7 +606,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                 onChange={(e) => setNewMessage(e.target.value)}
                                 placeholder="Type a message..."
                                 autoComplete="off"
-                                className="flex-1 resize-none border-0 bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-2 py-3 min-h-[52px] text-base"
+                                className="flex-1 resize-none border-input bg-transparent focus:ring-0 focus-visible:ring-0 shadow-none px-2 py-3 min-h-[52px] text-base"
                                 maxRows={5}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleSendMessage(e); }}
                             />
@@ -625,3 +627,5 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
+
+    
