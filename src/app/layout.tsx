@@ -44,7 +44,7 @@ export default function RootLayout({
             }}
           >
             <div className="flex min-h-screen flex-col">
-              {!isChatPage && <Header />}
+              <Header />
               <main className="flex-1">{children}</main>
               {!isChatPage && <Footer />}
             </div>
