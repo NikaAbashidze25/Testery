@@ -631,9 +631,11 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                         const timeSincePrevMessage = prevMessage ? (msg.timestamp?.toMillis() - prevMessage.timestamp?.toMillis()) / (1000 * 60) : Infinity;
                         const addSpacing = showAvatar || timeSincePrevMessage > TIME_GAP_MINUTES;
 
+                        const isReactionPopoverOpen = openPopoverId === msg.id;
+
                         const actionButtons = (
                             <div className={cn("flex items-center self-center opacity-0 group-hover:opacity-100 transition-opacity", isSender ? "mr-1" : "ml-1")}>
-                                <Popover open={openPopoverId === msg.id} onOpenChange={(open) => setOpenPopoverId(open ? msg.id : null)}>
+                                <Popover open={isReactionPopoverOpen} onOpenChange={(open) => setOpenPopoverId(open ? msg.id : null)}>
                                     <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><Smile className="h-4 w-4" /></Button></PopoverTrigger>
                                     <PopoverContent className="w-auto p-1">
                                         <div className="flex items-center gap-1">
@@ -646,24 +648,24 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                     </PopoverContent>
                                 </Popover>
                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleStartReply(msg)}><Reply className="h-4 w-4" /></Button>
-                                {isSender && (
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuItem onClick={() => handleTogglePinMessage(msg)}><Pin className="mr-2 h-4 w-4" /><span>{msg.isPinned ? 'Unpin' : 'Pin'}</span></DropdownMenuItem>
-                                            {canEdit && msg.text && (<DropdownMenuItem onClick={() => handleStartEdit(msg)}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>)}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={() => handleTogglePinMessage(msg)}><Pin className="mr-2 h-4 w-4" /><span>{msg.isPinned ? 'Unpin' : 'Pin'}</span></DropdownMenuItem>
+                                        {isSender && canEdit && msg.text && (<DropdownMenuItem onClick={() => handleStartEdit(msg)}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>)}
+                                        {isSender && (
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild><DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem></AlertDialogTrigger>
                                                 <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the message.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
                                             </AlertDialog>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                )}
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                         );
 
                         return (
-                        <div key={msg.id} className={cn("group flex items-end gap-2.5 w-full", isSender ? "justify-end" : "justify-start", addSpacing && "mt-2")}>
+                        <div key={msg.id} className={cn("group flex items-end gap-2.5 w-full", isSender ? "justify-end" : "justify-start", addSpacing && "mt-2", isReactionPopoverOpen && "pb-4")}>
                             {isSender && (
                                 <div className="flex items-center order-first">
                                     <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">{msg.timestamp && format(msg.timestamp.toDate(), 'p')}</span>
