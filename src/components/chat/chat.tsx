@@ -632,7 +632,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                         const addSpacing = showAvatar || timeSincePrevMessage > TIME_GAP_MINUTES;
 
                         return (
-                        <div key={msg.id} className={cn("group flex items-end gap-2.5", isSender ? "flex-row-reverse" : "flex-row", addSpacing && "mt-4")}>
+                        <div key={msg.id} className={cn("group flex items-end gap-2.5", isSender ? "flex-row-reverse" : "flex-row", addSpacing && "mt-3")}>
                             <div className={cn("flex items-center", isSender ? "flex-row-reverse" : "flex-row")}>
                                 <div className={cn("flex w-full max-w-xs space-x-2", isSender ? "justify-end" : "justify-start")}>
                                     <div className="relative">
@@ -671,7 +671,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                                     </div>
                                                 </div>
                                                 {hasReactions && (
-                                                    <div className={cn("absolute -bottom-4 flex gap-1 items-center z-10", isSender ? "right-2" : "left-2")}>
+                                                    <div className={cn("absolute -bottom-4 flex gap-1 items-center z-10 right-2")}>
                                                         {Object.entries(msg.reactions).map(([emoji, uids]) => (uids.length > 0 && (
                                                         <Tooltip key={emoji}>
                                                             <TooltipTrigger asChild>
@@ -775,3 +775,5 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </TooltipProvider>
   );
 }
+
+    
