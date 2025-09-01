@@ -11,14 +11,20 @@ interface AnimatedSectionProps extends React.HTMLAttributes<HTMLElement> {
 export function AnimatedSection({ children, className, ...props }: AnimatedSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hasMounted) return;
+    
     const section = sectionRef.current;
     if (!section) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // Update state when element comes into view
         if (entry.isIntersecting) {
           setIsVisible(true);
           observer.unobserve(section);
@@ -36,7 +42,11 @@ export function AnimatedSection({ children, className, ...props }: AnimatedSecti
         observer.unobserve(section);
       }
     };
-  }, []);
+  }, [hasMounted]);
+
+  if (!hasMounted) {
+    return null;
+  }
 
   return (
     <section
