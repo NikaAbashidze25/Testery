@@ -27,7 +27,7 @@ import { auth, db, storage } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -42,6 +42,8 @@ import { useTheme } from 'next-themes';
 import { Send, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip, Menu, File as FileIcon, MessageSquare, Image as ImageIcon } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 // Interfaces
 interface Message {
@@ -89,6 +91,7 @@ const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const EDIT_TIME_LIMIT_MS = 5 * 60 * 1000;
 const availableReactions = ['👍', '❤️', '😂', '😮', '😢', '👏'];
+const TIME_GAP_MINUTES = 10;
 
 
 // Helper function
@@ -240,6 +243,8 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { resolvedTheme } = useTheme();
   const prevMessagesCountRef = useRef(messages.length);
+  const userScrolledUpRef = useRef(false);
+
 
   // Effects
   useEffect(() => {
@@ -253,18 +258,35 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     return () => unsubscribe();
   }, [router]);
 
+  const handleScroll = () => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      const isScrolledToBottom =
+        container.scrollHeight - container.scrollTop <= container.clientHeight + 1; // +1 for tolerance
+      userScrolledUpRef.current = !isScrolledToBottom;
+    }
+  };
+
   const scrollToBottom = useCallback((behavior: 'auto' | 'smooth' = 'auto') => {
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTo({
-        top: messagesContainerRef.current.scrollHeight,
-        behavior: behavior,
-      });
+        messagesContainerRef.current.scrollTo({
+            top: messagesContainerRef.current.scrollHeight,
+            behavior: behavior,
+        });
+        userScrolledUpRef.current = false;
     }
   }, []);
 
   useEffect(() => {
-    // Only scroll to bottom if new messages are added, not on reaction updates
-    if (messages.length > prevMessagesCountRef.current) {
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!userScrolledUpRef.current && messages.length > prevMessagesCountRef.current) {
       scrollToBottom();
     }
     prevMessagesCountRef.current = messages.length;
@@ -499,6 +521,10 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const handleReaction = async (message: Message, newEmoji: string) => {
     if (!user || !activeChat) return;
     setOpenPopoverId(null);
+    
+    // Temporarily disable autoscroll on reaction
+    userScrolledUpRef.current = true;
+    
     const messageRef = doc(db, 'applications', activeChat.id, 'messages', message.id);
     const currentUserReactions = Object.entries(message.reactions || {}).find(
       ([, uids]) => uids.includes(user.uid)
@@ -509,24 +535,32 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     // If user has an existing reaction, remove it first
     if (currentUserReactions) {
       const [oldEmoji] = currentUserReactions;
-      if (oldEmoji !== newEmoji) {
+       if (oldEmoji === newEmoji) {
+         batch.update(messageRef, { [`reactions.${oldEmoji}`]: arrayRemove(user.uid) });
+       } else {
         batch.update(messageRef, { [`reactions.${oldEmoji}`]: arrayRemove(user.uid) });
+        batch.update(messageRef, { [`reactions.${newEmoji}`]: arrayUnion(user.uid) });
       }
+    } else {
+      // If user has no reaction, add the new one
+      batch.update(messageRef, { [`reactions.${newEmoji}`]: arrayUnion(user.uid) });
     }
-
-    // Toggle the new emoji reaction
-    const userHasReactedWithNewEmoji = message.reactions?.[newEmoji]?.includes(user.uid);
-    batch.update(messageRef, {
-      [`reactions.${newEmoji}`]: userHasReactedWithNewEmoji
-        ? arrayRemove(user.uid)
-        : arrayUnion(user.uid),
-    });
 
     try {
       await batch.commit();
     } catch (error) {
       console.error("Error updating reaction:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update reaction.' });
+    } finally {
+        // Re-enable autoscroll after a short delay
+        setTimeout(() => {
+             const container = messagesContainerRef.current;
+            if (container) {
+                const isScrolledToBottom =
+                container.scrollHeight - container.scrollTop <= container.clientHeight + 1;
+                userScrolledUpRef.current = !isScrolledToBottom;
+            }
+        }, 100);
     }
   };
   
@@ -585,82 +619,107 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </header>
 
                      {/* Messages */}
-                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-2 text-sm min-h-0" style={{lineHeight: '1.3'}}>
-                    {messages.map((msg) => {
+                    <main ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-0.5 text-sm min-h-0" style={{lineHeight: '1.3'}}>
+                    {messages.map((msg, index) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
                         const hasReactions = msg.reactions && Object.values(msg.reactions).some(uids => uids.length > 0);
 
+                        const prevMessage = messages[index - 1];
+                        const showAvatar = !prevMessage || prevMessage.senderId !== msg.senderId;
+                        const timeSincePrevMessage = prevMessage ? (msg.timestamp?.toMillis() - prevMessage.timestamp?.toMillis()) / (1000 * 60) : Infinity;
+                        const addSpacing = showAvatar || timeSincePrevMessage > TIME_GAP_MINUTES;
+
                         return (
-                        <div key={msg.id} className={cn("group flex items-start gap-2.5 max-w-[85%]", isSender ? "ml-auto flex-row-reverse" : "mr-auto")}>
-                            <Avatar className="h-8 w-8 self-end mb-1">
-                            <AvatarImage src={isSender ? user?.photoURL! : activeChat.otherUser?.avatarUrl} />
-                            <AvatarFallback>{getInitials(isSender ? user?.displayName! : activeChat.otherUser?.name)}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col gap-0.5 w-full">
-                            <div className={cn("flex items-center gap-2", isSender ? "flex-row-reverse" : "")}>
-                                <div className={cn("relative rounded-xl px-3 py-1.5 max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30", hasReactions ? 'mb-5' : '')}>
-                                {msg.replyTo && (
-                                    <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
-                                    <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
-                                    <p className="truncate">{msg.replyTo.text}</p>
-                                    </div>
-                                )}
-                                {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
-                                {msg.imageUrl && (
-                                    <Link href={msg.imageUrl} target="_blank">
-                                    <Image src={msg.imageUrl} alt="Sent image" width={200} height={200} className="rounded-md max-w-xs cursor-pointer" />
-                                    </Link>
-                                )}
-                                {msg.fileUrl && (
-                                <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-2 bg-background/50 rounded-md hover:bg-background/80 transition-colors">
-                                    <FileIcon className="h-6 w-6 flex-shrink-0"/>
-                                    <span className="truncate">{msg.fileName}</span>
-                                </a>
-                                )}
-                                <div className="flex items-center gap-2 mt-1">
-                                    {msg.isPinned && <Pin className="h-3 w-3 text-primary" />}
-                                    {msg.editedAt && <span className="text-xs text-muted-foreground/70">(edited)</span>}
-                                </div>
-                                {hasReactions && (
-                                <div className={cn("absolute -bottom-4 flex gap-1 items-center", isSender ? "right-2" : "left-2")}>
-                                    {Object.entries(msg.reactions).map(([emoji, uids]) => (uids.length > 0 && (
-                                    <div key={emoji} className={cn("bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm", uids.includes(user?.uid || '') ? 'border-primary' : 'border-border')}>
-                                        <span>{emoji}</span>
-                                    </div>
-                                    )))}
-                                </div>
-                                )}
-                                </div>
-                                <div className={cn("flex items-center self-center opacity-0 group-hover:opacity-100 transition-opacity", isSender ? "flex-row-reverse" : "")}>
-                                <Popover open={openPopoverId === msg.id} onOpenChange={(open) => setOpenPopoverId(open ? msg.id : null)}>
-                                    <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><Smile className="h-4 w-4" /></Button></PopoverTrigger>
-                                    <PopoverContent className="w-auto p-1">
-                                        <div className="flex items-center gap-1">
-                                            {availableReactions.map(emoji => (
-                                                <Button key={emoji} variant="ghost" size="icon" className="h-8 w-8 rounded-full transition-transform hover:scale-125" onClick={() => handleReaction(msg, emoji)}>
-                                                    <span className="text-lg">{emoji}</span>
-                                                </Button>
-                                            ))}
+                        <div key={msg.id} className={cn("group flex items-end gap-2.5", isSender ? "flex-row-reverse" : "flex-row", addSpacing && "mt-4")}>
+                            <div className={cn("flex items-center", isSender ? "flex-row-reverse" : "flex-row")}>
+                                <div className={cn("flex w-full max-w-xs space-x-2", isSender ? "justify-end" : "justify-start")}>
+                                    <div className="relative">
+                                        <div className={cn("flex items-center", isSender ? "flex-row-reverse" : "")}>
+                                            <Avatar className={cn("h-8 w-8 self-end mb-1", showAvatar ? "visible" : "invisible")}>
+                                                <AvatarImage src={isSender ? user?.photoURL! : activeChat.otherUser?.avatarUrl} />
+                                                <AvatarFallback>{getInitials(isSender ? user?.displayName! : activeChat.otherUser?.name)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="relative">
+                                                <div className={cn(
+                                                    "relative rounded-xl px-3 py-1.5 max-w-max", 
+                                                    isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none",
+                                                    msg.isPinned && "bg-primary/20 dark:bg-primary/30"
+                                                )}>
+                                                    {msg.replyTo && (
+                                                        <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
+                                                            <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
+                                                            <p className="truncate">{msg.replyTo.text}</p>
+                                                        </div>
+                                                    )}
+                                                    {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
+                                                    {msg.imageUrl && (
+                                                        <Link href={msg.imageUrl} target="_blank">
+                                                        <Image src={msg.imageUrl} alt="Sent image" width={200} height={200} className="rounded-md max-w-xs cursor-pointer" />
+                                                        </Link>
+                                                    )}
+                                                    {msg.fileUrl && (
+                                                    <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-2 bg-background/50 rounded-md hover:bg-background/80 transition-colors">
+                                                        <FileIcon className="h-6 w-6 flex-shrink-0"/>
+                                                        <span className="truncate">{msg.fileName}</span>
+                                                    </a>
+                                                    )}
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        {msg.isPinned && <Pin className="h-3 w-3 text-primary" />}
+                                                        {msg.editedAt && <span className="text-xs text-muted-foreground/70">(edited)</span>}
+                                                    </div>
+                                                </div>
+                                                {hasReactions && (
+                                                    <div className={cn("absolute -bottom-4 flex gap-1 items-center z-10", isSender ? "right-2" : "left-2")}>
+                                                        {Object.entries(msg.reactions).map(([emoji, uids]) => (uids.length > 0 && (
+                                                        <Tooltip key={emoji}>
+                                                            <TooltipTrigger asChild>
+                                                                <div className={cn("bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm cursor-pointer", uids.includes(user?.uid || '') ? 'border-primary' : 'border-border')} onClick={() => handleReaction(msg, emoji)}>
+                                                                    <span>{emoji}</span>
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>{uids.map(uid => uid === user?.uid ? 'You' : activeChat.otherUser?.name).join(', ')}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        )))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className={cn("flex items-center self-center opacity-0 group-hover:opacity-100 transition-opacity", isSender ? "flex-row-reverse" : "")}>
+                                                <Popover open={openPopoverId === msg.id} onOpenChange={(open) => setOpenPopoverId(open ? msg.id : null)}>
+                                                    <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><Smile className="h-4 w-4" /></Button></PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-1">
+                                                        <div className="flex items-center gap-1">
+                                                            {availableReactions.map(emoji => (
+                                                                <Button key={emoji} variant="ghost" size="icon" className="h-8 w-8 rounded-full transition-transform hover:scale-125" onClick={() => handleReaction(msg, emoji)}>
+                                                                    <span className="text-lg">{emoji}</span>
+                                                                </Button>
+                                                            ))}
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleStartReply(msg)}><Reply className="h-4 w-4" /></Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuContent>
+                                                    <DropdownMenuItem onClick={() => handleTogglePinMessage(msg)}><Pin className="mr-2 h-4 w-4" /><span>{msg.isPinned ? 'Unpin' : 'Pin'}</span></DropdownMenuItem>
+                                                    {isSender && canEdit && msg.text && (<DropdownMenuItem onClick={() => handleStartEdit(msg)}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>)}
+                                                    {isSender && (
+                                                        <AlertDialog>
+                                                        <AlertDialogTrigger asChild><DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem></AlertDialogTrigger>
+                                                        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the message.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                                        </AlertDialog>
+                                                    )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
                                         </div>
-                                    </PopoverContent>
-                                </Popover>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleStartReply(msg)}><Reply className="h-4 w-4" /></Button>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                    <DropdownMenuItem onClick={() => handleTogglePinMessage(msg)}><Pin className="mr-2 h-4 w-4" /><span>{msg.isPinned ? 'Unpin' : 'Pin'}</span></DropdownMenuItem>
-                                    {isSender && canEdit && msg.text && (<DropdownMenuItem onClick={() => handleStartEdit(msg)}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>)}
-                                    {isSender && (
-                                        <AlertDialog>
-                                        <AlertDialogTrigger asChild><DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem></AlertDialogTrigger>
-                                        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the message.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteMessage(msg.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                                        </AlertDialog>
-                                    )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                         <span className={cn("text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity", isSender ? "order-first mr-2" : "order-last ml-2")}>
+                                            {msg.timestamp && format(msg.timestamp.toDate(), 'p')}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
                             </div>
                         </div>
                         );
@@ -706,7 +765,9 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </footer>
                  </div>
                 <aside className={cn("h-full transition-all duration-300 overflow-hidden", isInfoPanelOpen ? "block" : "hidden")}>
+                    <TooltipProvider>
                     {isInfoPanelOpen && <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />}
+                    </TooltipProvider>
                 </aside>
             </div>
             )}
