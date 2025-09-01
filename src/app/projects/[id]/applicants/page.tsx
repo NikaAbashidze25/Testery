@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, type DocumentData } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, type DocumentData, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -12,9 +12,10 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Inbox, Check, X, Clock, CheckCircle, XCircle, MessageSquare, FileText } from 'lucide-react';
+import { ArrowLeft, Inbox, Check, X, Clock, CheckCircle, XCircle, MessageSquare, FileText, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
 interface Application extends DocumentData {
@@ -125,6 +126,16 @@ export default function ProjectApplicantsPage() {
     }
   };
 
+  const handleDeleteApplication = async (appId: string) => {
+      try {
+        await deleteDoc(doc(db, 'applications', appId));
+        setApplications(apps => apps.filter(app => app.id !== appId));
+        toast({ title: "Application Deleted", description: "The application has been removed."});
+      } catch (error: any) {
+         toast({ variant: 'destructive', title: 'Error', description: `Failed to delete application: ${error.message}` });
+      }
+  };
+
   const formatAppliedDate = (timestamp: Application['appliedAt']) => {
     if (!timestamp) return '...';
     const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
@@ -229,7 +240,28 @@ export default function ProjectApplicantsPage() {
                     </>
                   )}
                   {app.status === 'declined' && (
-                    <p className="text-sm text-muted-foreground">You have declined this application.</p>
+                     <div className="flex items-center gap-2">
+                        <p className="text-sm text-muted-foreground">You have declined this application.</p>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="icon" className="h-8 w-8">
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete this application. This action cannot be undone.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteApplication(app.id)}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
                   )}
                 </CardFooter>
               </Card>
