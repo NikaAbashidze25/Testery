@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { auth, db } from "@/lib/firebase";
-import { collection, getDocs, orderBy, query, type DocumentData } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, where, type DocumentData } from "firebase/firestore";
 import { formatDistanceToNow } from 'date-fns';
-import { Search, MapPin, Inbox, User } from "lucide-react";
+import { Search, MapPin, Inbox, User, Clock, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { cn } from "@/lib/utils";
 
 
 interface Project extends DocumentData {
@@ -31,12 +32,18 @@ interface Project extends DocumentData {
     authorId: string;
 }
 
+interface Application extends DocumentData {
+    projectId: string;
+    status: 'pending' | 'accepted' | 'declined';
+}
+
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [applications, setApplications] = useState<Map<string, Application>>(new Map());
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -47,30 +54,44 @@ export default function ProjectsPage() {
   }, []);
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchProjectsAndApplications = async () => {
         setIsLoading(true);
         try {
+            // Fetch applications if user is logged in
+            if (user) {
+                const appsCollection = collection(db, 'applications');
+                const appsQuery = query(appsCollection, where('testerId', '==', user.uid));
+                const appsSnapshot = await getDocs(appsQuery);
+                const userApps = new Map<string, Application>();
+                appsSnapshot.forEach(doc => {
+                    const appData = doc.data() as Application;
+                    userApps.set(appData.projectId, appData);
+                });
+                setApplications(userApps);
+            }
+
+            // Fetch projects
             const projectsCollection = collection(db, 'projects');
             const q = query(projectsCollection, orderBy('postedAt', 'desc'));
-            
             const querySnapshot = await getDocs(q);
             
             let projectsData = querySnapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Project));
 
+            // Exclude user's own projects from the list
             if (user) {
                 projectsData = projectsData.filter(p => p.authorId !== user.uid);
             }
 
             setProjects(projectsData);
         } catch (error) {
-            console.error("Error fetching projects: ", error);
+            console.error("Error fetching data: ", error);
         } finally {
             setIsLoading(false);
         }
     };
     if (!isAuthLoading) {
-        fetchProjects();
+        fetchProjectsAndApplications();
     }
   }, [user, isAuthLoading]);
 
@@ -78,6 +99,17 @@ export default function ProjectsPage() {
     if (!timestamp) return '...';
     const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
     return formatDistanceToNow(date, { addSuffix: true });
+  }
+
+  const getApplicationStatusBadge = (status: Application['status']) => {
+    if (status === 'pending') {
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"><Clock className="mr-1 h-3 w-3" />Applied</Badge>;
+    }
+    if (status === 'accepted') {
+        return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"><CheckCircle className="mr-1 h-3 w-3" />Accepted</Badge>;
+    }
+    // No badge for declined to keep UI clean, user can check in their applications tab.
+    return null;
   }
 
   return (
@@ -140,10 +172,15 @@ export default function ProjectsPage() {
 
       {!isLoading && !isAuthLoading && projects.length > 0 && (
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-            {projects.map(project => (
+            {projects.map(project => {
+              const application = applications.get(project.id);
+              return (
               <Card key={project.id} className="flex flex-col hover:shadow-lg transition-shadow duration-300">
                 <CardHeader>
-                  <CardTitle>{project.title}</CardTitle>
+                  <div className="flex justify-between items-start">
+                    <CardTitle>{project.title}</CardTitle>
+                    {application && getApplicationStatusBadge(application.status)}
+                  </div>
                   <CardDescription>
                     <div className="flex items-center gap-2 text-sm">
                       <Link href={`/users/${project.authorId}`} className="font-semibold text-primary hover:underline">
@@ -171,7 +208,8 @@ export default function ProjectsPage() {
                   </Button>
                 </CardFooter>
               </Card>
-            ))}
+              )
+            })}
           </div>
         )}
     </div>
