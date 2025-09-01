@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme-provider';
 import { MainLayout } from '@/components/layout/main-layout';
+import { AuthProvider } from '@/contexts/auth-provider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -33,10 +34,12 @@ export default function RootLayout({
               midnight: 'midnight',
             }}
           >
-            <MainLayout>
-              {children}
-            </MainLayout>
-            <Toaster />
+            <AuthProvider>
+                <MainLayout>
+                {children}
+                </MainLayout>
+                <Toaster />
+            </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

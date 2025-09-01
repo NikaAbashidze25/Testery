@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Menu, User, LogOut, Search, FilePlus, MessageSquare } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import {
@@ -21,21 +21,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { TesteryLogo } from './logo';
 import { Skeleton } from '../ui/skeleton';
 import { ThemeToggle } from './theme-toggle';
+import { useAuth } from '@/contexts/auth-provider';
 
 export function Header() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     setHasMounted(true);
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setIsAuthLoading(false);
-    });
-    return () => unsubscribe();
   }, []);
 
 
