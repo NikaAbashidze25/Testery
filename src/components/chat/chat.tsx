@@ -570,6 +570,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   };
 
   return (
+    <TooltipProvider>
     <div className="flex h-full w-full">
         {/* Mobile menu sheet */}
         <div className="md:hidden">
@@ -765,13 +766,12 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     </footer>
                  </div>
                 <aside className={cn("h-full transition-all duration-300 overflow-hidden", isInfoPanelOpen ? "block" : "hidden")}>
-                    <TooltipProvider>
                     {isInfoPanelOpen && <ChatInfoPanel messages={messages} otherUser={activeChat.otherUser} projectTitle={activeChat.projectTitle} onTogglePin={handleTogglePinMessage} />}
-                    </TooltipProvider>
                 </aside>
             </div>
             )}
         </main>
     </div>
+    </TooltipProvider>
   );
 }
