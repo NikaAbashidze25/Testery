@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Menu, User, LogOut, Search, FilePlus, MessageSquare } from 'lucide-react';
+import { Menu, User, LogOut, Search, FilePlus, MessageSquare, Briefcase, Send, Bookmark } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -75,13 +76,33 @@ export function Header() {
             <DropdownMenuItem asChild>
               <Link href="/profile">
                 <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+                <span>My Profile</span>
               </Link>
             </DropdownMenuItem>
              <DropdownMenuItem asChild>
               <Link href="/chat">
                 <MessageSquare className="mr-2 h-4 w-4" />
                 <span>My Chats</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+             <DropdownMenuLabel className="text-xs text-muted-foreground">My Activity</DropdownMenuLabel>
+             <DropdownMenuItem asChild>
+              <Link href="/profile/my-projects">
+                <Briefcase className="mr-2 h-4 w-4" />
+                <span>My Projects</span>
+              </Link>
+            </DropdownMenuItem>
+             <DropdownMenuItem asChild>
+              <Link href="/profile/my-applications">
+                <Send className="mr-2 h-4 w-4" />
+                <span>My Applications</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/profile/saved-projects">
+                <Bookmark className="mr-2 h-4 w-4" />
+                <span>Saved Projects</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

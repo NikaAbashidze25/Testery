@@ -4,7 +4,7 @@
 
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, collection, addDoc, query, where, getDocs, serverTimestamp, type DocumentData } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, query, where, getDocs, serverTimestamp, type DocumentData, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check, Send, Clock, CheckCircle, XCircle, Bookmark } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -37,6 +37,10 @@ interface Application {
     status: 'pending' | 'accepted' | 'declined';
 }
 
+interface UserProfile {
+    savedProjects?: string[];
+}
+
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -46,9 +50,11 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [application, setApplication] = useState<Application | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
 
   useEffect(() => {
@@ -78,8 +84,8 @@ export default function ProjectDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    // Check if the user has already applied
-    const checkApplication = async () => {
+    // Check if the user has already applied & fetch user profile for saved projects
+    const checkApplicationAndProfile = async () => {
         if (user && project) {
             const applicationsRef = collection(db, 'applications');
             const q = query(applicationsRef, where('projectId', '==', project.id), where('testerId', '==', user.uid));
@@ -87,9 +93,15 @@ export default function ProjectDetailPage() {
             if (!querySnapshot.empty) {
                 setApplication(querySnapshot.docs[0].data() as Application);
             }
+
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if(userDocSnap.exists()){
+                setUserProfile(userDocSnap.data() as UserProfile);
+            }
         }
     };
-    checkApplication();
+    checkApplicationAndProfile();
   }, [user, project]);
 
 
@@ -130,6 +142,32 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleSaveToggle = async () => {
+    if (!user || !project) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+        return;
+    }
+    setIsSaving(true);
+    const userDocRef = doc(db, 'users', user.uid);
+    const isSaved = userProfile?.savedProjects?.includes(project.id);
+    
+    try {
+        if (isSaved) {
+            await updateDoc(userDocRef, { savedProjects: arrayRemove(project.id) });
+            setUserProfile(prev => ({...prev, savedProjects: prev?.savedProjects?.filter(id => id !== project.id)}));
+            toast({ title: 'Project Unsaved' });
+        } else {
+            await updateDoc(userDocRef, { savedProjects: arrayUnion(project.id) });
+            setUserProfile(prev => ({...prev, savedProjects: [...(prev?.savedProjects || []), project.id]}));
+            toast({ title: 'Project Saved' });
+        }
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not update saved projects.' });
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
   const formatPostedDate = (timestamp: Project['postedAt']) => {
     if (!timestamp) return '...';
     const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
@@ -137,6 +175,7 @@ export default function ProjectDetailPage() {
   }
 
   const isOwner = user && project && user.uid === project.authorId;
+  const isSaved = user && project && userProfile?.savedProjects?.includes(project.id);
 
   const getStatusBadge = (status: Application['status']) => {
     switch (status) {
@@ -151,7 +190,7 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const renderApplyButton = () => {
+  const renderActionButtons = () => {
       if (isCheckingAuth) {
           return <Skeleton className="h-11 w-48" />;
       }
@@ -172,21 +211,28 @@ export default function ProjectDetailPage() {
           );
       }
       if (user) {
-          if (application) {
-            return (
-                <div className="flex items-center gap-2 rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                   <span className="font-medium text-foreground">Your Status:</span> {getStatusBadge(application.status)}
-                </div>
-            );
-          }
-          return <Button size="lg" onClick={handleApply} disabled={isApplying}>
-              {isApplying ? 'Submitting...' : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Apply for this Project
-                  </>
-              )}
-            </Button>;
+          return (
+            <div className="flex gap-2">
+                {application ? (
+                    <div className="flex items-center gap-2 rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">Your Status:</span> {getStatusBadge(application.status)}
+                    </div>
+                ) : (
+                    <Button size="lg" onClick={handleApply} disabled={isApplying}>
+                        {isApplying ? 'Submitting...' : (
+                            <>
+                                <Send className="mr-2 h-4 w-4" />
+                                Apply for this Project
+                            </>
+                        )}
+                    </Button>
+                )}
+                 <Button size="lg" variant="outline" onClick={handleSaveToggle} disabled={isSaving}>
+                    <Bookmark className={cn("mr-2 h-4 w-4", isSaved && "fill-current")} />
+                    {isSaving ? 'Saving...' : (isSaved ? 'Unsave Project' : 'Save Project')}
+                </Button>
+            </div>
+          );
       }
       return (
           <Button size="lg" asChild>
@@ -322,7 +368,7 @@ export default function ProjectDetailPage() {
 
         </CardContent>
         <CardFooter className="flex-col items-start gap-4 pt-6 border-t">
-           {renderApplyButton()}
+           {renderActionButtons()}
         </CardFooter>
       </Card>
     </div>

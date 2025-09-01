@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -175,7 +176,8 @@ export default function SignUpPage() {
             email: user.email,
             profilePictureUrl: user.photoURL,
             accountType: 'individual',
-            skills: []
+            skills: [],
+            savedProjects: []
         };
         await setDoc(userDocRef, userData);
         toast({
@@ -225,7 +227,8 @@ export default function SignUpPage() {
         email: values.email,
         skills: values.skills?.split(',').map(s => s.trim()) || [],
         profilePictureUrl,
-        accountType: 'individual'
+        accountType: 'individual',
+        savedProjects: []
       });
       
       toast({
@@ -272,6 +275,7 @@ export default function SignUpPage() {
             website: values.website,
             companyLogoUrl,
             accountType: 'company',
+            savedProjects: []
         });
         
         toast({
