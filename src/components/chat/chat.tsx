@@ -88,7 +88,7 @@ interface ChatListItem extends DocumentData {
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const EDIT_TIME_LIMIT_MS = 5 * 60 * 1000;
-const availableReactions = ['👍', '❤️', '😂'];
+const availableReactions = ['👍', '❤️', '😂', '😮', '😢', '👏'];
 
 
 // Helper function
@@ -589,7 +589,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                             </Avatar>
                             <div className="flex flex-col gap-0.5 w-full">
                             <div className={cn("flex items-center gap-2", isSender ? "flex-row-reverse" : "")}>
-                                <div className={cn("rounded-xl px-3 py-1.5 max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30")}>
+                                <div className={cn("relative rounded-xl px-3 py-1.5 max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30")}>
                                 {msg.replyTo && (
                                     <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
                                     <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
@@ -612,6 +612,15 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                     {msg.isPinned && <Pin className="h-3 w-3 text-primary" />}
                                     {msg.editedAt && <span className="text-xs text-muted-foreground/70">(edited)</span>}
                                 </div>
+                                {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                                <div className={cn("absolute -bottom-2 flex gap-1 items-center", isSender ? "right-2" : "left-2")}>
+                                    {Object.entries(msg.reactions).map(([emoji, uids]) => (uids.length > 0 && (
+                                    <div key={emoji} className={cn("bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm", uids.includes(user?.uid || '') ? 'border-primary' : 'border-border')}>
+                                        <span>{emoji}</span><span>{uids.length}</span>
+                                    </div>
+                                    )))}
+                                </div>
+                                )}
                                 </div>
                                 <div className={cn("flex items-center self-center opacity-0 group-hover:opacity-100 transition-opacity", isSender ? "flex-row-reverse" : "")}>
                                 <Popover open={openPopoverId === msg.id} onOpenChange={(open) => setOpenPopoverId(open ? msg.id : null)}>
@@ -634,13 +643,6 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                 </DropdownMenu>
                                 </div>
                             </div>
-                            {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                                <div className={cn("flex gap-1 items-center", isSender ? "justify-end" : "justify-start")}>
-                                {Object.entries(msg.reactions).map(([emoji, uids]) => (uids.length > 0 && (
-                                    <div key={emoji} className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs flex items-center gap-1 shadow-sm"><span>{emoji}</span><span>{uids.length}</span></div>
-                                )))}
-                                </div>
-                            )}
                             </div>
                         </div>
                         );
