@@ -12,10 +12,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check, Send, Clock, CheckCircle, XCircle, Bookmark } from 'lucide-react';
+import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check, Send, Clock, CheckCircle, XCircle, Bookmark, MessageSquare, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface Project extends DocumentData {
     id: string;
@@ -34,6 +35,7 @@ interface Project extends DocumentData {
 }
 
 interface Application {
+    id: string;
     status: 'pending' | 'accepted' | 'declined';
 }
 
@@ -91,7 +93,8 @@ export default function ProjectDetailPage() {
             const q = query(applicationsRef, where('projectId', '==', project.id), where('testerId', '==', user.uid));
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
-                setApplication(querySnapshot.docs[0].data() as Application);
+                const appDoc = querySnapshot.docs[0];
+                setApplication({id: appDoc.id, ...appDoc.data()} as Application);
             }
 
             const userDocRef = doc(db, 'users', user.uid);
@@ -117,16 +120,16 @@ export default function ProjectDetailPage() {
     setIsApplying(true);
     try {
         const applicationsRef = collection(db, 'applications');
-        const newApplication: Application = { status: 'pending' };
-        await addDoc(applicationsRef, {
+        const appData: Omit<Application, 'id'> = { status: 'pending' };
+        const newDocRef = await addDoc(applicationsRef, {
             projectId: project.id,
             projectTitle: project.title,
             testerId: user.uid,
             ownerId: project.authorId,
-            ...newApplication,
+            ...appData,
             appliedAt: serverTimestamp(),
         });
-        setApplication(newApplication);
+        setApplication({id: newDocRef.id, ...appData});
         toast({
             title: 'Application Sent!',
             description: "You have successfully applied for this project.",
@@ -213,11 +216,11 @@ export default function ProjectDetailPage() {
       if (user) {
           return (
             <div className="flex gap-2">
-                {application ? (
+                {application && application.status !== 'accepted' ? (
                     <div className="flex items-center gap-2 rounded-md bg-muted p-3 text-sm text-muted-foreground">
                     <span className="font-medium text-foreground">Your Status:</span> {getStatusBadge(application.status)}
                     </div>
-                ) : (
+                ) : !application ? (
                     <Button size="lg" onClick={handleApply} disabled={isApplying}>
                         {isApplying ? 'Submitting...' : (
                             <>
@@ -226,7 +229,7 @@ export default function ProjectDetailPage() {
                             </>
                         )}
                     </Button>
-                )}
+                ): null}
                  <Button size="lg" variant="outline" onClick={handleSaveToggle} disabled={isSaving}>
                     <Bookmark className={cn("mr-2 h-4 w-4", isSaved && "fill-current")} />
                     {isSaving ? 'Saving...' : (isSaved ? 'Unsave Project' : 'Save Project')}
@@ -323,6 +326,29 @@ export default function ProjectDetailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
+            {application?.status === 'accepted' && (
+                <Alert className="border-green-500 bg-green-50 dark:bg-green-900/20">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <AlertTitle className="text-green-700 dark:text-green-400">Application Accepted!</AlertTitle>
+                    <AlertDescription className="text-green-600 dark:text-green-500">
+                        Congratulations! You can now start working on the project.
+                        <div className="mt-3 flex gap-2">
+                             <Button asChild size="sm">
+                               <Link href={`/chat/${application.id}`}>
+                                   <MessageSquare className="mr-2 h-4 w-4" />
+                                   Start Chat
+                               </Link>
+                           </Button>
+                           <Button asChild size="sm" variant="outline">
+                               <Link href={`/project/${project.id}/submission/${application.id}`}>
+                                   <Upload className="mr-2 h-4 w-4" />
+                                   Submit Work
+                               </Link>
+                           </Button>
+                        </div>
+                    </AlertDescription>
+                </Alert>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex items-start gap-3 rounded-lg border p-4">
                     <MapPin className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
