@@ -20,6 +20,7 @@ import {
   where,
   getDocs,
   DocumentData,
+  writeBatch,
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
@@ -230,6 +231,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
   
   // Hooks
   const router = useRouter();
@@ -485,13 +487,35 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     }
   };
 
-  const handleReaction = async (message: Message, emoji: string) => {
+  const handleReaction = async (message: Message, newEmoji: string) => {
     if (!user || !activeChat) return;
+
     const messageRef = doc(db, 'applications', activeChat.id, 'messages', message.id);
-    const reactionPath = `reactions.${emoji}`;
-    const userHasReacted = message.reactions?.[emoji]?.includes(user.uid);
+    const currentUserReactions = Object.entries(message.reactions || {}).find(
+      ([, uids]) => uids.includes(user.uid)
+    );
+
+    const batch = writeBatch(db);
+
+    // If user has an existing reaction, remove it first
+    if (currentUserReactions) {
+      const [oldEmoji] = currentUserReactions;
+      if (oldEmoji !== newEmoji) {
+        batch.update(messageRef, { [`reactions.${oldEmoji}`]: arrayRemove(user.uid) });
+      }
+    }
+
+    // Toggle the new emoji reaction
+    const userHasReactedWithNewEmoji = message.reactions?.[newEmoji]?.includes(user.uid);
+    batch.update(messageRef, {
+      [`reactions.${newEmoji}`]: userHasReactedWithNewEmoji
+        ? arrayRemove(user.uid)
+        : arrayUnion(user.uid),
+    });
+
     try {
-      await updateDoc(messageRef, { [reactionPath]: userHasReacted ? arrayRemove(user.uid) : arrayUnion(user.uid) });
+      await batch.commit();
+      setOpenPopoverId(null);
     } catch (error) {
       console.error("Error updating reaction:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update reaction.' });
@@ -590,7 +614,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                 </div>
                                 </div>
                                 <div className={cn("flex items-center self-center opacity-0 group-hover:opacity-100 transition-opacity", isSender ? "flex-row-reverse" : "")}>
-                                <Popover>
+                                <Popover open={openPopoverId === msg.id} onOpenChange={(open) => setOpenPopoverId(open ? msg.id : null)}>
                                     <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><Smile className="h-4 w-4" /></Button></PopoverTrigger>
                                     <PopoverContent className="w-auto p-1"><div className="flex gap-1">{availableReactions.map(emoji => (<Button key={emoji} variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleReaction(msg, emoji)}><span className="text-lg">{emoji}</span></Button>))}</div></PopoverContent>
                                 </Popover>
@@ -670,5 +694,3 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     </div>
   );
 }
-
-    
