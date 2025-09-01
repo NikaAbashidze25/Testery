@@ -39,7 +39,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
 import { useTheme } from 'next-themes';
-import { Send, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip, Menu, File as FileIcon, MessageSquare } from 'lucide-react';
+import { Send, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip, Menu, File as FileIcon, MessageSquare, Image as ImageIcon } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 
@@ -169,13 +169,12 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
       <div className="flex-1 p-2">
         <Accordion type="multiple" defaultValue={['pinned', 'photos', 'files']} className="w-full">
             <AccordionItem value="pinned">
-                <AccordionTrigger className="px-2">Pinned Messages</AccordionTrigger>
+                <AccordionTrigger className="px-2 font-semibold flex items-center gap-2"><Pin className="h-4 w-4" /> Pinned Messages</AccordionTrigger>
                 <AccordionContent className="px-2">
                     <div className="space-y-2 text-sm">
                         {pinnedMessages.length > 0 ? pinnedMessages.map(msg => (
-                            <div key={`pin-info-${msg.id}`} className="group/pin p-2 bg-muted rounded-md text-muted-foreground flex justify-between items-start gap-2">
+                            <div key={`pin-info-${msg.id}`} className="group/pin p-2 bg-muted rounded-md text-muted-foreground flex justify-between items-start gap-2 hover:bg-muted/80">
                                 <div className="flex-grow">
-                                    <span className="font-semibold">{msg.senderId === otherUser?.uid ? otherUser.name : "You"}: </span>
                                     <p className="truncate">{msg.text || 'Shared Media'}</p>
                                 </div>
                                 <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0 opacity-50 group-hover/pin:opacity-100" onClick={() => onTogglePin(msg)}>
@@ -187,7 +186,7 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
                 </AccordionContent>
             </AccordionItem>
              <AccordionItem value="photos">
-                <AccordionTrigger className="px-2">Shared Photos</AccordionTrigger>
+                <AccordionTrigger className="px-2 font-semibold flex items-center gap-2"><ImageIcon className="h-4 w-4" /> Shared Photos</AccordionTrigger>
                 <AccordionContent className="px-2">
                      <div className="grid grid-cols-3 gap-2 mt-2">
                         {sharedImages.length > 0 ? sharedImages.slice(0, 9).map(msg => (
@@ -199,7 +198,7 @@ const ChatInfoPanel = ({ messages, otherUser, projectTitle, onTogglePin }: { mes
                 </AccordionContent>
             </AccordionItem>
             <AccordionItem value="files">
-                <AccordionTrigger className="px-2">Shared Files</AccordionTrigger>
+                <AccordionTrigger className="px-2 font-semibold flex items-center gap-2"><FileIcon className="h-4 w-4" /> Shared Files</AccordionTrigger>
                 <AccordionContent className="px-2">
                     <div className="space-y-2 text-sm">
                         {sharedFiles.length > 0 ? sharedFiles.map(msg => (
@@ -240,6 +239,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { resolvedTheme } = useTheme();
+  const prevMessagesCountRef = useRef(messages.length);
 
   // Effects
   useEffect(() => {
@@ -253,13 +253,22 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
     return () => unsubscribe();
   }, [router]);
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback((behavior: 'auto' | 'smooth' = 'auto') => {
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: behavior,
+      });
     }
   }, []);
 
-  useEffect(scrollToBottom, [messages, scrollToBottom]);
+  useEffect(() => {
+    // Only scroll to bottom if new messages are added, not on reaction updates
+    if (messages.length > prevMessagesCountRef.current) {
+      scrollToBottom();
+    }
+    prevMessagesCountRef.current = messages.length;
+  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     if (user) {
@@ -489,7 +498,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
   const handleReaction = async (message: Message, newEmoji: string) => {
     if (!user || !activeChat) return;
-
+    setOpenPopoverId(null);
     const messageRef = doc(db, 'applications', activeChat.id, 'messages', message.id);
     const currentUserReactions = Object.entries(message.reactions || {}).find(
       ([, uids]) => uids.includes(user.uid)
@@ -515,7 +524,6 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
     try {
       await batch.commit();
-      setOpenPopoverId(null);
     } catch (error) {
       console.error("Error updating reaction:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update reaction.' });
@@ -539,7 +547,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
         </div>
 
         {/* Desktop Sidebar */}
-        <aside className="hidden md:block md:w-[280px] lg:w-[320px] flex-shrink-0 h-full">
+        <aside className="hidden md:block md:w-[320px] lg:w-[360px] flex-shrink-0 h-full">
              {user && <ChatList user={user} chats={chats} activeChatId={activeChat?.id} onSelectChat={handleSelectChat} />}
         </aside>
         
@@ -581,6 +589,8 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                     {messages.map((msg) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
+                        const hasReactions = msg.reactions && Object.values(msg.reactions).some(uids => uids.length > 0);
+
                         return (
                         <div key={msg.id} className={cn("group flex items-start gap-2.5 max-w-[85%]", isSender ? "ml-auto flex-row-reverse" : "mr-auto")}>
                             <Avatar className="h-8 w-8 self-end mb-1">
@@ -589,7 +599,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                             </Avatar>
                             <div className="flex flex-col gap-0.5 w-full">
                             <div className={cn("flex items-center gap-2", isSender ? "flex-row-reverse" : "")}>
-                                <div className={cn("relative rounded-xl px-3 py-1.5 max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30")}>
+                                <div className={cn("relative rounded-xl px-3 py-1.5 max-w-max", isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary rounded-bl-none", msg.isPinned && "bg-primary/20 dark:bg-primary/30", hasReactions ? 'mb-5' : '')}>
                                 {msg.replyTo && (
                                     <div className="border-l-2 border-primary/50 pl-2 mb-2 text-xs opacity-80">
                                     <p className="font-semibold">{msg.replyTo.senderName} replied:</p>
@@ -612,11 +622,11 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                     {msg.isPinned && <Pin className="h-3 w-3 text-primary" />}
                                     {msg.editedAt && <span className="text-xs text-muted-foreground/70">(edited)</span>}
                                 </div>
-                                {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                                <div className={cn("absolute -bottom-2 flex gap-1 items-center", isSender ? "right-2" : "left-2")}>
+                                {hasReactions && (
+                                <div className={cn("absolute -bottom-4 flex gap-1 items-center", isSender ? "right-2" : "left-2")}>
                                     {Object.entries(msg.reactions).map(([emoji, uids]) => (uids.length > 0 && (
                                     <div key={emoji} className={cn("bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm", uids.includes(user?.uid || '') ? 'border-primary' : 'border-border')}>
-                                        <span>{emoji}</span><span>{uids.length}</span>
+                                        <span>{emoji}</span>
                                     </div>
                                     )))}
                                 </div>
