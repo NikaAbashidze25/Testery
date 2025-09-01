@@ -625,7 +625,15 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
                                 <div className={cn("flex items-center self-center opacity-0 group-hover:opacity-100 transition-opacity", isSender ? "flex-row-reverse" : "")}>
                                 <Popover open={openPopoverId === msg.id} onOpenChange={(open) => setOpenPopoverId(open ? msg.id : null)}>
                                     <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><Smile className="h-4 w-4" /></Button></PopoverTrigger>
-                                    <PopoverContent className="w-auto p-1"><div className="flex gap-1">{availableReactions.map(emoji => (<Button key={emoji} variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleReaction(msg, emoji)}><span className="text-lg">{emoji}</span></Button>))}</div></PopoverContent>
+                                    <PopoverContent className="w-auto p-1">
+                                        <div className="flex items-center gap-1">
+                                            {availableReactions.map(emoji => (
+                                                <Button key={emoji} variant="ghost" size="icon" className="h-8 w-8 rounded-full transition-transform hover:scale-125" onClick={() => handleReaction(msg, emoji)}>
+                                                    <span className="text-lg">{emoji}</span>
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </PopoverContent>
                                 </Popover>
                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleStartReply(msg)}><Reply className="h-4 w-4" /></Button>
                                 <DropdownMenu>
