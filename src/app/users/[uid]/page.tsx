@@ -111,7 +111,7 @@ export default function UserProfilePage() {
     return name[0];
   };
 
-  const formatPostedDate = (timestamp: Project['postedAt']) => {
+  const formatPostedDate = (timestamp: Project['postedAt'] | Review['createdAt']) => {
     if (!timestamp) return '...';
     const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
     return formatDistanceToNow(date, { addSuffix: true });
@@ -301,7 +301,7 @@ export default function UserProfilePage() {
                                                 <div>
                                                     <CardTitle className="text-lg">{review.clientName}</CardTitle>
                                                     <CardDescription>
-                                                        {formatDistanceToNow(new Date(review.createdAt.seconds * 1000), { addSuffix: true })}
+                                                        {formatPostedDate(review.createdAt)}
                                                     </CardDescription>
                                                 </div>
                                             </div>
