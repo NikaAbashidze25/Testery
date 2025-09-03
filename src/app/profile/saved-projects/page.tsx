@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Inbox, Bookmark, MapPin } from 'lucide-react';
+import { ArrowLeft, Inbox, Bookmark, MapPin, Clock, CheckCircle } from 'lucide-react';
 
 interface Project extends DocumentData {
     id: string;
@@ -27,6 +27,11 @@ interface Project extends DocumentData {
     };
 }
 
+interface Application extends DocumentData {
+    projectId: string;
+    status: 'pending' | 'accepted' | 'declined';
+}
+
 interface UserProfile {
     savedProjects?: string[];
 }
@@ -34,6 +39,7 @@ interface UserProfile {
 export default function SavedProjectsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [savedProjects, setSavedProjects] = useState<Project[]>([]);
+  const [applications, setApplications] = useState<Map<string, Application>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -50,9 +56,21 @@ export default function SavedProjectsPage() {
 
   useEffect(() => {
     if (user) {
-      const fetchSavedProjects = async () => {
+      const fetchSavedProjectsAndApps = async () => {
         setIsLoading(true);
         try {
+            // Fetch applications first
+            const appsCollection = collection(db, 'applications');
+            const appsQuery = query(appsCollection, where('testerId', '==', user.uid));
+            const appsSnapshot = await getDocs(appsQuery);
+            const userApps = new Map<string, Application>();
+            appsSnapshot.forEach(doc => {
+                const appData = doc.data() as Application;
+                userApps.set(appData.projectId, appData);
+            });
+            setApplications(userApps);
+
+            // Fetch saved projects
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
 
@@ -75,12 +93,12 @@ export default function SavedProjectsPage() {
                 }
             }
         } catch (error) {
-          console.error("Error fetching saved projects: ", error);
+          console.error("Error fetching data: ", error);
         } finally {
           setIsLoading(false);
         }
       };
-      fetchSavedProjects();
+      fetchSavedProjectsAndApps();
     }
   }, [user]);
 
@@ -88,6 +106,16 @@ export default function SavedProjectsPage() {
     if (!timestamp) return '...';
     const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
     return formatDistanceToNow(date, { addSuffix: true });
+  }
+
+  const getApplicationStatusBadge = (status: Application['status']) => {
+    if (status === 'pending') {
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"><Clock className="mr-1 h-3 w-3" />Applied</Badge>;
+    }
+    if (status === 'accepted') {
+        return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"><CheckCircle className="mr-1 h-3 w-3" />Accepted</Badge>;
+    }
+    return null;
   }
 
   if (!user) {
@@ -155,40 +183,46 @@ export default function SavedProjectsPage() {
 
       {!isLoading && savedProjects.length > 0 && (
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-            {savedProjects.map(project => (
+            {savedProjects.map(project => {
+                const application = applications.get(project.id);
+                return (
                 <Card key={project.id} className="flex flex-col hover:shadow-lg transition-shadow duration-300">
                     <CardHeader>
-                    <CardTitle>{project.title}</CardTitle>
-                    <CardDescription>
-                        <div className="flex items-center gap-2 text-sm">
-                        <Link href={`/users/${project.authorId}`} className="font-semibold text-primary hover:underline">
-                            {project.companyName}
-                        </Link>
-                        <span className="text-muted-foreground flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            {project.location}
-                        </span>
+                        <div className="flex justify-between items-start">
+                            <CardTitle>{project.title}</CardTitle>
+                            {application && getApplicationStatusBadge(application.status)}
                         </div>
-                    </CardDescription>
+                        <CardDescription>
+                            <div className="flex items-center gap-2 text-sm">
+                            <Link href={`/users/${project.authorId}`} className="font-semibold text-primary hover:underline">
+                                {project.companyName}
+                            </Link>
+                            <span className="text-muted-foreground flex items-center gap-1">
+                                <MapPin className="h-4 w-4" />
+                                {project.location}
+                            </span>
+                            </div>
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow">
-                    <p className="text-sm text-muted-foreground line-clamp-3">{project.description}</p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        {project.skills.map(skill => (
-                        <Badge key={skill} variant="secondary">{skill}</Badge>
-                        ))}
-                    </div>
+                        <p className="text-sm text-muted-foreground line-clamp-3">{project.description}</p>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {project.skills.map(skill => (
+                            <Badge key={skill} variant="secondary">{skill}</Badge>
+                            ))}
+                        </div>
                     </CardContent>
                     <CardFooter className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{formatPostedDate(project.postedAt)}</span>
-                    <Button asChild>
-                        <Link href={`/projects/${project.id}`}>View Details</Link>
-                    </Button>
+                        <span className="text-sm text-muted-foreground">{formatPostedDate(project.postedAt)}</span>
+                        <Button asChild>
+                            <Link href={`/projects/${project.id}`}>View Details</Link>
+                        </Button>
                     </CardFooter>
                 </Card>
-            ))}
+            )})}
           </div>
         )}
     </div>
   );
 }
+
