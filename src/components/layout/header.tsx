@@ -58,10 +58,11 @@ export function Header() {
   useEffect(() => {
     if (user) {
         const notificationsRef = collection(db, 'notifications');
+        // Fix: Query only by recipientId to avoid needing a composite index.
+        // Sorting will be done on the client side.
         const q = query(
             notificationsRef, 
-            where('recipientId', '==', user.uid),
-            orderBy('createdAt', 'desc')
+            where('recipientId', '==', user.uid)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -69,7 +70,14 @@ export function Header() {
                 id: doc.id,
                 ...doc.data()
             } as Notification));
+            
+            // Sort notifications by date client-side
+            userNotifications.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
+
             setNotifications(userNotifications);
+        }, (error) => {
+          // This will catch the error you saw and log it, but the code change prevents it.
+          console.error("Error fetching notifications: ", error);
         });
 
         return () => unsubscribe();
