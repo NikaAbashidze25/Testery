@@ -195,7 +195,7 @@ export default function MyProjectsPage() {
                         <Users className="mr-2 h-4 w-4" />
                         Applicants
                         {project.applicantCount && project.applicantCount > 0 && (
-                           <Badge className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{project.applicantCount}</Badge>
+                           <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{project.applicantCount}</Badge>
                         )}
                       </Link>
                   </Button>
