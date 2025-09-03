@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, type DocumentData, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, type DocumentData, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -116,11 +116,30 @@ export default function ProjectApplicantsPage() {
   }, [user, projectId, toast]);
 
   const handleApplicationStatus = async (appId: string, status: 'accepted' | 'declined') => {
+      if (!user) return;
     try {
         const appDocRef = doc(db, 'applications', appId);
         await updateDoc(appDocRef, { status: status });
+
+        // Create notification for the applicant
+        const appDocSnap = await getDoc(appDocRef);
+        if (appDocSnap.exists()) {
+            const appData = appDocSnap.data();
+            const statusMessage = status === 'accepted' ? 'accepted' : 'declined';
+            await addDoc(collection(db, 'notifications'), {
+                recipientId: appData.testerId,
+                senderId: user.uid,
+                senderName: user.displayName,
+                type: `application_${status}`,
+                message: `Your application for "${appData.projectTitle}" has been ${statusMessage}.`,
+                link: '/profile/my-applications',
+                isRead: false,
+                createdAt: serverTimestamp(),
+            });
+        }
+
         setApplications(apps => apps.map(app => app.id === appId ? { ...app, status: status } : app));
-        toast({ title: `Application ${status}`, description: `The application has been ${status}.`});
+        toast({ title: `Application ${status}`, description: `The application has been ${status} and the tester has been notified.`});
     } catch(error: any) {
         toast({ variant: 'destructive', title: 'Error', description: error.message });
     }
