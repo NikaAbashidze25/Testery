@@ -5,7 +5,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Menu, User, LogOut, Search, FilePlus, MessageSquare, Briefcase, Send, Bookmark } from 'lucide-react';
+import { Menu, User, LogOut, Search, FilePlus, MessageSquare, Briefcase, Send, Bookmark, Bell } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -56,62 +56,87 @@ export function Header() {
 
     if (user) {
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8 rounded-md">
-                <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
-                <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end" forceMount>
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user.displayName}</p>
-                <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/profile">
-                <User className="mr-2 h-4 w-4" />
-                <span>My Profile</span>
-              </Link>
-            </DropdownMenuItem>
-             <DropdownMenuItem asChild>
+        <>
+            <Button variant="ghost" size="icon" asChild>
               <Link href="/chat">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                <span>My Chats</span>
+                <MessageSquare className="h-5 w-5" />
+                <span className="sr-only">My Chats</span>
               </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-             <DropdownMenuLabel className="text-xs text-muted-foreground">My Activity</DropdownMenuLabel>
-             <DropdownMenuItem asChild>
-              <Link href="/profile/my-projects">
-                <Briefcase className="mr-2 h-4 w-4" />
-                <span>My Projects</span>
-              </Link>
-            </DropdownMenuItem>
-             <DropdownMenuItem asChild>
-              <Link href="/profile/my-applications">
-                <Send className="mr-2 h-4 w-4" />
-                <span>My Applications</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/profile/saved-projects">
-                <Bookmark className="mr-2 h-4 w-4" />
-                <span>Saved Projects</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Bell className="h-5 w-5" />
+                  <span className="sr-only">Notifications</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                    <div className="text-center text-sm text-muted-foreground p-4">
+                        No new notifications
+                    </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8 rounded-md">
+                    <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
+                    <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>My Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/chat">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    <span>My Chats</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground">My Activity</DropdownMenuLabel>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile/my-projects">
+                    <Briefcase className="mr-2 h-4 w-4" />
+                    <span>My Projects</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile/my-applications">
+                    <Send className="mr-2 h-4 w-4" />
+                    <span>My Applications</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile/saved-projects">
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    <span>Saved Projects</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+        </>
       );
     }
 
@@ -224,9 +249,9 @@ export function Header() {
             </nav>
         </div>
 
-        <div className="flex flex-1 items-center justify-end space-x-4">
+        <div className="flex flex-1 items-center justify-end space-x-1">
           <ThemeToggle />
-          <nav className="flex items-center space-x-2">
+          <nav className="flex items-center space-x-1">
             {hasMounted && renderUserControls()}
           </nav>
         </div>
