@@ -206,10 +206,13 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
   }
 
   const hasAnyActivity = postedProjects.length > 0 || testedProjects.length > 0 || reviews.length > 0;
-  const tabTriggers = [];
-  if (postedProjects.length > 0) tabTriggers.push(<TabsTrigger key="client" value="client">Posted Projects</TabsTrigger>);
-  if (testedProjects.length > 0) tabTriggers.push(<TabsTrigger key="tester" value="tester">Tested Projects</TabsTrigger>);
-  if (reviews.length > 0) tabTriggers.push(<TabsTrigger key="reviews" value="reviews">Reviews</TabsTrigger>);
+  const tabCount = [postedProjects, testedProjects, reviews].filter(array => array.length > 0).length;
+  const gridClass = {
+    1: 'grid-cols-1',
+    2: 'grid-cols-2',
+    3: 'grid-cols-3'
+  }[tabCount] || 'grid-cols-1';
+
 
   return (
     <div className="container py-12">
@@ -261,8 +264,10 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
             <div className="lg:col-span-2 space-y-6">
                <Tabs defaultValue={getDefaultTab()} className="w-full">
                 {hasAnyActivity && (
-                    <TabsList className={`grid w-full grid-cols-${tabTriggers.length}`}>
-                        {tabTriggers}
+                    <TabsList className={`grid w-full ${gridClass}`}>
+                        {postedProjects.length > 0 && <TabsTrigger value="client">Posted Projects</TabsTrigger>}
+                        {testedProjects.length > 0 && <TabsTrigger value="tester">Tested Projects</TabsTrigger>}
+                        {reviews.length > 0 && <TabsTrigger value="reviews">Reviews</TabsTrigger>}
                     </TabsList>
                 )}
                 
@@ -391,5 +396,3 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
     </div>
   );
 }
-
-    
