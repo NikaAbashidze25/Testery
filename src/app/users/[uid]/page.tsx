@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -39,6 +39,7 @@ interface Project extends DocumentData {
         seconds: number;
         nanoseconds: number;
     };
+    projectTitle?: string;
 }
 
 interface TestedProject extends Project {
@@ -70,8 +71,9 @@ const safeGetData = (doc: any): DocumentData => {
 };
 
 
-export default function UserProfilePage({ params }: { params: { uid: string } }) {
-  const uid = params.uid;
+export default function UserProfilePage() {
+  const params = useParams();
+  const uid = params.uid as string;
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [postedProjects, setPostedProjects] = useState<Project[]>([]);
@@ -235,7 +237,7 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
 
                     <Tabs defaultValue={getDefaultTab()} className="w-full">
                         {hasAnyActivity && activeTabs.length > 0 && (
-                            <TabsList className={cn("grid w-full", gridClass)}>
+                             <TabsList className={cn("grid w-full", gridClass)}>
                                 {postedProjects.length > 0 && (
                                     <TabsTrigger value="client">Posted Projects</TabsTrigger>
                                 )}
@@ -523,4 +525,3 @@ const ProfileStats = ({ postedProjects, testedProjects, reviews }: {
     </Card>
   </div>
 );
-
