@@ -10,10 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, ArrowLeft, Inbox, Star, Clock, CheckCircle, FileText } from 'lucide-react';
+import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, ArrowLeft, Inbox, Star, CheckCircle, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from '@/components/ui/separator';
 
 interface UserProfile {
   uid: string;
@@ -60,6 +60,7 @@ interface Review extends DocumentData {
         seconds: number;
         nanoseconds: number;
     };
+    projectTitle?: string;
 }
 
 export default function UserProfilePage({ params }: { params: { uid: string } }) {
@@ -83,7 +84,7 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
                     const profileData = userDocSnap.data() as UserProfile;
                     setUserProfile(profileData);
                     
-                    // 1. Fetch Projects the User HAS POSTED (as a client/creator)
+                    // 1. Fetch Projects the User HAS POSTED
                     const postedProjectsQuery = query(collection(db, 'projects'), where('authorId', '==', uid), orderBy('postedAt', 'desc'));
                     const postedProjectsSnapshot = await getDocs(postedProjectsQuery);
                     const postedProjectsData = postedProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
@@ -111,10 +112,17 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
                     testedProjectsData.sort((a,b) => b.testedAt.seconds - a.testedAt.seconds);
                     setTestedProjects(testedProjectsData);
 
-                    // 3. Fetch Reviews the User HAS RECEIVED (for their testing work)
+                    // 3. Fetch Reviews the User HAS RECEIVED
                     const reviewsQuery = query(collection(db, 'reviews'), where('testerId', '==', uid), orderBy('createdAt', 'desc'));
                     const reviewsSnapshot = await getDocs(reviewsQuery);
-                    const reviewsData = reviewsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+                    const reviewsData = await Promise.all(reviewsSnapshot.docs.map(async (reviewDoc) => {
+                        const reviewData = { id: reviewDoc.id, ...reviewDoc.data() } as Review;
+                        const projectDoc = await getDoc(doc(db, 'projects', reviewData.projectId));
+                        if(projectDoc.exists()){
+                            reviewData.projectTitle = projectDoc.data().title;
+                        }
+                        return reviewData;
+                    }));
                     setReviews(reviewsData);
 
                 } else {
@@ -155,12 +163,6 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
     );
   };
   
-  const getDefaultTab = () => {
-    if (testedProjects.length > 0 || reviews.length > 0) return "tester";
-    if (postedProjects.length > 0) return "client";
-    return "reviews"; // fallback
-  };
-
   if (isLoading) {
     return (
         <div className="container py-12">
@@ -206,14 +208,7 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
   }
 
   const hasAnyActivity = postedProjects.length > 0 || testedProjects.length > 0 || reviews.length > 0;
-  const tabCount = [postedProjects, testedProjects, reviews].filter(array => array.length > 0).length;
-  const gridClass = {
-    1: 'grid-cols-1',
-    2: 'grid-cols-2',
-    3: 'grid-cols-3'
-  }[tabCount] || 'grid-cols-1';
-
-
+  
   return (
     <div className="container py-12">
         <div className="mb-8">
@@ -233,24 +228,11 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
                         </AvatarFallback>
                     </Avatar>
                     <CardTitle className="text-3xl">{userProfile.fullName || userProfile.companyName}</CardTitle>
-                    <CardDescription className="flex items-center gap-2">
+                    <CardDescription className="flex items-center justify-center gap-2">
                         <Mail className="h-4 w-4" /> {userProfile.email}
                     </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6 text-sm">
-                    {userProfile.skills && userProfile.skills.length > 0 && (
-                        <div>
-                            <h3 className="font-semibold mb-3 flex items-center gap-3">
-                                <Briefcase className="h-5 w-5 text-muted-foreground" />
-                                Skills
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                            {userProfile.skills.map(skill => (
-                                <Badge key={skill} variant="secondary">{skill}</Badge>
-                            ))}
-                            </div>
-                        </div>
-                    )}
                     {userProfile.accountType === 'company' && userProfile.website && (
                             <div className="flex items-center gap-3">
                                 <Globe className="h-5 w-5 text-muted-foreground" />
@@ -261,133 +243,112 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
                 </Card>
             </div>
 
-            <div className="lg:col-span-2 space-y-6">
-               <Tabs defaultValue={getDefaultTab()} className="w-full">
-                {hasAnyActivity && (
-                    <TabsList className={`grid w-full ${gridClass}`}>
-                        {postedProjects.length > 0 && <TabsTrigger value="client">Posted Projects</TabsTrigger>}
-                        {testedProjects.length > 0 && <TabsTrigger value="tester">Tested Projects</TabsTrigger>}
-                        {reviews.length > 0 && <TabsTrigger value="reviews">Reviews</TabsTrigger>}
-                    </TabsList>
-                )}
-                
-                <TabsContent value="client" className="space-y-4">
-                    <h2 className="text-3xl font-bold font-headline mb-2">Posted Projects</h2>
-                    <p className="text-muted-foreground mb-6">Projects that {userProfile.fullName || userProfile.companyName} has created.</p>
-                    {postedProjects.length > 0 ? (
-                        postedProjects.map(project => (
-                                <Card key={project.id}>
+            <div className="lg:col-span-2 space-y-8">
+               
+               {/* Work History & Reviews Section */}
+                <div className="space-y-4">
+                    <h2 className="text-3xl font-bold font-headline">Work History</h2>
+                    {reviews.length > 0 ? (
+                        reviews.map(review => (
+                            <Card key={review.id}>
+                                <CardHeader>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <CardTitle className="text-lg text-primary hover:underline">
+                                                <Link href={`/projects/${review.projectId}`}>
+                                                    {review.projectTitle || 'Completed Project'}
+                                                </Link>
+                                            </CardTitle>
+                                            <CardDescription>
+                                                {formatDate(review.createdAt)}
+                                            </CardDescription>
+                                        </div>
+                                        {renderStars(review.rating)}
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-muted-foreground italic">"{review.comment}"</p>
+                                </CardContent>
+                                 <CardFooter>
+                                    <div className="flex items-center gap-2">
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={review.clientAvatar} />
+                                            <AvatarFallback>{getInitials(review.clientName)}</AvatarFallback>
+                                        </Avatar>
+                                        <span className="text-sm font-medium">{review.clientName}</span>
+                                    </div>
+                                </CardFooter>
+                            </Card>
+                        ))
+                    ) : (
+                      <p className="text-muted-foreground">No items</p>
+                    )}
+                </div>
+
+                <Separator />
+
+                {/* Skills Section */}
+                <div className="space-y-4">
+                    <h2 className="text-3xl font-bold font-headline">Skills</h2>
+                     {userProfile.skills && userProfile.skills.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                        {userProfile.skills.map(skill => (
+                            <Badge key={skill} variant="secondary" className="text-base py-1 px-4">{skill}</Badge>
+                        ))}
+                        </div>
+                    ) : (
+                         <p className="text-muted-foreground">No skills listed.</p>
+                    )}
+                </div>
+
+                <Separator />
+
+                {/* Project Catalog Section */}
+                 <div className="space-y-4">
+                    <h2 className="text-3xl font-bold font-headline">Project Catalog</h2>
+                    <p className="text-muted-foreground">
+                        Projects are a new way to showcase your offerings, highlight your strengths, and attract more clients.
+                    </p>
+                     {postedProjects.length > 0 ? (
+                        <div className="space-y-4">
+                            {postedProjects.map(project => (
+                                <Card key={project.id} className="bg-muted/50">
                                     <CardHeader>
-                                        <CardTitle>{project.title}</CardTitle>
+                                        <CardTitle className="text-lg">{project.title}</CardTitle>
                                         <CardDescription>Posted {formatDate(project.postedAt)}</CardDescription>
                                     </CardHeader>
                                     <CardContent>
                                             <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{project.description}</p>
                                             <div className="flex flex-wrap gap-2">
                                             {project.skills.map(skill => (
-                                            <Badge key={skill} variant="secondary">{skill}</Badge>
+                                            <Badge key={skill} variant="outline">{skill}</Badge>
                                             ))}
                                         </div>
                                     </CardContent>
-                                    <CardFooter>
-                                        <Button asChild variant="secondary">
-                                            <Link href={`/projects/${project.id}`}>View Project Details</Link>
-                                        </Button>
-                                    </CardFooter>
                                 </Card>
-                            ))
+                            ))}
+                             <Button asChild>
+                                <Link href="/projects/post">Manage projects</Link>
+                            </Button>
+                        </div>
                     ) : (
-                      <Card className="text-center py-12">
-                        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <CardTitle className="text-lg">No Projects Posted</CardTitle>
-                        <CardDescription>This user hasn't posted any projects yet.</CardDescription>
-                      </Card>
+                      <div>
+                        <Button asChild>
+                           <Link href="/projects/post">Create a Project</Link>
+                        </Button>
+                      </div>
                     )}
-                </TabsContent>
+                </div>
 
-                <TabsContent value="tester" className="space-y-4">
-                    <h2 className="text-3xl font-bold font-headline mb-2">Tested Projects</h2>
-                    <p className="text-muted-foreground mb-6">Projects that {userProfile.fullName || userProfile.companyName} has participated in as a tester.</p>
-                    {testedProjects.length > 0 ? (
-                        testedProjects.map(project => (
-                          <Card key={project.id}>
-                            <CardHeader>
-                              <CardTitle className="text-lg flex items-center gap-2">
-                                <CheckCircle className="h-5 w-5 text-green-500" />
-                                {project.title}
-                              </CardTitle>
-                              <CardDescription>
-                                Application accepted {formatDate(project.testedAt)}
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                              <p className="text-sm text-muted-foreground">{project.description}</p>
-                              <div className="flex flex-wrap gap-2 mt-3">
-                                {project.skills.map(skill => (
-                                  <Badge key={skill} variant="outline">{skill}</Badge>
-                                ))}
-                              </div>
-                            </CardContent>
-                            <CardFooter>
-                              <Button asChild variant="outline" size="sm">
-                                <Link href={`/projects/${project.id}`}>View Project Details</Link>
-                              </Button>
-                            </CardFooter>
-                          </Card>
-                        ))
-                    ) : (
-                      <Card className="text-center py-12">
-                        <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <CardTitle className="text-lg">No Tests Completed</CardTitle>
-                        <CardDescription>This user hasn't tested any projects yet.</CardDescription>
-                      </Card>
-                    )}
-                </TabsContent>
-
-                <TabsContent value="reviews" className="space-y-4">
-                    <h2 className="text-3xl font-bold font-headline mb-2">Reviews</h2>
-                    <p className="text-muted-foreground mb-6">Feedback from clients on their testing work.</p>
-                    {reviews.length > 0 ? (
-                        reviews.map(review => (
-                                <Card key={review.id}>
-                                    <CardHeader>
-                                        <div className="flex items-center gap-4">
-                                            <Avatar className="h-12 w-12">
-                                                <AvatarImage src={review.clientAvatar} />
-                                                <AvatarFallback>{getInitials(review.clientName)}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <CardTitle className="text-lg">{review.clientName}</CardTitle>
-                                                <CardDescription>
-                                                    {formatDate(review.createdAt)}
-                                                </CardDescription>
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {renderStars(review.rating)}
-                                        <p className="text-muted-foreground mt-2">{review.comment}</p>
-                                    </CardContent>
-                                </Card>
-                            ))
-                    ) : (
-                      <Card className="text-center py-12">
-                        <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <CardTitle className="text-lg">No Reviews Yet</CardTitle>
-                        <CardDescription>This user hasn't received any reviews yet.</CardDescription>
-                      </Card>
-                    )}
-                </TabsContent>
-               </Tabs>
 
                 {!hasAnyActivity && (
                      <Card className="text-center py-12">
                         <CardHeader>
-                                <div className="mx-auto bg-secondary rounded-full h-16 w-16 flex items-center justify-center">
+                            <div className="mx-auto bg-secondary rounded-full h-16 w-16 flex items-center justify-center">
                                 <Inbox className="h-8 w-8 text-muted-foreground" />
                             </div>
                             <CardTitle className="mt-4">No Activity Yet</CardTitle>
-                            <CardDescription>This user hasn't posted, tested, or received reviews on any projects.</CardDescription>
+                            <CardDescription>This user hasn't posted or tested any projects yet.</CardDescription>
                         </CardHeader>
                     </Card>
                 )}
