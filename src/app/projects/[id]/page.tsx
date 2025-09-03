@@ -367,7 +367,7 @@ export default function ProjectDetailPage() {
                  <div className="flex items-start gap-3 rounded-lg border p-4">
                     <DollarSign className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
                     <div>
-                        <h4 className="font-semibold">Compensation</h4>
+                        <h4 className="font-semibold">Reward / Compensation</h4>
                         <p className="text-muted-foreground">{project.compensation}</p>
                     </div>
                 </div>
