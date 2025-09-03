@@ -91,13 +91,11 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
                     const profileData = safeGetData(userDocSnap) as UserProfile;
                     setUserProfile(profileData);
                     
-                    // 1. Fetch Projects the User HAS POSTED
                     const postedProjectsQuery = query(collection(db, 'projects'), where('authorId', '==', uid), orderBy('postedAt', 'desc'));
                     const postedProjectsSnapshot = await getDocs(postedProjectsQuery);
                     const postedProjectsData = postedProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...safeGetData(doc) } as Project));
                     setPostedProjects(postedProjectsData);
 
-                    // 2. Fetch Projects the User HAS TESTED
                     const testedApplicationsQuery = query(
                         collection(db, 'applications'), 
                         where('testerId', '==', uid),
@@ -131,7 +129,6 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
                     validTestedProjects.sort((a,b) => b.testedAt.seconds - a.testedAt.seconds);
                     setTestedProjects(validTestedProjects);
 
-                    // 3. Fetch Reviews the User HAS RECEIVED
                     const reviewsQuery = query(collection(db, 'reviews'), where('testerId', '==', uid), orderBy('createdAt', 'desc'));
                     const reviewsSnapshot = await getDocs(reviewsQuery);
                     const reviewsData = await Promise.all(reviewsSnapshot.docs.map(async (reviewDoc) => {
@@ -186,7 +183,7 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
         if (reviews.length > 0) return "reviews";
         if (postedProjects.length > 0) return "client";
         if (testedProjects.length > 0) return "tester";
-        return "reviews"; // fallback
+        return "reviews";
     };
     
     if (isLoading) {
@@ -205,7 +202,15 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
         reviews.length > 0 ? 'reviews' : null
     ].filter(Boolean);
 
-    const gridClass = `grid-cols-${activeTabs.length}`;
+    const getGridClass = (count: number) => {
+        switch (count) {
+          case 1: return 'grid-cols-1';
+          case 2: return 'grid-cols-2';
+          case 3: return 'grid-cols-3';
+          default: return 'grid-cols-1';
+        }
+    };
+    const gridClass = getGridClass(activeTabs.length);
 
     return (
         <div className="container py-12">
@@ -220,6 +225,14 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
                 <ProfileSidebar userProfile={userProfile} getInitials={getInitials} />
                 
                 <div className="lg:col-span-2 space-y-6">
+                    {hasAnyActivity && (
+                        <ProfileStats 
+                            postedProjects={postedProjects.length}
+                            testedProjects={testedProjects.length}
+                            reviews={reviews.length}
+                        />
+                    )}
+
                     <Tabs defaultValue={getDefaultTab()} className="w-full">
                         {hasAnyActivity && activeTabs.length > 0 && (
                             <TabsList className={cn("grid w-full", gridClass)}>
@@ -351,7 +364,6 @@ const ProfileSidebar = ({ userProfile, getInitials }: { userProfile: UserProfile
 
 const PostedProjectsSection = ({ projects, userProfile, formatDate }: { projects: Project[], userProfile: UserProfile, formatDate: (timestamp: any) => string }) => (
     <div className="space-y-4">
-        <h2 className="text-2xl font-semibold mb-4">Posted Projects</h2>
         {projects.length > 0 ? (
             projects.map(project => (
                 <Card key={project.id}>
@@ -375,7 +387,7 @@ const PostedProjectsSection = ({ projects, userProfile, formatDate }: { projects
                 </Card>
             ))
         ) : (
-            <EmptyStateCard
+             <EmptyStateCard
                 icon={<FileText className="h-12 w-12 text-muted-foreground" />}
                 title="No Projects Posted"
                 description="This user hasn't posted any projects yet."
@@ -386,7 +398,6 @@ const PostedProjectsSection = ({ projects, userProfile, formatDate }: { projects
 
 const TestedProjectsSection = ({ projects, userProfile, formatDate }: { projects: TestedProject[], userProfile: UserProfile, formatDate: (timestamp: any) => string }) => (
     <div className="space-y-4">
-        <h2 className="text-2xl font-semibold mb-4">Work History</h2>
         {projects.length > 0 ? (
             projects.map(project => (
                 <Card key={project.id}>
@@ -420,42 +431,53 @@ const TestedProjectsSection = ({ projects, userProfile, formatDate }: { projects
 
 const ReviewsSection = ({ reviews, userProfile, formatDate, getInitials, renderStars }: { reviews: Review[], userProfile: UserProfile, formatDate: (timestamp: any) => string, getInitials: (name?: string) => string, renderStars: (rating: number) => JSX.Element }) => (
     <div className="space-y-4">
-        <h2 className="text-2xl font-semibold mb-4">Reviews</h2>
         {reviews.length > 0 ? (
             reviews.map(review => (
-                <Card key={review.id}>
-                    <CardHeader>
-                        <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-4">
-                                <Avatar className="h-12 w-12">
-                                    <AvatarImage src={review.clientAvatar} />
-                                    <AvatarFallback>{getInitials(review.clientName)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <CardTitle className="text-lg">
-                                        {review.clientName}
-                                    </CardTitle>
-                                    <CardDescription>
-                                        On project: <Link href={`/projects/${review.projectId}`} className="text-primary hover:underline">{review.projectTitle || 'Project'}</Link>
-                                    </CardDescription>
-                                </div>
-                            </div>
-                           {renderStars(review.rating)}
+                <Card key={review.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-12 w-12 flex-shrink-0">
+                          <AvatarImage src={review.clientAvatar} />
+                          <AvatarFallback className="bg-primary/10">
+                            {getInitials(review.clientName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1">
+                          <CardTitle className="text-lg">
+                            {review.clientName}
+                          </CardTitle>
+                          <CardDescription className="line-clamp-1">
+                            On project:{" "}
+                            <Link 
+                              href={`/projects/${review.projectId}`} 
+                              className="text-primary hover:underline font-medium"
+                            >
+                              {review.projectTitle || 'Untitled Project'}
+                            </Link>
+                          </CardDescription>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground italic">"{review.comment}"</p>
-                    </CardContent>
-                     <CardFooter>
-                        <p className="text-xs text-muted-foreground">{formatDate(review.createdAt)}</p>
-                    </CardFooter>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {renderStars(review.rating)}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <blockquote className="border-l-4 border-primary/20 pl-4 italic text-muted-foreground">
+                      "{review.comment}"
+                    </blockquote>
+                  </CardContent>
+                  <CardFooter className="text-sm text-muted-foreground">
+                    Reviewed {formatDate(review.createdAt)}
+                  </CardFooter>
                 </Card>
             ))
         ) : (
             <EmptyStateCard
                 icon={<Star className="h-12 w-12 text-muted-foreground" />}
                 title="No Reviews Yet"
-                description="This user hasn't received any reviews."
+                description="This user hasn't received any reviews yet."
             />
         )}
     </div>
@@ -481,4 +503,24 @@ const NoActivityCard = () => (
     </Card>
 );
 
-    
+const ProfileStats = ({ postedProjects, testedProjects, reviews }: { 
+  postedProjects: number; 
+  testedProjects: number; 
+  reviews: number; 
+}) => (
+  <div className="grid grid-cols-3 gap-4 mb-6">
+    <Card className="text-center p-4">
+      <CardTitle className="text-2xl font-bold">{postedProjects}</CardTitle>
+      <CardDescription>Projects Posted</CardDescription>
+    </Card>
+    <Card className="text-center p-4">
+      <CardTitle className="text-2xl font-bold">{testedProjects}</CardTitle>
+      <CardDescription>Tests Completed</CardDescription>
+    </Card>
+    <Card className="text-center p-4">
+      <CardTitle className="text-2xl font-bold">{reviews}</CardTitle>
+      <CardDescription>Reviews</CardDescription>
+    </Card>
+  </div>
+);
+
