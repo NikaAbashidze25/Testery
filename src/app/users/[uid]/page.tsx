@@ -13,6 +13,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, ArrowLeft, Inbox, Star } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 type UserProfile = {
   uid: string;
@@ -71,26 +73,21 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
                 setUserProfile(profileData);
                 
                 // Fetch Projects for Companies
-                if (profileData.accountType === 'company') {
-                    const projectsCollection = collection(db, 'projects');
-                    const q = query(projectsCollection, where('authorId', '==', uid));
-                    const querySnapshot = await getDocs(q);
-                    const projectsData = querySnapshot.docs
-                      .map(doc => ({ id: doc.id, ...doc.data() } as Project))
-                      .sort((a, b) => b.postedAt.seconds - a.postedAt.seconds);
-                    setProjects(projectsData);
-                }
+                const projectsCollection = collection(db, 'projects');
+                const projectsQuery = query(projectsCollection, where('authorId', '==', uid), orderBy('postedAt', 'desc'));
+                const projectsSnapshot = await getDocs(projectsQuery);
+                const projectsData = projectsSnapshot.docs
+                  .map(doc => ({ id: doc.id, ...doc.data() } as Project));
+                setProjects(projectsData);
+                
 
                 // Fetch Reviews for Testers
-                if (profileData.accountType === 'individual') {
-                    const reviewsCollection = collection(db, 'reviews');
-                    const q = query(reviewsCollection, where('testerId', '==', uid));
-                    const querySnapshot = await getDocs(q);
-                    const reviewsData = querySnapshot.docs
-                        .map(doc => ({id: doc.id, ...doc.data()} as Review))
-                        .sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
-                    setReviews(reviewsData);
-                }
+                const reviewsCollection = collection(db, 'reviews');
+                const reviewsQuery = query(reviewsCollection, where('testerId', '==', uid), orderBy('createdAt', 'desc'));
+                const reviewsSnapshot = await getDocs(reviewsQuery);
+                const reviewsData = reviewsSnapshot.docs
+                    .map(doc => ({id: doc.id, ...doc.data()} as Review));
+                setReviews(reviewsData);
 
             } else {
                 console.error("No such user!");
@@ -125,6 +122,8 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
         </div>
     )
   }
+
+  const defaultTab = reviews.length > 0 ? "work" : "client";
 
   if (isLoading) {
     return (
@@ -179,7 +178,7 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
             </Button>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            <div className="lg:col-span-1 space-y-8">
+            <div className="lg:col-span-1 space-y-8 sticky top-24">
                 <Card>
                     <CardHeader className="flex flex-col items-center text-center">
                     <Avatar className="h-24 w-24 mb-4">
@@ -194,35 +193,22 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
                     </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6 text-sm">
-                    {userProfile.accountType === 'individual' && (
-                        <>
-                        <div className="flex items-center gap-3">
-                            <UserIcon className="h-5 w-5 text-muted-foreground" />
-                            <p><strong>Full Name:</strong> {userProfile.fullName}</p>
-                        </div>
-
-                        {userProfile.skills && userProfile.skills.length > 0 && (
-                            <div>
-                                <h3 className="font-semibold mb-3 flex items-center gap-3">
-                                    <Briefcase className="h-5 w-5 text-muted-foreground" />
-                                    Skills
-                                </h3>
-                                <div className="flex flex-wrap gap-2">
-                                {userProfile.skills.map(skill => (
-                                    <Badge key={skill} variant="secondary">{skill}</Badge>
-                                ))}
-                                </div>
+                    {userProfile.accountType === 'individual' && userProfile.skills && userProfile.skills.length > 0 && (
+                        <div>
+                            <h3 className="font-semibold mb-3 flex items-center gap-3">
+                                <Briefcase className="h-5 w-5 text-muted-foreground" />
+                                Skills
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                            {userProfile.skills.map(skill => (
+                                <Badge key={skill} variant="secondary">{skill}</Badge>
+                            ))}
                             </div>
-                        )}
-                        </>
+                        </div>
                     )}
 
                     {userProfile.accountType === 'company' && (
                         <>
-                            <div className="flex items-center gap-3">
-                            <Building className="h-5 w-5 text-muted-foreground" />
-                            <p><strong>Company:</strong> {userProfile.companyName}</p>
-                            </div>
                             <div className="flex items-center gap-3">
                             <UserIcon className="h-5 w-5 text-muted-foreground" />
                             <p><strong>Contact:</strong> {userProfile.contactPerson}</p>
@@ -243,88 +229,85 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
                 </Card>
             </div>
             <div className="lg:col-span-2 space-y-6">
-                {userProfile.accountType === 'company' && (
-                    <>
-                        <h2 className="text-3xl font-bold font-headline">Posted Projects</h2>
-                        {projects.length > 0 ? (
-                            <div className="space-y-4">
-                                {projects.map(project => (
-                                    <Card key={project.id}>
-                                        <CardHeader>
-                                            <CardTitle>{project.title}</CardTitle>
-                                            <CardDescription>Posted {formatPostedDate(project.postedAt)}</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                             <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{project.description}</p>
-                                              <div className="flex flex-wrap gap-2">
-                                                {project.skills.map(skill => (
-                                                <Badge key={skill} variant="secondary">{skill}</Badge>
-                                                ))}
+               <Tabs defaultValue={defaultTab} className="w-full">
+                {(reviews.length > 0 && projects.length > 0) && (
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="work">Work History &amp; Reviews</TabsTrigger>
+                        <TabsTrigger value="client">Client History</TabsTrigger>
+                    </TabsList>
+                )}
+                
+                {reviews.length > 0 && (
+                    <TabsContent value="work">
+                        <h2 className="text-3xl font-bold font-headline mb-6">Work History &amp; Reviews</h2>
+                        <div className="space-y-4">
+                            {reviews.map(review => (
+                                <Card key={review.id}>
+                                    <CardHeader>
+                                        <div className="flex items-center gap-4">
+                                            <Avatar className="h-12 w-12">
+                                                <AvatarImage src={review.clientAvatar} />
+                                                <AvatarFallback>{getInitials(review.clientName)}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <CardTitle className="text-lg">{review.clientName}</CardTitle>
+                                                <CardDescription>
+                                                    {formatPostedDate(review.createdAt)}
+                                                </CardDescription>
                                             </div>
-                                        </CardContent>
-                                        <CardFooter>
-                                            <Button asChild variant="secondary">
-                                                <Link href={`/projects/${project.id}`}>View Project</Link>
-                                            </Button>
-                                        </CardFooter>
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : (
-                            <Card className="text-center py-12">
-                                <CardHeader>
-                                     <div className="mx-auto bg-secondary rounded-full h-16 w-16 flex items-center justify-center">
-                                        <Inbox className="h-8 w-8 text-muted-foreground" />
-                                    </div>
-                                    <CardTitle className="mt-4">No Projects Posted</CardTitle>
-                                    <CardDescription>This user hasn't posted any projects yet.</CardDescription>
-                                </CardHeader>
-                            </Card>
-                        )}
-                    </>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {renderStars(review.rating)}
+                                        <p className="text-muted-foreground mt-2">{review.comment}</p>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </TabsContent>
                 )}
 
-                 {userProfile.accountType === 'individual' && (
-                    <>
-                        <h2 className="text-3xl font-bold font-headline">Reviews</h2>
-                        {reviews.length > 0 ? (
-                            <div className="space-y-4">
-                                {reviews.map(review => (
-                                    <Card key={review.id}>
-                                        <CardHeader>
-                                            <div className="flex items-center gap-4">
-                                                <Avatar className="h-12 w-12">
-                                                    <AvatarImage src={review.clientAvatar} />
-                                                    <AvatarFallback>{getInitials(review.clientName)}</AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <CardTitle className="text-lg">{review.clientName}</CardTitle>
-                                                    <CardDescription>
-                                                        {formatPostedDate(review.createdAt)}
-                                                    </CardDescription>
-                                                </div>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent>
-                                            {renderStars(review.rating)}
-                                            <p className="text-muted-foreground mt-2">{review.comment}</p>
-                                        </CardContent>
-                                    </Card>
-                                ))}
+                {projects.length > 0 && (
+                     <TabsContent value="client">
+                        <h2 className="text-3xl font-bold font-headline mb-6">Client History</h2>
+                        <div className="space-y-4">
+                            {projects.map(project => (
+                                <Card key={project.id}>
+                                    <CardHeader>
+                                        <CardTitle>{project.title}</CardTitle>
+                                        <CardDescription>Posted {formatPostedDate(project.postedAt)}</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                            <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{project.description}</p>
+                                            <div className="flex flex-wrap gap-2">
+                                            {project.skills.map(skill => (
+                                            <Badge key={skill} variant="secondary">{skill}</Badge>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter>
+                                        <Button asChild variant="secondary">
+                                            <Link href={`/projects/${project.id}`}>View Project</Link>
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
+                     </TabsContent>
+                )}
+               </Tabs>
+
+                {reviews.length === 0 && projects.length === 0 && (
+                     <Card className="text-center py-12">
+                        <CardHeader>
+                                <div className="mx-auto bg-secondary rounded-full h-16 w-16 flex items-center justify-center">
+                                <Inbox className="h-8 w-8 text-muted-foreground" />
                             </div>
-                        ) : (
-                             <Card className="text-center py-12">
-                                <CardHeader>
-                                     <div className="mx-auto bg-secondary rounded-full h-16 w-16 flex items-center justify-center">
-                                        <Inbox className="h-8 w-8 text-muted-foreground" />
-                                    </div>
-                                    <CardTitle className="mt-4">No Reviews Yet</CardTitle>
-                                    <CardDescription>This tester hasn't received any reviews yet.</CardDescription>
-                                </CardHeader>
-                            </Card>
-                        )}
-                    </>
-                 )}
+                            <CardTitle className="mt-4">No Activity Yet</CardTitle>
+                            <CardDescription>This user hasn't posted or completed any projects.</CardDescription>
+                        </CardHeader>
+                    </Card>
+                )}
             </div>
         </div>
     </div>
