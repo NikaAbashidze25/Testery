@@ -110,7 +110,7 @@ export default function MyApplicationsPage() {
         <div className="mb-6">
              <Button variant="outline" onClick={() => router.back()}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Profile
+                Back
             </Button>
         </div>
         <div className="flex justify-between items-center mb-8">

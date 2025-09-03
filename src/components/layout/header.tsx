@@ -5,11 +5,12 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Menu, User, LogOut, Search, FilePlus, MessageSquare, Briefcase, Send, Bookmark, Bell } from 'lucide-react';
+import { Menu, User, LogOut, Search, FilePlus, MessageSquare, Briefcase, Send, Bookmark, Bell, CircleUser, FileText } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, writeBatch, getDocs, DocumentData } from 'firebase/firestore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,22 +18,84 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { TesteryLogo } from './logo';
 import { Skeleton } from '../ui/skeleton';
 import { ThemeToggle } from './theme-toggle';
 import { useAuth } from '@/contexts/auth-provider';
+import { Badge } from '../ui/badge';
+import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
+
+interface Notification {
+    id: string;
+    message: string;
+    link: string;
+    isRead: boolean;
+    createdAt: {
+        seconds: number;
+        nanoseconds: number;
+    };
+    senderName?: string;
+}
 
 export function Header() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const router = useRouter();
 
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (user) {
+        const notificationsRef = collection(db, 'notifications');
+        const q = query(
+            notificationsRef, 
+            where('recipientId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const userNotifications = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as Notification));
+            setNotifications(userNotifications);
+        });
+
+        return () => unsubscribe();
+    } else {
+        setNotifications([]);
+    }
+  }, [user]);
+
+  const markAsRead = async (notificationId: string) => {
+    const notificationRef = doc(db, 'notifications', notificationId);
+    await updateDoc(notificationRef, { isRead: true });
+  };
+  
+  const markAllAsRead = async () => {
+    if (!user || notifications.length === 0) return;
+
+    const unreadNotifications = notifications.filter(n => !n.isRead);
+    if(unreadNotifications.length === 0) return;
+
+    const batch = writeBatch(db);
+    unreadNotifications.forEach(notification => {
+        const notificationRef = doc(db, 'notifications', notification.id);
+        batch.update(notificationRef, { isRead: true });
+    });
+    await batch.commit();
+  };
 
 
   const handleLogout = async () => {
@@ -48,6 +111,8 @@ export function Header() {
     }
     return name[0];
   };
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const renderUserControls = () => {
     if (isAuthLoading || !hasMounted) {
@@ -65,19 +130,44 @@ export function Header() {
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                      <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-xs">{unreadCount}</Badge>
+                  )}
                   <span className="sr-only">Notifications</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-80">
+                 <DropdownMenuLabel className="flex justify-between items-center">
+                    Notifications
+                    {unreadCount > 0 && (
+                        <Button variant="link" size="sm" className="h-auto p-0" onClick={markAllAsRead}>Mark all as read</Button>
+                    )}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                {notifications.length === 0 ? (
                     <div className="text-center text-sm text-muted-foreground p-4">
                         No new notifications
                     </div>
-                </DropdownMenuItem>
+                ) : (
+                   notifications.slice(0, 5).map(notification => (
+                    <DropdownMenuItem 
+                        key={notification.id} 
+                        className={cn("flex items-start gap-3 p-2 cursor-pointer", !notification.isRead && "bg-accent/50")}
+                        onClick={() => {
+                            markAsRead(notification.id);
+                            router.push(notification.link);
+                        }}
+                    >
+                        <CircleUser className="h-6 w-6 mt-1 flex-shrink-0" />
+                        <div className="flex-1">
+                            <p className="text-sm leading-snug">{notification.message}</p>
+                            <p className="text-xs text-muted-foreground">{formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true })}</p>
+                        </div>
+                    </DropdownMenuItem>
+                   ))
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>
@@ -113,7 +203,7 @@ export function Header() {
                 <DropdownMenuLabel className="text-xs text-muted-foreground">My Activity</DropdownMenuLabel>
                 <DropdownMenuItem asChild>
                   <Link href="/profile/my-projects">
-                    <Briefcase className="mr-2 h-4 w-4" />
+                    <FileText className="mr-2 h-4 w-4" />
                     <span>My Projects</span>
                   </Link>
                 </DropdownMenuItem>

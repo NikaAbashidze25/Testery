@@ -131,7 +131,7 @@ export default function SavedProjectsPage() {
         <div className="mb-6">
              <Button variant="outline" onClick={() => router.back()}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                Back to Profile
             </Button>
         </div>
         <div className="flex justify-between items-center mb-8">
@@ -225,4 +225,3 @@ export default function SavedProjectsPage() {
     </div>
   );
 }
-

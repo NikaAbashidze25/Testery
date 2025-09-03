@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, Edit, FileText } from 'lucide-react';
+import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, Edit, FileText, Send, Bookmark } from 'lucide-react';
 
 
 type UserProfile = {
@@ -172,20 +172,38 @@ export default function ProfilePage() {
             </>
           )}
         </CardContent>
-        <CardFooter className="flex justify-center gap-4 border-t pt-6">
-            <Button asChild>
-                <Link href="/profile/edit">
-                    <Edit className="mr-2 h-4 w-4" /> Edit Profile
-                </Link>
-            </Button>
-            {userProfile.accountType === 'company' && (
-                 <Button asChild variant="outline">
-                    <Link href="/profile/my-projects">
-                        <FileText className="mr-2 h-4 w-4" />
-                        My Projects
+        <CardFooter className="flex-col gap-4 border-t pt-6">
+            <div className="flex justify-center gap-4">
+                <Button asChild>
+                    <Link href="/profile/edit">
+                        <Edit className="mr-2 h-4 w-4" /> Edit Profile
                     </Link>
                 </Button>
-            )}
+                {userProfile.accountType === 'company' && (
+                    <Button asChild variant="outline">
+                        <Link href="/profile/my-projects">
+                            <FileText className="mr-2 h-4 w-4" />
+                            My Projects
+                        </Link>
+                    </Button>
+                )}
+                 {userProfile.accountType === 'individual' && (
+                    <Button asChild variant="outline">
+                        <Link href="/profile/my-applications">
+                            <Send className="mr-2 h-4 w-4" />
+                            My Applications
+                        </Link>
+                    </Button>
+                )}
+            </div>
+             <div className="flex justify-center gap-4">
+                 <Button asChild variant="outline">
+                    <Link href="/profile/saved-projects">
+                        <Bookmark className="mr-2 h-4 w-4" />
+                        Saved Projects
+                    </Link>
+                </Button>
+             </div>
         </CardFooter>
       </Card>
     </div>

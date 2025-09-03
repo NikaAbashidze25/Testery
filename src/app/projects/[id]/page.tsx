@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -120,16 +119,30 @@ export default function ProjectDetailPage() {
     setIsApplying(true);
     try {
         const applicationsRef = collection(db, 'applications');
-        const appData: Omit<Application, 'id'> = { status: 'pending' };
-        const newDocRef = await addDoc(applicationsRef, {
+        const appData: Omit<Application, 'id'> & { [key: string]: any } = { 
+            status: 'pending',
             projectId: project.id,
             projectTitle: project.title,
             testerId: user.uid,
             ownerId: project.authorId,
-            ...appData,
             appliedAt: serverTimestamp(),
-        });
+        };
+
+        const newDocRef = await addDoc(applicationsRef, appData);
         setApplication({id: newDocRef.id, ...appData});
+
+        // Create notification for project owner
+        await addDoc(collection(db, "notifications"), {
+            recipientId: project.authorId,
+            senderId: user.uid,
+            senderName: user.displayName || "A user",
+            type: "new_application",
+            message: `${user.displayName || "A new user"} applied to your project "${project.title}"`,
+            link: `/projects/${project.id}/applicants`,
+            isRead: false,
+            createdAt: serverTimestamp(),
+        });
+
         toast({
             title: 'Application Sent!',
             description: "You have successfully applied for this project.",
