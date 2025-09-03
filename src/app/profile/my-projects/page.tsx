@@ -25,6 +25,7 @@ interface Project extends DocumentData {
         seconds: number;
         nanoseconds: number;
     };
+    applicantCount?: number;
 }
 
 export default function MyProjectsPage() {
@@ -53,9 +54,29 @@ export default function MyProjectsPage() {
           const q = query(projectsCollection, where('authorId', '==', user.uid));
           const querySnapshot = await getDocs(q);
           const projectsData = querySnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() } as Project))
-            .sort((a, b) => b.postedAt.seconds - a.postedAt.seconds);
+            .map(doc => ({ id: doc.id, ...doc.data() } as Project));
+            
+          // Fetch applicant counts for all projects
+          const projectIds = projectsData.map(p => p.id);
+          if (projectIds.length > 0) {
+              const appsRef = collection(db, 'applications');
+              const appsQuery = query(appsRef, where('projectId', 'in', projectIds));
+              const appsSnapshot = await getDocs(appsQuery);
+              const counts = new Map<string, number>();
+              
+              appsSnapshot.forEach(doc => {
+                  const projectId = doc.data().projectId;
+                  counts.set(projectId, (counts.get(projectId) || 0) + 1);
+              });
+
+              projectsData.forEach(p => {
+                  p.applicantCount = counts.get(p.id) || 0;
+              });
+          }
+
+          projectsData.sort((a, b) => b.postedAt.seconds - a.postedAt.seconds);
           setProjects(projectsData);
+
         } catch (error) {
           console.error("Error fetching user's projects: ", error);
         } finally {
@@ -169,10 +190,13 @@ export default function MyProjectsPage() {
                         View Project
                       </Link>
                   </Button>
-                  <Button asChild>
+                  <Button asChild className="relative">
                      <Link href={`/projects/${project.id}/applicants`}>
                         <Users className="mr-2 h-4 w-4" />
                         Applicants
+                        {project.applicantCount && project.applicantCount > 0 && (
+                           <Badge className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{project.applicantCount}</Badge>
+                        )}
                       </Link>
                   </Button>
                    <Button asChild variant="outline">
