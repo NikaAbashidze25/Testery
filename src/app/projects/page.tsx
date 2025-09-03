@@ -9,11 +9,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { auth, db } from "@/lib/firebase";
 import { collection, getDocs, orderBy, query, where, type DocumentData } from "firebase/firestore";
 import { formatDistanceToNow } from 'date-fns';
-import { Search, MapPin, Inbox, User, Clock, CheckCircle } from "lucide-react";
+import { Search, MapPin, Inbox, Clock, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { cn } from "@/lib/utils";
 
 
 interface Project extends DocumentData {
