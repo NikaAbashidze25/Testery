@@ -133,16 +133,21 @@ export default function UserProfilePage() {
                     validTestedProjects.sort((a,b) => b.testedAt.seconds - a.testedAt.seconds);
                     setTestedProjects(validTestedProjects);
 
-                    const reviewsQuery = query(collection(db, 'reviews'), where('testerId', '==', uid), orderBy('createdAt', 'desc'));
+                    const reviewsQuery = query(collection(db, 'reviews'), where('testerId', '==', uid));
                     const reviewsSnapshot = await getDocs(reviewsQuery);
-                    const reviewsData = await Promise.all(reviewsSnapshot.docs.map(async (reviewDoc) => {
+                    const reviewsDataPromises = reviewsSnapshot.docs.map(async (reviewDoc) => {
                         const reviewData = { id: reviewDoc.id, ...safeGetData(reviewDoc) } as Review;
-                        const projectDoc = await getDoc(doc(db, 'projects', reviewData.projectId));
-                        if(projectDoc.exists()){
-                            reviewData.projectTitle = projectDoc.data()?.title;
+                        if (reviewData.projectId) {
+                            const projectDoc = await getDoc(doc(db, 'projects', reviewData.projectId));
+                            if(projectDoc.exists()){
+                                reviewData.projectTitle = projectDoc.data()?.title;
+                            }
                         }
                         return reviewData;
-                    }));
+                    });
+                    const reviewsData = await Promise.all(reviewsDataPromises);
+                    reviewsData.sort((a,b) => b.createdAt.seconds - a.createdAt.seconds);
+
                     setReviews(reviewsData);
 
                 } else {
