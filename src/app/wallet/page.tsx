@@ -56,9 +56,14 @@ export default function WalletPage() {
 
                 // Fetch transactions
                 const transRef = collection(db, 'transactions');
-                const q = query(transRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+                const q = query(transRef, where('userId', '==', user.uid));
                 const transSnap = await getDocs(q);
-                setTransactions(transSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
+                const transactionsData = transSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+                
+                // Sort transactions by date client-side
+                transactionsData.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
+                
+                setTransactions(transactionsData);
 
             } catch (error) {
                 console.error("Failed to fetch wallet data:", error);
