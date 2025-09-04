@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-provider';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,16 +10,19 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit } from 'lucide-react';
+import { Briefcase, Edit, FileText, Send, Bookmark, User as UserIcon, Building } from 'lucide-react';
 
-// Removed 'extends DocumentData' to ensure a plain interface
 interface UserProfile {
   uid: string;
   email: string;
   accountType: 'individual' | 'company';
   fullName?: string;
+  skills?: string[];
   profilePictureUrl?: string;
   companyName?: string;
+  contactPerson?: string;
+  industry?: string;
+  website?: string;
   companyLogoUrl?: string;
 }
 
@@ -43,7 +45,6 @@ export default function ProfilePage() {
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
-          // Cast to the clean UserProfile interface
           setUserProfile(userDocSnap.data() as UserProfile);
         } else {
           console.error("User document not found in Firestore.");
@@ -69,14 +70,21 @@ export default function ProfilePage() {
   if (isLoading || isAuthLoading) {
     return (
       <div className="container py-12">
-        <Card className="max-w-xl mx-auto">
+        <Card className="max-w-2xl mx-auto">
           <CardHeader className="items-center text-center">
             <Skeleton className="h-24 w-24 rounded-full mb-4" />
             <Skeleton className="h-8 w-48 mb-2" />
             <Skeleton className="h-5 w-64" />
           </CardHeader>
-          <CardFooter>
-            <Skeleton className="h-11 w-36" />
+           <CardContent>
+            <div className="flex justify-center mt-4">
+                <Skeleton className="h-11 w-36" />
+            </div>
+           </CardContent>
+          <CardFooter className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
           </CardFooter>
         </Card>
       </div>
@@ -95,24 +103,79 @@ export default function ProfilePage() {
   const name = isCompany ? userProfile.companyName : userProfile.fullName;
   const avatarUrl = isCompany ? userProfile.companyLogoUrl : userProfile.profilePictureUrl;
 
+  const ActivityCard = ({ href, icon: Icon, title, description }: { href: string; icon: React.ElementType; title: string; description: string; }) => (
+      <Link href={href} className="block">
+        <Card className="h-full hover:bg-accent hover:shadow-md transition-all duration-200">
+            <CardHeader className="flex flex-row items-center gap-4">
+                <Icon className="h-8 w-8 text-primary" />
+                <CardTitle className="text-lg">{title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground">{description}</p>
+            </CardContent>
+        </Card>
+      </Link>
+  );
+
   return (
     <div className="container py-12">
-      <Card className="max-w-xl mx-auto">
+      <Card className="max-w-2xl mx-auto">
         <CardHeader className="items-center text-center">
           <Avatar className="h-24 w-24 text-3xl">
             <AvatarImage src={avatarUrl || ''} alt={name || 'Profile picture'} />
             <AvatarFallback>{getInitials(name)}</AvatarFallback>
           </Avatar>
-          <CardTitle className="text-3xl pt-4">{name || 'User'}</CardTitle>
-          <CardDescription>{userProfile.email}</CardDescription>
+          <div className="pt-4">
+              <CardTitle className="text-3xl">{name || 'User'}</CardTitle>
+              <CardDescription className="flex items-center justify-center gap-2 mt-2">
+                {isCompany ? <Building className="h-4 w-4" /> : <UserIcon className="h-4 w-4" />}
+                {isCompany ? 'Company Account' : 'Individual Account'}
+              </CardDescription>
+              <CardDescription>{userProfile.email}</CardDescription>
+          </div>
         </CardHeader>
-        <CardFooter className="flex justify-center">
-          <Button asChild size="lg">
-            <Link href="/profile/edit">
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Profile
-            </Link>
-          </Button>
+        <CardContent>
+            <div className="flex justify-center mt-4">
+                 <Button asChild size="lg">
+                    <Link href="/profile/edit">
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Profile
+                    </Link>
+                </Button>
+            </div>
+        </CardContent>
+        
+        <CardFooter className="flex-col items-stretch gap-4 px-6 pb-6">
+            <h3 className="text-center font-semibold text-muted-foreground text-sm uppercase tracking-wider pt-4 border-t">My Activity</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 {isCompany ? (
+                    <ActivityCard
+                        href="/profile/my-projects"
+                        icon={FileText}
+                        title="My Projects"
+                        description="View and manage the projects you have posted."
+                    />
+                 ) : (
+                    <ActivityCard
+                        href="/profile/my-applications"
+                        icon={Send}
+                        title="My Applications"
+                        description="Track the status of all your project applications."
+                    />
+                 )}
+                 <ActivityCard
+                    href="/profile/saved-projects"
+                    icon={Bookmark}
+                    title="Saved Projects"
+                    description="Access projects you have saved to view later."
+                />
+                 <ActivityCard
+                    href="/users/[uid]"
+                    icon={Briefcase}
+                    title="Public View"
+                    description="See how your profile appears to other users."
+                />
+            </div>
         </CardFooter>
       </Card>
     </div>
