@@ -145,8 +145,7 @@ export default function UserProfilePage() {
                         }
                         return reviewData;
                     });
-                    const reviewsData = await Promise.all(reviewsDataPromises);
-                    reviewsData.sort((a,b) => b.createdAt.seconds - a.createdAt.seconds);
+                    const reviewsData = (await Promise.all(reviewsDataPromises)).sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
 
                     setReviews(reviewsData);
 
@@ -389,7 +388,7 @@ const PostedProjectsSection = ({ projects, userProfile, formatDate }: { projects
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <Button asChild variant="secondary">
+                        <Button asChild variant="outline">
                             <Link href={`/projects/${project.id}`}>View Project Details</Link>
                         </Button>
                     </CardFooter>
@@ -538,3 +537,4 @@ const ProfileStats = ({ postedProjects, testedProjects, reviews }: {
     
 
     
+
