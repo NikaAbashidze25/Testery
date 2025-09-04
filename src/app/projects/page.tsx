@@ -11,7 +11,7 @@ import { collection, getDocs, orderBy, query, where, type DocumentData } from "f
 import { formatDistanceToNow } from 'date-fns';
 import { Search, MapPin, Inbox, Clock, CheckCircle } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 
 
@@ -43,6 +43,8 @@ export default function ProjectsPage() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [applications, setApplications] = useState<Map<string, Application>>(new Map());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [locationQuery, setLocationQuery] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -94,6 +96,20 @@ export default function ProjectsPage() {
     }
   }, [user, isAuthLoading]);
 
+  const filteredProjects = useMemo(() => {
+    return projects.filter(project => {
+        const matchesSearch = searchQuery.toLowerCase() === '' ||
+            project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            project.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            project.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()));
+
+        const matchesLocation = locationQuery.toLowerCase() === '' ||
+            project.location.toLowerCase().includes(locationQuery.toLowerCase());
+
+        return matchesSearch && matchesLocation;
+    });
+  }, [projects, searchQuery, locationQuery]);
+
   const formatPostedDate = (timestamp: Project['postedAt']) => {
     if (!timestamp) return '...';
     const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
@@ -121,13 +137,23 @@ export default function ProjectsPage() {
       <div className="flex flex-col md:flex-row gap-4 mb-8 max-w-4xl mx-auto">
         <div className="relative flex-grow">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input placeholder="Project title, keywords, or company" className="pl-10 h-12" />
+          <Input 
+            placeholder="Project title, keywords, or company" 
+            className="pl-10 h-12"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
         <div className="relative flex-grow">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input placeholder="Location" className="pl-10 h-12" />
+          <Input 
+            placeholder="Location" 
+            className="pl-10 h-12"
+            value={locationQuery}
+            onChange={(e) => setLocationQuery(e.target.value)}
+           />
         </div>
-        <Button size="lg" className="h-12">Search</Button>
+        <Button size="lg" className="h-12" onClick={() => {}}>Search</Button>
       </div>
       
        {(isLoading || isAuthLoading) && (
@@ -157,21 +183,26 @@ export default function ProjectsPage() {
          </div>
        )}
 
-      {!isLoading && !isAuthLoading && projects.length === 0 && (
+      {!isLoading && !isAuthLoading && filteredProjects.length === 0 && (
         <Card className="text-center py-12">
             <CardHeader>
                 <div className="mx-auto bg-secondary rounded-full h-16 w-16 flex items-center justify-center">
                     <Inbox className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <CardTitle className="mt-4">No Projects Found</CardTitle>
-                <CardDescription>There are currently no projects available. Check back later!</CardDescription>
+                <CardDescription>
+                    {searchQuery || locationQuery 
+                        ? "Try adjusting your search criteria." 
+                        : "There are currently no projects available. Check back later!"
+                    }
+                </CardDescription>
             </CardHeader>
         </Card>
       )}
 
-      {!isLoading && !isAuthLoading && projects.length > 0 && (
+      {!isLoading && !isAuthLoading && filteredProjects.length > 0 && (
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-            {projects.map(project => {
+            {filteredProjects.map(project => {
               const application = applications.get(project.id);
               return (
               <Card key={project.id} className="flex flex-col hover:shadow-lg transition-shadow duration-300">
