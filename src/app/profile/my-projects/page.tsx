@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { collection, query, where, getDocs, orderBy, type DocumentData } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, type DocumentData, doc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Inbox, ArrowLeft, Edit, Users, Eye } from 'lucide-react';
+import { PlusCircle, Inbox, ArrowLeft, Edit, Users, Eye, FileText } from 'lucide-react';
 
 interface Project extends DocumentData {
     id: string;
@@ -27,6 +27,7 @@ interface Project extends DocumentData {
     };
     applicantCount?: number;
     pendingApplicantCount?: number;
+    submissionCount?: number;
 }
 
 export default function MyProjectsPage() {
@@ -59,29 +60,44 @@ export default function MyProjectsPage() {
             
           const projectIds = projectsData.map(p => p.id);
           if (projectIds.length > 0) {
+              // Fetch applications for all projects
               const appsRef = collection(db, 'applications');
               const appsQuery = query(appsRef, where('projectId', 'in', projectIds));
               const appsSnapshot = await getDocs(appsQuery);
               
-              const counts = new Map<string, { total: number, pending: number }>();
+              const applicantCounts = new Map<string, { total: number, pending: number }>();
               
               appsSnapshot.forEach(doc => {
                   const appData = doc.data();
                   const projectId = appData.projectId;
-                  const currentCounts = counts.get(projectId) || { total: 0, pending: 0 };
+                  const currentCounts = applicantCounts.get(projectId) || { total: 0, pending: 0 };
                   
                   currentCounts.total += 1;
                   if (appData.status === 'pending') {
                       currentCounts.pending += 1;
                   }
                   
-                  counts.set(projectId, currentCounts);
+                  applicantCounts.set(projectId, currentCounts);
+              });
+              
+              // Fetch submissions for all projects
+              const subsRef = collection(db, 'submissions');
+              const subsQuery = query(subsRef, where('projectId', 'in', projectIds));
+              const subsSnapshot = await getDocs(subsQuery);
+
+              const submissionCounts = new Map<string, number>();
+              subsSnapshot.forEach(doc => {
+                  const subData = doc.data();
+                  const projectId = subData.projectId;
+                  submissionCounts.set(projectId, (submissionCounts.get(projectId) || 0) + 1);
               });
 
+
               projectsData.forEach(p => {
-                  const projectCounts = counts.get(p.id);
-                  p.applicantCount = projectCounts?.total || 0;
-                  p.pendingApplicantCount = projectCounts?.pending || 0;
+                  const projectAppCounts = applicantCounts.get(p.id);
+                  p.applicantCount = projectAppCounts?.total || 0;
+                  p.pendingApplicantCount = projectAppCounts?.pending || 0;
+                  p.submissionCount = submissionCounts.get(p.id) || 0;
               });
           }
 
@@ -199,6 +215,20 @@ export default function MyProjectsPage() {
                      <Link href={`/projects/${project.id}`}>
                         <Eye className="mr-2 h-4 w-4" />
                         View Project
+                      </Link>
+                  </Button>
+                   <Button asChild className="relative">
+                     <Link href={`/projects/${project.id}/submissions`}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Submissions
+                        {(project.submissionCount ?? 0) > 0 && (
+                           <Badge 
+                                variant='success'
+                                className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0"
+                            >
+                              {project.submissionCount}
+                           </Badge>
+                        )}
                       </Link>
                   </Button>
                   <Button asChild className="relative">

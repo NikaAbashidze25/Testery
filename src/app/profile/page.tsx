@@ -194,34 +194,38 @@ export default function ProfilePage() {
         
         <CardFooter className="flex-col items-stretch gap-4 px-6 pb-6">
             <h3 className="text-center font-semibold text-muted-foreground text-sm uppercase tracking-wider pt-4 border-t">My Activity</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  {isCompany ? (
-                    <ActivityCard
-                        href="/profile/my-projects"
-                        icon={FileText}
-                        title="My Projects"
-                        description="View and manage the projects you have posted."
-                    />
+                    <>
+                        <ActivityCard
+                            href="/profile/my-projects"
+                            icon={FileText}
+                            title="My Projects"
+                            description="View and manage the projects you have posted."
+                        />
+                        <ActivityCard
+                            href="/projects/all-submissions"
+                            icon={Send}
+                            title="Submissions"
+                            description="Review work submitted to all of your projects."
+                        />
+                    </>
                  ) : (
-                    <ActivityCard
-                        href="/profile/my-applications"
-                        icon={Send}
-                        title="My Applications"
-                        description="Track the status of all your project applications."
-                    />
+                    <>
+                        <ActivityCard
+                            href="/profile/my-applications"
+                            icon={Send}
+                            title="My Applications"
+                            description="Track the status of all your project applications."
+                        />
+                         <ActivityCard
+                            href="/profile/saved-projects"
+                            icon={Bookmark}
+                            title="Saved Projects"
+                            description="Access projects you have saved to view later."
+                        />
+                    </>
                  )}
-                 <ActivityCard
-                    href="/profile/saved-projects"
-                    icon={Bookmark}
-                    title="Saved Projects"
-                    description="Access projects you have saved to view later."
-                />
-                 <ActivityCard
-                    href={`/users/${user.uid}`}
-                    icon={Briefcase}
-                    title="Public View"
-                    description="See how your profile appears to other users."
-                />
             </div>
         </CardFooter>
       </Card>
