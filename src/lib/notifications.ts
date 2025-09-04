@@ -34,8 +34,8 @@ export const sendNotification = async (
 };
 
 // Specific notification helpers
-export const notifyApplicationReceived = (projectOwnerId: string, projectId: string, projectTitle: string, applicantName: string) => {
-  return sendNotification(
+export const notifyApplicationReceived = async (projectOwnerId: string, projectId: string, projectTitle: string, applicantName: string) => {
+  return await sendNotification(
     projectOwnerId,
     'application_received',
     'New Application Received',
@@ -46,8 +46,8 @@ export const notifyApplicationReceived = (projectOwnerId: string, projectId: str
   );
 };
 
-export const notifyApplicationAccepted = (testerId: string, projectId: string, projectTitle: string) => {
-  return sendNotification(
+export const notifyApplicationAccepted = async (testerId: string, projectId: string, projectTitle: string) => {
+  return await sendNotification(
     testerId,
     'application_accepted',
     'Application Accepted!',
@@ -58,8 +58,8 @@ export const notifyApplicationAccepted = (testerId: string, projectId: string, p
   );
 };
 
-export const notifyApplicationRejected = (testerId: string, projectId: string, projectTitle: string) => {
-  return sendNotification(
+export const notifyApplicationRejected = async (testerId: string, projectId: string, projectTitle: string) => {
+  return await sendNotification(
     testerId,
     'application_rejected',
     'Application Update',
