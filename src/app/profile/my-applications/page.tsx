@@ -185,7 +185,7 @@ export default function MyApplicationsPage() {
                   {app.status === 'accepted' && (
                     <div className="flex gap-2">
                         {app.hasSubmission ? (
-                             <Button asChild variant="secondary">
+                             <Button asChild variant="outline">
                                <Link href={`/project/${app.projectId}/submission/${app.id}`}>
                                    View Submission
                                </Link>
