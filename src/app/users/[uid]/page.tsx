@@ -71,7 +71,7 @@ const safeGetData = (doc: any): DocumentData => {
 };
 
 
-export default function UserProfilePage({ params, searchParams = Promise.resolve({}) }: { params: Promise<{ uid: string }>, searchParams?: Promise<{ [key: string]: string | string[] | undefined }> }) {
+export default function UserProfilePage({ params, searchParams }: { params: Promise<{ uid: string }>, searchParams?: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const { uid } = use(params);
   const searchParamsValue = use(searchParams);
   const router = useRouter();
