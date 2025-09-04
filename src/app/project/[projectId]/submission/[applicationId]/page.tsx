@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc, type DocumentData } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc, type DocumentData, writeBatch, collection } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
@@ -17,12 +17,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud } from 'lucide-react';
+import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud, Check, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { notifySubmissionReceived } from '@/lib/notifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 const submissionSchema = z.object({
   comments: z.string().optional(),
@@ -51,6 +52,7 @@ interface Submission extends DocumentData {
     files?: SubmissionFile[];
     submittedAt: any;
     feedback?: FeedbackFormValues;
+    rewardedAmount?: number;
 }
 
 interface ClientProfile {
@@ -58,6 +60,12 @@ interface ClientProfile {
     name: string;
     avatarUrl?: string;
 }
+
+interface WalletData {
+    balance: number;
+    currency: string;
+}
+
 
 export default function SubmissionPage() {
     const [user, setUser] = useState<User | null>(null);
@@ -69,6 +77,10 @@ export default function SubmissionPage() {
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [clientProfile, setClientProfile] = useState<ClientProfile | null>(null);
+    const [clientWallet, setClientWallet] = useState<WalletData | null>(null);
+
+    const [isRewardDialogOpen, setIsRewardDialogOpen] = useState(false);
+    const [rewardAmount, setRewardAmount] = useState('');
 
 
     const router = useRouter();
@@ -131,6 +143,16 @@ export default function SubmissionPage() {
                          toast({ variant: 'destructive', title: 'Unauthorized', description: 'You cannot view this page.' });
                          router.push('/');
                          return;
+                    }
+
+                    if(isClient) {
+                        const walletRef = doc(db, 'wallets', user.uid);
+                        const walletSnap = await getDoc(walletRef);
+                        if (walletSnap.exists()) {
+                            setClientWallet(walletSnap.data() as WalletData);
+                        } else {
+                            setClientWallet({ balance: 0, currency: 'USD' });
+                        }
                     }
 
                 } else {
@@ -290,6 +312,74 @@ export default function SubmissionPage() {
          } finally {
             setIsSubmitting(false);
          }
+    };
+    
+    const handleReward = async () => {
+        if (!user || !submission || !project || !clientWallet) return;
+        const amount = parseFloat(rewardAmount);
+        if (isNaN(amount) || amount <= 0) {
+            toast({ variant: 'destructive', title: 'Invalid Amount', description: 'Please enter a valid reward amount.' });
+            return;
+        }
+        if (amount > clientWallet.balance) {
+             toast({ variant: 'destructive', title: 'Insufficient Funds', description: 'Your wallet balance is too low to complete this transaction.' });
+            return;
+        }
+        setIsSubmitting(true);
+
+        const batch = writeBatch(db);
+
+        // 1. Update client's wallet
+        const clientWalletRef = doc(db, 'wallets', user.uid);
+        batch.update(clientWalletRef, { balance: clientWallet.balance - amount });
+
+        // 2. Update tester's wallet
+        const testerWalletRef = doc(db, 'wallets', submission.testerId);
+        const testerWalletSnap = await getDoc(testerWalletRef);
+        const testerWalletData = testerWalletSnap.data();
+        const newTesterBalance = (testerWalletData?.balance || 0) + amount;
+        batch.set(testerWalletRef, { balance: newTesterBalance, currency: 'USD' }, { merge: true });
+
+        // 3. Create transaction for client
+        const clientTransactionRef = doc(collection(db, 'transactions'));
+        batch.set(clientTransactionRef, {
+            userId: user.uid,
+            type: 'payment',
+            amount: -amount,
+            description: `Payment to tester for project: ${project.title}`,
+            status: 'completed',
+            createdAt: serverTimestamp(),
+            relatedUserId: submission.testerId,
+        });
+        
+        // 4. Create transaction for tester
+        const testerTransactionRef = doc(collection(db, 'transactions'));
+        batch.set(testerTransactionRef, {
+            userId: submission.testerId,
+            type: 'payout',
+            amount: amount,
+            description: `Reward for project: ${project.title}`,
+            status: 'completed',
+            createdAt: serverTimestamp(),
+            relatedUserId: user.uid,
+        });
+
+        // 5. Update submission with rewarded amount
+        const submissionRef = doc(db, 'submissions', applicationId);
+        batch.update(submissionRef, { rewardedAmount: amount });
+
+        try {
+            await batch.commit();
+            toast({ title: 'Reward Sent!', description: `You have successfully rewarded the tester.` });
+            setSubmission(prev => prev ? {...prev, rewardedAmount: amount} : null);
+            setClientWallet(prev => prev ? {...prev, balance: prev.balance - amount} : null);
+            setIsRewardDialogOpen(false);
+            setRewardAmount('');
+        } catch(error: any) {
+            toast({ variant: 'destructive', title: 'Reward Failed', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
     
     const isClient = user?.uid === application?.ownerId;
@@ -514,6 +604,48 @@ export default function SubmissionPage() {
                                     </div>
                                 )}
                             </div>
+                            
+                            {/* Reward Section */}
+                            {isClient && submission.feedback && (
+                                <div className="border-t pt-6">
+                                <h3 className="font-semibold text-lg mb-4">Reward Tester</h3>
+                                {submission.rewardedAmount ? (
+                                     <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 flex items-center gap-3">
+                                        <Check className="h-5 w-5" />
+                                        <p>You have rewarded this tester with <strong>${submission.rewardedAmount.toFixed(2)}</strong>.</p>
+                                     </div>
+                                ) : (
+                                    <Dialog open={isRewardDialogOpen} onOpenChange={setIsRewardDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button>
+                                                <DollarSign className="mr-2 h-4 w-4" />
+                                                Reward Tester
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Reward Tester</DialogTitle>
+                                                <DialogDescription>
+                                                    Enter the amount you'd like to send from your wallet to the tester.
+                                                    Your current balance is <strong>${clientWallet?.balance.toFixed(2)}</strong>.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="grid gap-4 py-4">
+                                                <Label htmlFor="reward-amount">Amount (USD)</Label>
+                                                <Input id="reward-amount" type="number" placeholder="e.g., 50.00" value={rewardAmount} onChange={(e) => setRewardAmount(e.target.value)} />
+                                            </div>
+                                            <DialogFooter>
+                                                <Button variant="outline" onClick={() => setIsRewardDialogOpen(false)}>Cancel</Button>
+                                                <Button onClick={handleReward} disabled={isSubmitting || !rewardAmount || parseFloat(rewardAmount) > (clientWallet?.balance ?? 0)}>
+                                                    {isSubmitting ? 'Sending...' : 'Send Reward'}
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+                                )}
+                                </div>
+                            )}
+
                         </div>
                     )}
                      {!submission && isClient && (
