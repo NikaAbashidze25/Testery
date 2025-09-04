@@ -236,13 +236,15 @@ export default function ProjectApplicantsPage() {
                   )}
                   {app.status === 'accepted' && (
                     <>
-                      {app.hasSubmission && (
+                      {app.hasSubmission ? (
                         <Button asChild variant="secondary">
                            <Link href={`/project/${projectId}/submission/${app.id}`}>
                                <FileText className="mr-2 h-4 w-4" />
                                View Submission
                            </Link>
                        </Button>
+                      ) : (
+                        <div className="text-sm text-muted-foreground italic">Waiting for submission...</div>
                       )}
                       <Button asChild>
                           <Link href={`/chat/${app.id}`}>

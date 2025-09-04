@@ -20,6 +20,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { notifySubmissionReceived } from '@/lib/notifications';
+
 
 const submissionSchema = z.object({
   comments: z.string().optional(),
@@ -142,7 +144,7 @@ export default function SubmissionPage() {
 
 
     const handleSubmission = async (values: SubmissionFormValues) => {
-        if (!user || !application) return;
+        if (!user || !application || !project) return;
         setIsSubmitting(true);
         try {
             const uploadedFiles: SubmissionFile[] = [];
@@ -166,8 +168,16 @@ export default function SubmissionPage() {
             
             await setDoc(doc(db, 'submissions', applicationId), submissionData);
 
+            await notifySubmissionReceived(
+                application.ownerId, 
+                projectId, 
+                project.title, 
+                user.displayName || 'A tester', 
+                applicationId
+            );
+
             toast({ title: 'Success', description: 'Your work has been submitted.' });
-            setSubmission({ id: applicationId, ...submissionData });
+            setSubmission({ id: applicationId, ...submissionData, submittedAt: new Date() });
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: error.message });
@@ -479,5 +489,3 @@ export default function SubmissionPage() {
     )
 
 }
-
-    
