@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, Edit, FileText, Send, Bookmark } from 'lucide-react';
+import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, Edit } from 'lucide-react';
 
 
 type UserProfile = {
@@ -35,18 +35,15 @@ export default function ProfilePage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is signed in, now fetch their profile from Firestore
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
 
         if (userDocSnap.exists()) {
           setUserProfile(userDocSnap.data() as UserProfile);
         } else {
-          // Handle case where user exists in Auth but not in Firestore
           console.error("No profile data found in Firestore for this user.");
         }
       } else {
-        // User is signed out
         setUserProfile(null);
       }
       setIsLoading(false);
@@ -68,12 +65,12 @@ export default function ProfilePage() {
     return (
         <div className="container py-12">
             <Card className="max-w-2xl mx-auto">
-                <CardHeader className="flex flex-col items-center text-center">
+                <CardHeader className="flex flex-col items-center text-center border-b pb-6">
                     <Skeleton className="h-24 w-24 rounded-full mb-4" />
                     <Skeleton className="h-8 w-48 mb-2" />
                     <Skeleton className="h-5 w-64" />
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 pt-6">
                     <div className="space-y-2">
                         <Skeleton className="h-5 w-32" />
                         <Skeleton className="h-5 w-full" />
@@ -82,16 +79,8 @@ export default function ProfilePage() {
                         <Skeleton className="h-5 w-32" />
                         <Skeleton className="h-5 w-full" />
                     </div>
-                    <div className="space-y-2">
-                        <Skeleton className="h-5 w-32" />
-                        <div className="flex flex-wrap gap-2">
-                            <Skeleton className="h-6 w-20" />
-                            <Skeleton className="h-6 w-24" />
-                            <Skeleton className="h-6 w-16" />
-                        </div>
-                    </div>
                 </CardContent>
-                 <CardFooter className="flex justify-center gap-4">
+                 <CardFooter className="flex justify-center pt-6 border-t">
                     <Skeleton className="h-10 w-32" />
                 </CardFooter>
             </Card>
@@ -113,7 +102,7 @@ export default function ProfilePage() {
   return (
     <div className="container py-12">
       <Card className="max-w-2xl mx-auto">
-        <CardHeader className="flex flex-col items-center text-center">
+        <CardHeader className="flex flex-col items-center text-center border-b pb-6">
           <Avatar className="h-24 w-24 mb-4">
             <AvatarImage src={userProfile.profilePictureUrl || userProfile.companyLogoUrl} alt="Profile Picture" />
             <AvatarFallback className="text-3xl">
@@ -125,7 +114,7 @@ export default function ProfilePage() {
             <Mail className="h-4 w-4" /> {userProfile.email}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           {userProfile.accountType === 'individual' && (
             <>
               <div className="flex items-center gap-3">
@@ -172,36 +161,12 @@ export default function ProfilePage() {
             </>
           )}
         </CardContent>
-        <CardFooter className="flex-col gap-4 border-t pt-6">
-            <div className="flex justify-center gap-4">
-                <Button asChild>
-                    <Link href="/profile/edit">
-                        <Edit className="mr-2 h-4 w-4" /> Edit Profile
-                    </Link>
-                </Button>
-                {userProfile.accountType === 'company' && (
-                    <Button asChild variant="outline">
-                        <Link href="/profile/my-projects">
-                            <FileText className="mr-2 h-4 w-4" />
-                            My Projects
-                        </Link>
-                    </Button>
-                )}
-                 {userProfile.accountType === 'individual' && (
-                    <Button asChild variant="outline">
-                        <Link href="/profile/my-applications">
-                            <Send className="mr-2 h-4 w-4" />
-                            My Applications
-                        </Link>
-                    </Button>
-                )}
-                 <Button asChild variant="outline">
-                    <Link href="/profile/saved-projects">
-                        <Bookmark className="mr-2 h-4 w-4" />
-                        Saved Projects
-                    </Link>
-                </Button>
-            </div>
+        <CardFooter className="flex justify-center pt-6 border-t">
+            <Button asChild>
+                <Link href="/profile/edit">
+                    <Edit className="mr-2 h-4 w-4" /> Edit Profile
+                </Link>
+            </Button>
         </CardFooter>
       </Card>
     </div>
