@@ -1,0 +1,196 @@
+
+.next15-migration-body {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.next15-migration-body .container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.next15-migration-body header {
+    text-align: center;
+    padding: 40px 20px;
+    background: rgba(30, 41, 59, 0.6);
+    border-radius: 16px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.next15-migration-body h1 {
+    font-size: 3.5rem;
+    margin-bottom: 15px;
+    background: linear-gradient(to right, #60a5fa, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.next15-migration-body .subtitle {
+    font-size: 1.4rem;
+    color: #94a3b8;
+    margin-bottom: 25px;
+}
+
+.next15-migration-body .warning-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(to right, #f59e0b, #ef4444);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.next15-migration-body .cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.next15-migration-body .card {
+    background: rgba(30, 41, 59, 0.8);
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.next15-migration-body .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.next15-migration-body .card h2 {
+    color: #60a5fa;
+    margin-bottom: 15px;
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.next15-migration-body .card h2 .icon {
+    font-size: 1.5rem;
+}
+
+.next15-migration-body .code-block {
+    background: #1a2438;
+    border-radius: 10px;
+    padding: 18px;
+    margin: 20px 0;
+    overflow-x: auto;
+    font-family: 'Consolas', monospace;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.next15-migration-body .code-block code {
+    color: #e2e8f0;
+    line-height: 1.5;
+}
+
+.next15-migration-body .code-keyword {
+    color: #60a5fa;
+}
+
+.next15-migration-body .code-function {
+    color: #fbbf24;
+}
+
+.next15-migration-body .code-var {
+    color: #34d399;
+}
+
+.next15-migration-body .code-comment {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.next15-migration-body .code-string {
+    color: #f87171;
+}
+
+.next15-migration-body .bad {
+    border-left: 5px solid #ef4444;
+}
+
+.next15-migration-body .good {
+    border-left: 5px solid #10b981;
+}
+
+.next15-migration-body .info-box {
+    background: rgba(59, 130, 246, 0.15);
+    border-left: 5px solid #3b82f6;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 25px 0;
+}
+
+.next15-migration-body .info-box h3 {
+    color: #93c5fd;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.next15-migration-body .footer {
+    text-align: center;
+    padding: 30px;
+    margin-top: 40px;
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+.next15-migration-body .tab-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.next15-migration-body .tab {
+    padding: 12px 25px;
+    background: rgba(30, 41, 59, 0.8);
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.next15-migration-body .tab.active {
+    background: rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+    font-weight: bold;
+}
+
+.next15-migration-body .tab-content {
+    display: none;
+}
+
+.next15-migration-body .tab-content.active {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .next15-migration-body .cards-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .next15-migration-body h1 {
+        font-size: 2.5rem;
+    }
+    
+    .next15-migration-body .subtitle {
+        font-size: 1.2rem;
+    }
+}
