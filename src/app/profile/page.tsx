@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ExternalLink, Mail, User as UserIcon, Building, Briefcase, Globe, Edit } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 
 type UserProfile = {
@@ -31,6 +32,7 @@ type UserProfile = {
 export default function ProfilePage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -42,15 +44,21 @@ export default function ProfilePage() {
           setUserProfile(userDocSnap.data() as UserProfile);
         } else {
           console.error("No profile data found in Firestore for this user.");
+           toast({
+            variant: "destructive",
+            title: "Profile not found",
+            description: "We couldn't find your profile data. Please try again or contact support.",
+          });
+          router.push('/');
         }
       } else {
-        setUserProfile(null);
+        router.push('/login');
       }
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [router]);
   
   const getInitials = (name: string | undefined) => {
     if (!name) return 'U';
@@ -91,10 +99,7 @@ export default function ProfilePage() {
   if (!userProfile) {
     return (
       <div className="container py-12 text-center">
-        <p className="mb-4">You need to be logged in to view this page.</p>
-        <Button asChild>
-          <Link href="/login">Log In</Link>
-        </Button>
+        <p className="mb-4">Redirecting...</p>
       </div>
     );
   }
