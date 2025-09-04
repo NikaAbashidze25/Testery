@@ -438,7 +438,7 @@ export default function SubmissionPage() {
                                 {submission.feedback && clientProfile && (
                                      <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
                                         <div className="flex items-start gap-4">
-                                             <Link href={`/users/${clientProfile.uid}`}>
+                                            <Link href={`/users/${clientProfile.uid}`}>
                                                 <Avatar>
                                                     <AvatarImage src={clientProfile.avatarUrl} alt={clientProfile.name} />
                                                     <AvatarFallback>{getInitials(clientProfile.name)}</AvatarFallback>
@@ -446,9 +446,9 @@ export default function SubmissionPage() {
                                             </Link>
                                             <div className="flex-1 space-y-3">
                                                 <div>
-                                                     <Link href={`/users/${clientProfile.uid}`} className="hover:underline">
-                                                        <p className="text-sm font-medium">Feedback from {clientProfile.name}</p>
-                                                     </Link>
+                                                    <p className="text-sm font-medium">
+                                                        Feedback from <Link href={`/users/${clientProfile.uid}`} className="text-primary hover:underline">{clientProfile.name}</Link>
+                                                    </p>
                                                     <div className="flex items-center gap-1 mt-1">
                                                         {[...Array(5)].map((_, i) => (
                                                             <Star key={i} className={cn('h-5 w-5', i < submission.feedback!.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300')} />
