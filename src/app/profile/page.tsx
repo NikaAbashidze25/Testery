@@ -133,7 +133,7 @@ export default function ProfilePage() {
                   <p><strong>Full Name:</strong> {userProfile.fullName}</p>
               </div>
 
-              {userProfile.skills && userProfile.skills.length > 0 && (
+              {userProfile.skills && userProfile.skills.length > 0 && userProfile.skills.some(s => s) && (
                 <div>
                     <h3 className="font-semibold mb-2 flex items-center gap-3">
                         <Briefcase className="h-5 w-5 text-muted-foreground" />
@@ -141,7 +141,7 @@ export default function ProfilePage() {
                     </h3>
                     <div className="flex flex-wrap gap-2">
                     {userProfile.skills.map(skill => (
-                        <Badge key={skill} variant="secondary">{skill}</Badge>
+                        skill && <Badge key={skill} variant="secondary">{skill}</Badge>
                     ))}
                     </div>
                 </div>
@@ -195,15 +195,13 @@ export default function ProfilePage() {
                         </Link>
                     </Button>
                 )}
-            </div>
-             <div className="flex justify-center gap-4">
                  <Button asChild variant="outline">
                     <Link href="/profile/saved-projects">
                         <Bookmark className="mr-2 h-4 w-4" />
                         Saved Projects
                     </Link>
                 </Button>
-             </div>
+            </div>
         </CardFooter>
       </Card>
     </div>
