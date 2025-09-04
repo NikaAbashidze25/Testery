@@ -65,7 +65,6 @@ export default function EditProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [croppedImage, setCroppedImage] = useState<File | null>(null);
   const [imageToCrop, setImageToCrop] = useState<string | undefined>(undefined);
-  const [isCropperOpen, setIsCropperOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,34 +109,37 @@ export default function EditProfilePage() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
       if (file.size > MAX_FILE_SIZE) {
         toast({
             variant: 'destructive',
             title: 'File Too Large',
             description: `The selected image must be smaller than ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
         });
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
         return;
       }
-
       const reader = new FileReader();
       reader.onload = () => {
         setImageToCrop(reader.result as string);
-        setIsCropperOpen(true);
       };
       reader.readAsDataURL(file);
     }
+    // Reset file input to allow re-selection of the same file
+    e.target.value = '';
   };
 
   const handleCroppedImageSave = (imageFile: File) => {
     setCroppedImage(imageFile);
     const fileField = userProfile?.accountType === 'individual' ? 'profilePicture' : 'companyLogo';
     form.setValue(fileField, imageFile.name);
+    setImageToCrop(undefined); // Close the dialog
   };
+
+  const handleCropperClose = () => {
+    setImageToCrop(undefined);
+  }
 
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -158,11 +160,11 @@ export default function EditProfilePage() {
       const fileField = userProfile.accountType === 'individual' ? 'profilePicture' : 'companyLogo';
       delete dataToUpdate[fileField];
 
-      if (userProfile.accountType === 'individual') {
-        dataToUpdate.skills = (values.skills || '').split(',').map((s:string) => s.trim());
+      if (userProfile.accountType === 'individual' && 'fullName' in values) {
+        dataToUpdate.skills = (values.skills || '').split(',').map((s:string) => s.trim()).filter(Boolean);
         dataToUpdate.profilePictureUrl = imageUrl;
         await updateProfile(auth.currentUser, { displayName: values.fullName, photoURL: imageUrl });
-      } else {
+      } else if (userProfile.accountType === 'company' && 'contactPerson' in values) {
         dataToUpdate.companyLogoUrl = imageUrl;
         await updateProfile(auth.currentUser, { displayName: values.contactPerson, photoURL: imageUrl });
       }
@@ -209,6 +211,12 @@ export default function EditProfilePage() {
     return null;
   }
   
+  const currentAvatarSrc = croppedImage 
+    ? URL.createObjectURL(croppedImage) 
+    : (userProfile.accountType === 'individual' ? userProfile.profilePictureUrl : userProfile.companyLogoUrl);
+
+  const currentAvatarFallback = getInitials(userProfile.accountType === 'individual' ? userProfile.fullName : userProfile.companyName);
+
   return (
     <div className="container py-12">
       <Card className="max-w-2xl mx-auto">
@@ -228,9 +236,9 @@ export default function EditProfilePage() {
                       <FormItem>
                          <div className="flex items-center gap-8">
                             <Avatar className="h-24 w-24">
-                                <AvatarImage src={croppedImage ? URL.createObjectURL(croppedImage) : userProfile.profilePictureUrl} alt="Profile Picture" />
+                                <AvatarImage src={currentAvatarSrc} alt="Profile Picture" />
                                 <AvatarFallback className="text-3xl">
-                                {getInitials(userProfile.fullName)}
+                                  {currentAvatarFallback}
                                 </AvatarFallback>
                             </Avatar>
                              <div className="flex-grow space-y-2">
@@ -299,9 +307,9 @@ export default function EditProfilePage() {
                       <FormItem>
                          <div className="flex items-center gap-8">
                            <Avatar className="h-24 w-24">
-                              <AvatarImage src={croppedImage ? URL.createObjectURL(croppedImage) : userProfile.companyLogoUrl} alt="Company Logo" />
+                              <AvatarImage src={currentAvatarSrc} alt="Company Logo" />
                               <AvatarFallback className="text-3xl">
-                              {getInitials(userProfile.companyName)}
+                                {currentAvatarFallback}
                               </AvatarFallback>
                           </Avatar>
                            <div className="flex-grow space-y-2">
@@ -394,8 +402,8 @@ export default function EditProfilePage() {
       </Card>
       {imageToCrop && (
         <ImageCropperDialog
-            isOpen={isCropperOpen}
-            onClose={() => setIsCropperOpen(false)}
+            isOpen={!!imageToCrop}
+            onClose={handleCropperClose}
             imageSrc={imageToCrop}
             onSave={handleCroppedImageSave}
         />
@@ -403,5 +411,3 @@ export default function EditProfilePage() {
     </div>
   );
 }
-
-    
