@@ -26,6 +26,7 @@ interface Project extends DocumentData {
         nanoseconds: number;
     };
     applicantCount?: number;
+    pendingApplicantCount?: number;
 }
 
 export default function MyProjectsPage() {
@@ -56,21 +57,31 @@ export default function MyProjectsPage() {
           const projectsData = querySnapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as Project));
             
-          // Fetch applicant counts for all projects
           const projectIds = projectsData.map(p => p.id);
           if (projectIds.length > 0) {
               const appsRef = collection(db, 'applications');
               const appsQuery = query(appsRef, where('projectId', 'in', projectIds));
               const appsSnapshot = await getDocs(appsQuery);
-              const counts = new Map<string, number>();
+              
+              const counts = new Map<string, { total: number, pending: number }>();
               
               appsSnapshot.forEach(doc => {
-                  const projectId = doc.data().projectId;
-                  counts.set(projectId, (counts.get(projectId) || 0) + 1);
+                  const appData = doc.data();
+                  const projectId = appData.projectId;
+                  const currentCounts = counts.get(projectId) || { total: 0, pending: 0 };
+                  
+                  currentCounts.total += 1;
+                  if (appData.status === 'pending') {
+                      currentCounts.pending += 1;
+                  }
+                  
+                  counts.set(projectId, currentCounts);
               });
 
               projectsData.forEach(p => {
-                  p.applicantCount = counts.get(p.id) || 0;
+                  const projectCounts = counts.get(p.id);
+                  p.applicantCount = projectCounts?.total || 0;
+                  p.pendingApplicantCount = projectCounts?.pending || 0;
               });
           }
 
@@ -195,7 +206,12 @@ export default function MyProjectsPage() {
                         <Users className="mr-2 h-4 w-4" />
                         Applicants
                         {(project.applicantCount ?? 0) > 0 && (
-                           <Badge variant="success" className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{project.applicantCount}</Badge>
+                           <Badge 
+                                variant={project.pendingApplicantCount && project.pendingApplicantCount > 0 ? 'success' : 'secondary'} 
+                                className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0"
+                            >
+                              {project.pendingApplicantCount && project.pendingApplicantCount > 0 ? project.pendingApplicantCount : project.applicantCount}
+                           </Badge>
                         )}
                       </Link>
                   </Button>
