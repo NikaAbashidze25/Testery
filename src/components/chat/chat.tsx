@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useTransition } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import {
   collection,
@@ -39,7 +39,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
 import { useTheme } from 'next-themes';
-import { Send, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip, Menu, File as FileIcon, MessageSquare, Image as ImageIcon } from 'lucide-react';
+import { Send, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip, Menu, File as FileIcon, MessageSquare, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -105,15 +105,40 @@ const getInitials = (name: string | undefined) => {
   return name[0];
 };
 
+const ChatListItemComponent = React.memo(({ chat, isActive, onClick }: { chat: ChatListItem, isActive: boolean, onClick: (chat: ChatListItem) => void }) => {
+    const formatTimestamp = (timestamp: ChatListItem['lastMessageTimestamp']) => {
+        if (!timestamp) return '';
+        const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+        return formatDistanceToNow(date, { addSuffix: true });
+    };
+
+    return (
+        <button
+            onClick={() => onClick(chat)}
+            className={cn(
+                "w-full text-left p-3 flex items-center gap-3 transition-colors hover:bg-accent",
+                isActive && "bg-accent"
+            )}
+        >
+            <Avatar className="h-12 w-12">
+                <AvatarImage src={chat.otherUserAvatar} />
+                <AvatarFallback>{getInitials(chat.otherUserName)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 truncate">
+                <div className="flex justify-between items-center">
+                    <span className="font-semibold truncate text-sm">{chat.otherUserName}</span>
+                    <span className="text-xs text-muted-foreground">{formatTimestamp(chat.lastMessageTimestamp)}</span>
+                </div>
+                <p className="text-sm text-muted-foreground truncate">{chat.lastMessage || '...'}</p>
+            </div>
+        </button>
+    );
+});
+ChatListItemComponent.displayName = 'ChatListItemComponent';
+
+
 // Sub-components
 const ChatList = ({ user, chats, activeChatId, onSelectChat }: { user: User; chats: ChatListItem[]; activeChatId?: string; onSelectChat: (chat: ChatListItem) => void }) => {
-  
-  const formatTimestamp = (timestamp: ChatListItem['lastMessageTimestamp']) => {
-    if (!timestamp) return '';
-    const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
-    return formatDistanceToNow(date, { addSuffix: true });
-  };
-
   return (
      <div className="flex flex-col h-full bg-secondary/50 border-r overflow-y-auto">
       <div className="p-4 border-b sticky top-0 bg-secondary/50 z-10">
@@ -127,26 +152,12 @@ const ChatList = ({ user, chats, activeChatId, onSelectChat }: { user: User; cha
       </div>
       <div className="flex-1">
         {chats.map(chat => (
-          <button
+          <ChatListItemComponent
             key={chat.id}
-            onClick={() => onSelectChat(chat)}
-            className={cn(
-              "w-full text-left p-3 flex items-center gap-3 transition-colors hover:bg-accent",
-              chat.id === activeChatId && "bg-accent"
-            )}
-          >
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={chat.otherUserAvatar} />
-              <AvatarFallback>{getInitials(chat.otherUserName)}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 truncate">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold truncate text-sm">{chat.otherUserName}</span>
-                <span className="text-xs text-muted-foreground">{formatTimestamp(chat.lastMessageTimestamp)}</span>
-              </div>
-              <p className="text-sm text-muted-foreground truncate">{chat.lastMessage || '...'}</p>
-            </div>
-          </button>
+            chat={chat}
+            isActive={chat.id === activeChatId}
+            onClick={onSelectChat}
+          />
         ))}
       </div>
     </div>
@@ -227,7 +238,6 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const [chats, setChats] = useState<ChatListItem[]>([]);
   const [activeChat, setActiveChat] = useState<{ id: string, otherUser: OtherUser | null, projectTitle: string } | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -235,6 +245,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   
   // Hooks
   const router = useRouter();
@@ -354,14 +365,16 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
   const handleSelectChat = useCallback((chat: ChatListItem) => {
       if (!user || !chat.otherUserId) return;
-      const otherUserInfo = {
-        uid: chat.otherUserId,
-        name: chat.otherUserName || 'User',
-        avatarUrl: chat.otherUserAvatar || '',
-      };
-      setActiveChat({ id: chat.id, otherUser: otherUserInfo, projectTitle: chat.projectTitle });
-      router.replace(`/chat/${chat.id}`, { scroll: false });
-      setIsMobileMenuOpen(false);
+      startTransition(() => {
+        const otherUserInfo = {
+          uid: chat.otherUserId!,
+          name: chat.otherUserName || 'User',
+          avatarUrl: chat.otherUserAvatar || '',
+        };
+        setActiveChat({ id: chat.id, otherUser: otherUserInfo, projectTitle: chat.projectTitle });
+        router.replace(`/chat/${chat.id}`, { scroll: false });
+        setIsMobileMenuOpen(false);
+      });
   }, [user, router]);
 
 
@@ -604,7 +617,11 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
 
                     {/* Messages */}
                     <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-2 text-sm min-h-0" style={{lineHeight: '1.3'}}>
-                    {messages.map((msg, index) => {
+                    {isPending ? (
+                      <div className="flex h-full items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : messages.map((msg, index) => {
                         const isSender = msg.senderId === user?.uid;
                         const canEdit = isSender && (Date.now() - msg.timestamp?.toMillis()) < EDIT_TIME_LIMIT_MS;
                         const hasReactions = msg.reactions && Object.values(msg.reactions).some(uids => uids.length > 0);
