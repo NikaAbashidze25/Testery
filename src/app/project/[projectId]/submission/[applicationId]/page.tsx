@@ -54,6 +54,7 @@ interface Submission extends DocumentData {
 }
 
 interface ClientProfile {
+    uid: string;
     name: string;
     avatarUrl?: string;
 }
@@ -154,6 +155,7 @@ export default function SubmissionPage() {
                     if (clientDocSnap.exists()) {
                         const clientData = clientDocSnap.data();
                         setClientProfile({
+                            uid: subData.clientId,
                             name: clientData.companyName || clientData.fullName,
                             avatarUrl: clientData.companyLogoUrl || clientData.profilePictureUrl
                         });
@@ -436,13 +438,17 @@ export default function SubmissionPage() {
                                 {submission.feedback && clientProfile && (
                                      <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
                                         <div className="flex items-start gap-4">
-                                            <Avatar>
-                                                <AvatarImage src={clientProfile.avatarUrl} alt={clientProfile.name} />
-                                                <AvatarFallback>{getInitials(clientProfile.name)}</AvatarFallback>
-                                            </Avatar>
+                                             <Link href={`/users/${clientProfile.uid}`}>
+                                                <Avatar>
+                                                    <AvatarImage src={clientProfile.avatarUrl} alt={clientProfile.name} />
+                                                    <AvatarFallback>{getInitials(clientProfile.name)}</AvatarFallback>
+                                                </Avatar>
+                                            </Link>
                                             <div className="flex-1 space-y-3">
                                                 <div>
-                                                    <p className="text-sm font-medium">Feedback from {clientProfile.name}</p>
+                                                     <Link href={`/users/${clientProfile.uid}`} className="hover:underline">
+                                                        <p className="text-sm font-medium">Feedback from {clientProfile.name}</p>
+                                                     </Link>
                                                     <div className="flex items-center gap-1 mt-1">
                                                         {[...Array(5)].map((_, i) => (
                                                             <Star key={i} className={cn('h-5 w-5', i < submission.feedback!.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300')} />
