@@ -210,7 +210,7 @@ export default function MyProjectsPage() {
                     ))}
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-end gap-2">
+                <CardFooter className="flex flex-wrap justify-end gap-2">
                    <Button asChild variant="ghost">
                      <Link href={`/projects/${project.id}`}>
                         <Eye className="mr-2 h-4 w-4" />
