@@ -84,6 +84,7 @@ interface ChatListItem extends DocumentData {
   };
   otherUserName?: string;
   otherUserAvatar?: string;
+  otherUserId?: string;
 }
 
 // Constants
@@ -105,7 +106,7 @@ const getInitials = (name: string | undefined) => {
 };
 
 // Sub-components
-const ChatList = ({ user, chats, activeChatId, onSelectChat }: { user: User; chats: ChatListItem[]; activeChatId?: string; onSelectChat: (id: string) => void }) => {
+const ChatList = ({ user, chats, activeChatId, onSelectChat }: { user: User; chats: ChatListItem[]; activeChatId?: string; onSelectChat: (chat: ChatListItem) => void }) => {
   
   const formatTimestamp = (timestamp: ChatListItem['lastMessageTimestamp']) => {
     if (!timestamp) return '';
@@ -128,7 +129,7 @@ const ChatList = ({ user, chats, activeChatId, onSelectChat }: { user: User; cha
         {chats.map(chat => (
           <button
             key={chat.id}
-            onClick={() => onSelectChat(chat.id)}
+            onClick={() => onSelectChat(chat)}
             className={cn(
               "w-full text-left p-3 flex items-center gap-3 transition-colors hover:bg-accent",
               chat.id === activeChatId && "bg-accent"
@@ -307,6 +308,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
           const chatsWithDetails = await Promise.all(
             uniqueApplications.map(async (app) => {
               const otherUserId = user.uid === app.ownerId ? app.testerId : app.ownerId;
+              app.otherUserId = otherUserId;
               const userDocRef = doc(db, 'users', otherUserId);
               const userDocSnap = await getDoc(userDocRef);
               if (userDocSnap.exists()) {
@@ -330,6 +332,15 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
           );
           chatsWithDetails.sort((a,b) => (b.lastMessageTimestamp?.seconds ?? 0) - (a.lastMessageTimestamp?.seconds ?? 0));
           setChats(chatsWithDetails);
+
+          // Auto-select chat if initialApplicationId is provided
+          if (initialApplicationId) {
+            const chatToSelect = chatsWithDetails.find(c => c.id === initialApplicationId);
+            if (chatToSelect) {
+              handleSelectChat(chatToSelect);
+            }
+          }
+
         } catch (error) {
           console.error("Error fetching user's chats: ", error);
         } finally {
@@ -338,17 +349,21 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
       };
       fetchChats();
     }
-  }, [user]);
+  }, [user, initialApplicationId]);
 
-  useEffect(() => {
-    if (initialApplicationId && chats.length > 0) {
-      const chatExists = chats.some(c => c.id === initialApplicationId);
-      if (chatExists) {
-        handleSelectChat(initialApplicationId);
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialApplicationId, chats]);
+
+  const handleSelectChat = useCallback((chat: ChatListItem) => {
+      if (!user || !chat.otherUserId) return;
+      const otherUserInfo = {
+        uid: chat.otherUserId,
+        name: chat.otherUserName || 'User',
+        avatarUrl: chat.otherUserAvatar || '',
+      };
+      setActiveChat({ id: chat.id, otherUser: otherUserInfo, projectTitle: chat.projectTitle });
+      router.replace(`/chat/${chat.id}`, { scroll: false });
+      setIsMobileMenuOpen(false);
+  }, [user, router]);
+
 
   useEffect(() => {
     if (activeChat?.id && user) {
@@ -363,38 +378,6 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
       return () => unsubscribe();
     }
   }, [activeChat, user, toast]);
-
-  const handleSelectChat = useCallback(async (applicationId: string) => {
-    if (!user) return;
-    const appDocRef = doc(db, 'applications', applicationId);
-    const appDocSnap = await getDoc(appDocRef);
-    if (!appDocSnap.exists()) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Chat not found.' });
-      return;
-    }
-    const appData = appDocSnap.data();
-    const isOwner = user.uid === appData.ownerId;
-    const isTester = user.uid === appData.testerId;
-    if (!isOwner && !isTester) {
-      toast({ variant: 'destructive', title: 'Unauthorized', description: 'You do not have access to this chat.' });
-      return;
-    }
-    const otherUserId = isOwner ? appData.testerId : appData.ownerId;
-    const otherUserDocRef = doc(db, 'users', otherUserId);
-    const otherUserDocSnap = await getDoc(otherUserDocRef);
-    let otherUserInfo: OtherUser | null = null;
-    if (otherUserDocSnap.exists()) {
-      const otherUserData = otherUserDocSnap.data();
-      otherUserInfo = {
-        uid: otherUserId,
-        name: otherUserData.companyName || otherUserData.fullName,
-        avatarUrl: otherUserData.companyLogoUrl || otherUserData.profilePictureUrl
-      };
-    }
-    setActiveChat({ id: applicationId, otherUser: otherUserInfo, projectTitle: appData.projectTitle });
-    router.replace(`/chat/${applicationId}`, { scroll: false });
-    setIsMobileMenuOpen(false);
-  }, [user, toast, router]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
