@@ -71,13 +71,6 @@ export default function EditProfilePage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const formSchema = userProfile?.accountType === 'individual' ? individualSchema : companySchema;
-  
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: {},
-  });
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -86,10 +79,9 @@ export default function EditProfilePage() {
         if (userDocSnap.exists()) {
           const profileData = userDocSnap.data() as UserProfile;
           setUserProfile(profileData);
-          form.reset({
-            ...profileData,
-            skills: profileData.skills?.join(', '),
-          });
+        } else {
+            // Handle case where user exists in Auth but not in Firestore
+             router.push('/login');
         }
       } else {
         router.push('/login');
@@ -97,8 +89,61 @@ export default function EditProfilePage() {
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, [router, form]);
+  }, [router]);
+
+  if (isLoading) {
+    return (
+      <div className="container py-12">
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-5 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-8">
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-11 w-24" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    // This state can happen briefly or if the user data is missing.
+    // Returning null or a message prevents the form from initializing without data.
+    return null; 
+  }
+
+  return <EditProfileForm userProfile={userProfile} />;
+}
+
+function EditProfileForm({ userProfile }: { userProfile: UserProfile }) {
+  const { toast } = useToast();
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [croppedImage, setCroppedImage] = useState<File | null>(null);
+  const [imageToCrop, setImageToCrop] = useState<string | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
+  const formSchema = userProfile.accountType === 'individual' ? individualSchema : companySchema;
+
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+        ...userProfile,
+        skills: userProfile.skills?.join(', ') || '',
+        profilePicture: undefined,
+        companyLogo: undefined,
+    },
+  });
+
   const getInitials = (name: string | undefined) => {
     if (!name) return 'U';
     const names = name.split(' ');
@@ -126,24 +171,24 @@ export default function EditProfilePage() {
       };
       reader.readAsDataURL(file);
     }
-    // Reset file input to allow re-selection of the same file
-    e.target.value = '';
+    if (e.target) {
+        e.target.value = '';
+    }
   };
 
   const handleCroppedImageSave = (imageFile: File) => {
     setCroppedImage(imageFile);
-    const fileField = userProfile?.accountType === 'individual' ? 'profilePicture' : 'companyLogo';
+    const fileField = userProfile.accountType === 'individual' ? 'profilePicture' : 'companyLogo';
     form.setValue(fileField, imageFile.name);
     setImageToCrop(undefined); // Close the dialog
   };
 
   const handleCropperClose = () => {
     setImageToCrop(undefined);
-  }
-
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!auth.currentUser || !userProfile) return;
+    if (!auth.currentUser) return;
     setIsSubmitting(true);
 
     try {
@@ -183,34 +228,6 @@ export default function EditProfilePage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="container py-12">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-5 w-64" />
-          </CardHeader>
-          <CardContent className="space-y-8">
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-            <Skeleton className="h-11 w-24" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!userProfile) {
-    return null;
-  }
-  
   const currentAvatarSrc = croppedImage 
     ? URL.createObjectURL(croppedImage) 
     : (userProfile.accountType === 'individual' ? userProfile.profilePictureUrl : userProfile.companyLogoUrl);
@@ -227,7 +244,7 @@ export default function EditProfilePage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              {userProfile.accountType === 'individual' && (
+              {userProfile.accountType === 'individual' ? (
                 <>
                    <FormField
                     control={form.control}
@@ -296,9 +313,7 @@ export default function EditProfilePage() {
                     )}
                   />
                 </>
-              )}
-
-              {userProfile.accountType === 'company' && (
+              ) : (
                 <>
                    <FormField
                     control={form.control}
