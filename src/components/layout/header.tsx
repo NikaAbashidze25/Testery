@@ -50,10 +50,10 @@ export function Header() {
   useEffect(() => {
     if (user) {
         const notificationsRef = collection(db, 'notifications');
+        // FIX: Remove orderBy from the query to avoid needing a composite index
         const q = query(
             notificationsRef, 
-            where('recipientId', '==', user.uid),
-            orderBy('createdAt', 'desc')
+            where('recipientId', '==', user.uid)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -61,6 +61,14 @@ export function Header() {
                 id: doc.id,
                 ...doc.data()
             } as Notification));
+
+            // Sort notifications by date in the client-side code
+            userNotifications.sort((a, b) => {
+                const dateA = a.createdAt?.toDate()?.getTime() || 0;
+                const dateB = b.createdAt?.toDate()?.getTime() || 0;
+                return dateB - dateA;
+            });
+            
             setNotifications(userNotifications);
         }, (error) => {
           console.error("Error fetching notifications: ", error);
@@ -195,7 +203,7 @@ export function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-xs text-muted-foreground">My Activity</DropdownMenuLabel>
-                <DropdownMenuItem asChild>
+                 <DropdownMenuItem asChild>
                   <Link href="/profile/my-projects">
                     <FileText className="mr-2 h-4 w-4" />
                     <span>My Projects</span>
