@@ -16,6 +16,7 @@ import { ArrowLeft, Inbox, Check, X, Clock, CheckCircle, XCircle, MessageSquare,
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { notifyApplicationAccepted, notifyApplicationRejected } from '@/lib/notifications';
 
 
 interface Application extends DocumentData {
@@ -37,7 +38,7 @@ export default function ProjectApplicantsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [projectTitle, setProjectTitle] = useState('');
+  const [project, setProject] = useState<DocumentData | null>(null);
   const router = useRouter();
   const params = useParams();
   const projectId = params.id as string;
@@ -53,7 +54,7 @@ export default function ProjectApplicantsPage() {
             toast({ variant: 'destructive', title: 'Unauthorized', description: "You are not the owner of this project."});
             router.push('/projects');
         } else if (projectDoc.exists()) {
-            setProjectTitle(projectDoc.data().title);
+            setProject(projectDoc.data());
         } else {
              toast({ variant: 'destructive', title: 'Not Found', description: "Project not found."});
              router.push('/projects');
@@ -116,26 +117,19 @@ export default function ProjectApplicantsPage() {
   }, [user, projectId, toast]);
 
   const handleApplicationStatus = async (appId: string, status: 'accepted' | 'declined') => {
-      if (!user) return;
+      if (!user || !project) return;
     try {
         const appDocRef = doc(db, 'applications', appId);
         await updateDoc(appDocRef, { status: status });
 
-        // Create notification for the applicant
         const appDocSnap = await getDoc(appDocRef);
         if (appDocSnap.exists()) {
             const appData = appDocSnap.data();
-            const statusMessage = status === 'accepted' ? 'accepted' : 'declined';
-            await addDoc(collection(db, 'notifications'), {
-                recipientId: appData.testerId,
-                senderId: user.uid,
-                senderName: user.displayName,
-                type: `application_${status}`,
-                message: `Your application for "${appData.projectTitle}" has been ${statusMessage}.`,
-                link: '/profile/my-applications',
-                isRead: false,
-                createdAt: serverTimestamp(),
-            });
+            if (status === 'accepted') {
+                await notifyApplicationAccepted(appData.testerId, projectId, project.title);
+            } else {
+                await notifyApplicationRejected(appData.testerId, projectId, project.title);
+            }
         }
 
         setApplications(apps => apps.map(app => app.id === appId ? { ...app, status: status } : app));
@@ -183,7 +177,7 @@ export default function ProjectApplicantsPage() {
         <div className="flex justify-between items-center mb-8">
             <div className="space-y-2">
                 <h1 className="text-4xl font-bold font-headline">Applicants</h1>
-                <div className="text-muted-foreground">Testers who applied for: <span className="font-semibold text-foreground">{projectTitle || <Skeleton className="h-5 w-48 inline-block" />}</span></div>
+                <div className="text-muted-foreground">Testers who applied for: <span className="font-semibold text-foreground">{project?.title || <Skeleton className="h-5 w-48 inline-block" />}</span></div>
             </div>
       </div>
 

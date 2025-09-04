@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { notifyApplicationReceived } from '@/lib/notifications';
 
 interface Project extends DocumentData {
     id: string;
@@ -132,16 +133,12 @@ export default function ProjectDetailPage() {
         setApplication({id: newDocRef.id, ...appData});
 
         // Create notification for project owner
-        await addDoc(collection(db, "notifications"), {
-            recipientId: project.authorId,
-            senderId: user.uid,
-            senderName: user.displayName || "A user",
-            type: "new_application",
-            message: `${user.displayName || "A new user"} applied to your project "${project.title}"`,
-            link: `/projects/${project.id}/applicants`,
-            isRead: false,
-            createdAt: serverTimestamp(),
-        });
+        await notifyApplicationReceived(
+            project.authorId, 
+            project.id, 
+            project.title,
+            user.displayName || "A new user"
+        );
 
         toast({
             title: 'Application Sent!',

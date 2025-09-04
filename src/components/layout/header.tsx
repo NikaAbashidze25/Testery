@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -10,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, writeBatch, getDocs, DocumentData } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, writeBatch, getDocs, DocumentData, Timestamp } from 'firebase/firestore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,10 +17,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { TesteryLogo } from './logo';
@@ -37,11 +32,8 @@ interface Notification {
     message: string;
     link: string;
     isRead: boolean;
-    createdAt: {
-        seconds: number;
-        nanoseconds: number;
-    };
-    senderName?: string;
+    createdAt: Timestamp;
+    title: string;
 }
 
 export function Header() {
@@ -58,11 +50,10 @@ export function Header() {
   useEffect(() => {
     if (user) {
         const notificationsRef = collection(db, 'notifications');
-        // Fix: Query only by recipientId to avoid needing a composite index.
-        // Sorting will be done on the client side.
         const q = query(
             notificationsRef, 
-            where('recipientId', '==', user.uid)
+            where('recipientId', '==', user.uid),
+            orderBy('createdAt', 'desc')
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -70,13 +61,8 @@ export function Header() {
                 id: doc.id,
                 ...doc.data()
             } as Notification));
-            
-            // Sort notifications by date client-side
-            userNotifications.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
-
             setNotifications(userNotifications);
         }, (error) => {
-          // This will catch the error you saw and log it, but the code change prevents it.
           console.error("Error fetching notifications: ", error);
         });
 
@@ -92,11 +78,9 @@ export function Header() {
   };
   
   const markAllAsRead = async () => {
-    if (!user || notifications.length === 0) return;
-
+    if (!user) return;
     const unreadNotifications = notifications.filter(n => !n.isRead);
     if(unreadNotifications.length === 0) return;
-
     const batch = writeBatch(db);
     unreadNotifications.forEach(notification => {
         const notificationRef = doc(db, 'notifications', notification.id);
@@ -104,7 +88,6 @@ export function Header() {
     });
     await batch.commit();
   };
-
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -141,16 +124,16 @@ export function Header() {
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
-                      <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 text-xs">{unreadCount}</Badge>
+                      <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 text-xs">{unreadCount > 9 ? '9+' : unreadCount}</Badge>
                   )}
                   <span className="sr-only">Notifications</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                 <DropdownMenuLabel className="flex justify-between items-center">
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                 <DropdownMenuLabel className="flex justify-between items-center p-2">
                     Notifications
                     {unreadCount > 0 && (
-                        <Button variant="link" size="sm" className="h-auto p-0" onClick={markAllAsRead}>Mark all as read</Button>
+                        <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={markAllAsRead}>Mark all as read</Button>
                     )}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -159,19 +142,22 @@ export function Header() {
                         No new notifications
                     </div>
                 ) : (
-                   notifications.slice(0, 5).map(notification => (
+                   notifications.map(notification => (
                     <DropdownMenuItem 
                         key={notification.id} 
-                        className={cn("flex items-start gap-3 p-2 cursor-pointer", !notification.isRead && "bg-accent/50")}
+                        className={cn("flex items-start gap-3 p-3 cursor-pointer border-l-2", !notification.isRead ? "border-primary bg-accent/50" : "border-transparent")}
                         onClick={() => {
                             markAsRead(notification.id);
                             router.push(notification.link);
                         }}
                     >
-                        <CircleUser className="h-6 w-6 mt-1 flex-shrink-0" />
-                        <div className="flex-1">
-                            <p className="text-sm leading-snug">{notification.message}</p>
-                            <p className="text-xs text-muted-foreground">{formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true })}</p>
+                         {!notification.isRead && (
+                            <span className="h-2 w-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                          )}
+                        <div className={cn("flex-1", notification.isRead && "pl-3")}>
+                            <p className="text-sm font-medium leading-snug">{notification.title}</p>
+                            <p className="text-xs text-muted-foreground">{notification.message}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true })}</p>
                         </div>
                     </DropdownMenuItem>
                    ))
