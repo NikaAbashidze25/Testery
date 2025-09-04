@@ -4,8 +4,8 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Menu, User, LogOut, Search, FilePlus, MessageSquare, Briefcase, Send, Bookmark, Bell, CircleUser, FileText } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Menu, User, LogOut, Search, FilePlus, MessageSquare, Briefcase, Send, Bookmark, Bell, CircleUser, FileText, Wallet } from 'lucide-react';
+import { useEffect, useState, useTransition } from 'react';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -50,7 +50,6 @@ export function Header() {
   useEffect(() => {
     if (user) {
         const notificationsRef = collection(db, 'notifications');
-        // FIX: Remove orderBy from the query to avoid needing a composite index
         const q = query(
             notificationsRef, 
             where('recipientId', '==', user.uid)
@@ -62,7 +61,6 @@ export function Header() {
                 ...doc.data()
             } as Notification));
 
-            // Sort notifications by date in the client-side code
             userNotifications.sort((a, b) => {
                 const dateA = a.createdAt?.toDate()?.getTime() || 0;
                 const dateB = b.createdAt?.toDate()?.getTime() || 0;
@@ -121,6 +119,12 @@ export function Header() {
     if (user) {
       return (
         <>
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/wallet">
+                <Wallet className="h-5 w-5" />
+                <span className="sr-only">My Wallet</span>
+              </Link>
+            </Button>
             <Button variant="ghost" size="icon" asChild>
               <Link href="/chat">
                 <MessageSquare className="h-5 w-5" />
@@ -193,6 +197,12 @@ export function Header() {
                   <Link href="/profile">
                     <User className="mr-2 h-4 w-4" />
                     <span>My Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/wallet">
+                    <Wallet className="mr-2 h-4 w-4" />
+                    <span>My Wallet</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
