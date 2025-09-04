@@ -294,7 +294,9 @@ export default function SubmissionPage() {
             <Card className="max-w-3xl mx-auto">
                  <CardHeader>
                     <CardTitle className="text-2xl">Project Submission</CardTitle>
-                    <CardDescription>Project: {project?.title || 'Loading...'}</CardDescription>
+                    <CardDescription>
+                        Project: <Link href={`/projects/${projectId}`} className="text-primary hover:underline">{project?.title || 'Loading...'}</Link>
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     {!submission && isTester && (
