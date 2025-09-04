@@ -63,7 +63,7 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <div className="container py-12">
-        <Card className="max-w-2xl mx-auto">
+        <Card className="max-w-3xl mx-auto">
           <CardHeader className="items-center text-center">
             <Skeleton className="h-24 w-24 rounded-full mb-4" />
             <Skeleton className="h-8 w-48" />
@@ -84,7 +84,7 @@ export default function ProfilePage() {
   }
 
   if (!userProfile) {
-    return null; // or a 'not found' component
+    return null; // Don't render anything until the profile is loaded
   }
 
   const isCompany = userProfile.accountType === 'company';
