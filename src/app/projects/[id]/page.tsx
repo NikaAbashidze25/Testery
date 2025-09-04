@@ -58,6 +58,7 @@ export default function ProjectDetailPage() {
   const [hasSubmission, setHasSubmission] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCheckingApplication, setIsCheckingApplication] = useState(true);
 
 
   useEffect(() => {
@@ -89,30 +90,35 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     // Check if the user has already applied, check for submission, & fetch user profile for saved projects
     const checkApplicationAndProfile = async () => {
-        if (user && project) {
-            const applicationsRef = collection(db, 'applications');
-            const q = query(applicationsRef, where('projectId', '==', project.id), where('testerId', '==', user.uid));
-            const querySnapshot = await getDocs(q);
+        if (!user || !project) {
+          setIsCheckingApplication(false);
+          return;
+        }
+        
+        setIsCheckingApplication(true);
+        const applicationsRef = collection(db, 'applications');
+        const q = query(applicationsRef, where('projectId', '==', project.id), where('testerId', '==', user.uid));
+        const querySnapshot = await getDocs(q);
 
-            if (!querySnapshot.empty) {
-                const appDoc = querySnapshot.docs[0];
-                const appData = {id: appDoc.id, ...appDoc.data()} as Application;
-                setApplication(appData);
+        if (!querySnapshot.empty) {
+            const appDoc = querySnapshot.docs[0];
+            const appData = {id: appDoc.id, ...appDoc.data()} as Application;
+            setApplication(appData);
 
-                if(appData.status === 'accepted') {
-                    // Check for submission only if application is accepted
-                    const submissionDocRef = doc(db, 'submissions', appDoc.id);
-                    const submissionDoc = await getDoc(submissionDocRef);
-                    setHasSubmission(submissionDoc.exists());
-                }
-            }
-
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            if(userDocSnap.exists()){
-                setUserProfile(userDocSnap.data() as UserProfile);
+            if(appData.status === 'accepted') {
+                // Check for submission only if application is accepted
+                const submissionDocRef = doc(db, 'submissions', appDoc.id);
+                const submissionDoc = await getDoc(submissionDocRef);
+                setHasSubmission(submissionDoc.exists());
             }
         }
+
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if(userDocSnap.exists()){
+            setUserProfile(userDocSnap.data() as UserProfile);
+        }
+        setIsCheckingApplication(false);
     };
     checkApplicationAndProfile();
   }, [user, project]);
@@ -264,6 +270,59 @@ export default function ProjectDetailPage() {
       );
   }
 
+  const renderStatusAlert = () => {
+    if (isCheckingApplication) {
+      return <Skeleton className="h-24 w-full" />;
+    }
+    if (!application || application.status !== 'accepted') {
+      return null;
+    }
+
+    if (hasSubmission) {
+      return (
+        <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-900/20">
+          <FileText className="h-4 w-4 text-blue-500" />
+          <AlertTitle className="text-blue-700 dark:text-blue-400">Work Submitted</AlertTitle>
+          <AlertDescription className="text-blue-600 dark:text-blue-500">
+            You have already submitted your work for this project.
+            <div className="mt-3 flex gap-2">
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/project/${project!.id}/submission/${application.id}`}>
+                  View Submission
+                </Link>
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      );
+    } else {
+      return (
+        <Alert className="border-green-500 bg-green-50 dark:bg-green-900/20">
+          <CheckCircle className="h-4 w-4 text-green-500" />
+          <AlertTitle className="text-green-700 dark:text-green-400">Application Accepted!</AlertTitle>
+          <AlertDescription className="text-green-600 dark:text-green-500">
+            Congratulations! You can now start working on the project.
+            <div className="mt-3 flex gap-2">
+              <Button asChild size="sm">
+                <Link href={`/chat/${application.id}`}>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Start Chat
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/project/${project!.id}/submission/${application.id}`}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Submit Work
+                </Link>
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+  };
+
+
   if (isLoading) {
     return (
         <div className="container py-12">
@@ -346,45 +405,7 @@ export default function ProjectDetailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
-            {application?.status === 'accepted' && !hasSubmission && (
-                <Alert className="border-green-500 bg-green-50 dark:bg-green-900/20">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <AlertTitle className="text-green-700 dark:text-green-400">Application Accepted!</AlertTitle>
-                    <AlertDescription className="text-green-600 dark:text-green-500">
-                        Congratulations! You can now start working on the project.
-                        <div className="mt-3 flex gap-2">
-                             <Button asChild size="sm">
-                               <Link href={`/chat/${application.id}`}>
-                                   <MessageSquare className="mr-2 h-4 w-4" />
-                                   Start Chat
-                               </Link>
-                           </Button>
-                           <Button asChild size="sm" variant="outline">
-                               <Link href={`/project/${project.id}/submission/${application.id}`}>
-                                   <Upload className="mr-2 h-4 w-4" />
-                                   Submit Work
-                               </Link>
-                           </Button>
-                        </div>
-                    </AlertDescription>
-                </Alert>
-            )}
-            {application?.status === 'accepted' && hasSubmission && (
-                 <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-900/20">
-                    <FileText className="h-4 w-4 text-blue-500" />
-                    <AlertTitle className="text-blue-700 dark:text-blue-400">Work Submitted</AlertTitle>
-                    <AlertDescription className="text-blue-600 dark:text-blue-500">
-                        You have already submitted your work for this project.
-                        <div className="mt-3 flex gap-2">
-                             <Button asChild size="sm" variant="outline">
-                               <Link href={`/project/${project.id}/submission/${application.id}`}>
-                                   View Submission
-                               </Link>
-                           </Button>
-                        </div>
-                    </AlertDescription>
-                </Alert>
-            )}
+            {renderStatusAlert()}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex items-start gap-3 rounded-lg border p-4">
                     <MapPin className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
@@ -436,5 +457,7 @@ export default function ProjectDetailPage() {
     </div>
   );
 }
+
+    
 
     
