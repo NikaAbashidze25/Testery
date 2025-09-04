@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useEffect, useState, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -71,8 +71,9 @@ const safeGetData = (doc: any): DocumentData => {
 };
 
 
-export default function UserProfilePage({ params }: { params: Promise<{ uid: string }> }) {
-  const { uid } = use(params);
+export default function UserProfilePage() {
+  const params = useParams();
+  const uid = params.uid as string;
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [postedProjects, setPostedProjects] = useState<Project[]>([]);
