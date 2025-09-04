@@ -71,9 +71,8 @@ const safeGetData = (doc: any): DocumentData => {
 };
 
 
-export default function UserProfilePage({ params, searchParams }: { params: Promise<{ uid: string }>, searchParams?: Promise<{ [key: string]: string | string[] | undefined }> }) {
-  const { uid } = use(params);
-  const searchParamsValue = use(searchParams);
+export default function UserProfilePage({ params }: { params: { uid: string } }) {
+  const { uid } = params;
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [postedProjects, setPostedProjects] = useState<Project[]>([]);
