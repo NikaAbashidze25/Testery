@@ -5,15 +5,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Wallet as WalletIcon, DollarSign, ArrowUpRight, Gift, ShieldCheck, Inbox } from 'lucide-react';
+import { Wallet as WalletIcon, DollarSign, ArrowUpRight, Gift, ShieldCheck, Inbox, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-provider';
-import { doc, getDoc, collection, query, where, orderBy, getDocs, DocumentData, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, DocumentData, Timestamp, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+
 
 interface WalletData {
     balance: number;
@@ -22,7 +28,7 @@ interface WalletData {
 
 interface Transaction extends DocumentData {
     id: string;
-    type: 'payment' | 'payout' | 'fee' | 'refund' | 'bonus';
+    type: 'payment' | 'payout' | 'fee' | 'refund' | 'bonus' | 'deposit' | 'withdrawal';
     description: string;
     amount: number;
     status: 'completed' | 'pending' | 'failed';
@@ -34,47 +40,92 @@ export default function WalletPage() {
     const [wallet, setWallet] = useState<WalletData | null>(null);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const [addFundsAmount, setAddFundsAmount] = useState('');
+    const [withdrawAmount, setWithdrawAmount] = useState('');
+    
+    const [isAddFundsOpen, setAddFundsOpen] = useState(false);
+    const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+
+    const { toast } = useToast();
+
+    const fetchWalletData = async () => {
+        if (!user) return;
+        setIsLoading(true);
+        try {
+            const walletRef = doc(db, 'wallets', user.uid);
+            const walletSnap = await getDoc(walletRef);
+            if (walletSnap.exists()) {
+                setWallet(walletSnap.data() as WalletData);
+            } else {
+                setWallet({ balance: 0, currency: 'USD' });
+            }
+
+            const transRef = collection(db, 'transactions');
+            const q = query(transRef, where('userId', '==', user.uid));
+            const transSnap = await getDocs(q);
+            const transactionsData = transSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+            
+            transactionsData.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
+            
+            setTransactions(transactionsData);
+
+        } catch (error) {
+            console.error("Failed to fetch wallet data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        if (!user) {
-            if(!isAuthLoading) setIsLoading(false);
-            return;
-        };
-
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                // Fetch wallet balance
-                const walletRef = doc(db, 'wallets', user.uid);
-                const walletSnap = await getDoc(walletRef);
-                if (walletSnap.exists()) {
-                    setWallet(walletSnap.data() as WalletData);
-                } else {
-                    // Create a default wallet if it doesn't exist
-                    setWallet({ balance: 0, currency: 'USD' });
-                }
-
-                // Fetch transactions
-                const transRef = collection(db, 'transactions');
-                const q = query(transRef, where('userId', '==', user.uid));
-                const transSnap = await getDocs(q);
-                const transactionsData = transSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-                
-                // Sort transactions by date client-side
-                transactionsData.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
-                
-                setTransactions(transactionsData);
-
-            } catch (error) {
-                console.error("Failed to fetch wallet data:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchData();
-
+        if (!isAuthLoading) {
+            fetchWalletData();
+        }
     }, [user, isAuthLoading]);
+
+    const handleTransaction = async (type: 'deposit' | 'withdrawal', amount: number) => {
+        if (!user || !wallet || amount <= 0) return;
+
+        if (type === 'withdrawal' && amount > wallet.balance) {
+            toast({ variant: 'destructive', title: 'Insufficient Funds', description: 'You cannot withdraw more than your available balance.' });
+            return;
+        }
+
+        setIsSubmitting(true);
+        const batch = writeBatch(db);
+        
+        const newBalance = type === 'deposit' ? wallet.balance + amount : wallet.balance - amount;
+        const walletRef = doc(db, 'wallets', user.uid);
+        batch.set(walletRef, { balance: newBalance, currency: wallet.currency }, { merge: true });
+
+        const newTransactionRef = doc(collection(db, 'transactions'));
+        batch.set(newTransactionRef, {
+            userId: user.uid,
+            type,
+            amount: type === 'deposit' ? amount : -amount,
+            description: type === 'deposit' ? 'Funds added to wallet' : 'Withdrawal from wallet',
+            status: 'completed',
+            createdAt: serverTimestamp(),
+        });
+        
+        try {
+            await batch.commit();
+            toast({ title: 'Success', description: `Your wallet has been updated.` });
+            await fetchWalletData(); // Refresh data
+            if(type === 'deposit') {
+                setAddFundsAmount('');
+                setAddFundsOpen(false);
+            } else {
+                setWithdrawAmount('');
+                setIsWithdrawOpen(false);
+            }
+        } catch (error) {
+             toast({ variant: 'destructive', title: 'Transaction Failed', description: 'There was an error processing your request.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const formatCurrency = (amount: number, currency = 'USD') => {
         return new Intl.NumberFormat('en-US', {
@@ -129,7 +180,6 @@ export default function WalletPage() {
 
        {isLoading || isAuthLoading ? renderSkeletons() : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            {/* Main Column */}
             <div className="lg:col-span-2 space-y-8">
               <Card>
                 <CardHeader>
@@ -142,14 +192,54 @@ export default function WalletPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="gap-2">
-                  <Button disabled>
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    Add Funds
-                  </Button>
-                  <Button variant="outline" disabled={(wallet?.balance ?? 0) <= 0}>
-                    <ArrowUpRight className="mr-2 h-4 w-4" />
-                    Withdraw
-                  </Button>
+                    <Dialog open={isAddFundsOpen} onOpenChange={setAddFundsOpen}>
+                        <DialogTrigger asChild>
+                            <Button>
+                                <DollarSign className="mr-2 h-4 w-4" />
+                                Add Funds
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Add Funds to Wallet</DialogTitle>
+                                <DialogDescription>This is a simulation. No real money will be charged.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <Label htmlFor="add-amount">Amount (USD)</Label>
+                                <Input id="add-amount" type="number" placeholder="e.g., 50.00" value={addFundsAmount} onChange={(e) => setAddFundsAmount(e.target.value)} />
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setAddFundsOpen(false)}>Cancel</Button>
+                                <Button onClick={() => handleTransaction('deposit', parseFloat(addFundsAmount))} disabled={isSubmitting || !addFundsAmount}>
+                                    {isSubmitting ? 'Processing...' : 'Add Funds'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <Dialog open={isWithdrawOpen} onOpenChange={setIsWithdrawOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" disabled={(wallet?.balance ?? 0) <= 0}>
+                                <ArrowUpRight className="mr-2 h-4 w-4" />
+                                Withdraw
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Withdraw Funds</DialogTitle>
+                                <DialogDescription>This is a simulation. No real money will be transferred.</DialogDescription>
+                            </DialogHeader>
+                             <div className="grid gap-4 py-4">
+                                <Label htmlFor="withdraw-amount">Amount (USD)</Label>
+                                <Input id="withdraw-amount" type="number" placeholder="e.g., 50.00" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+                            </div>
+                            <DialogFooter>
+                                 <Button variant="outline" onClick={() => setIsWithdrawOpen(false)}>Cancel</Button>
+                                <Button onClick={() => handleTransaction('withdrawal', parseFloat(withdrawAmount))} disabled={isSubmitting || !withdrawAmount || parseFloat(withdrawAmount) > (wallet?.balance ?? 0)}>
+                                    {isSubmitting ? 'Processing...' : 'Withdraw Funds'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </CardFooter>
               </Card>
 
@@ -195,7 +285,7 @@ export default function WalletPage() {
                         </Table>
                     )}
                 </CardContent>
-                {transactions.length > 0 && (
+                {transactions.length > 5 && (
                     <CardFooter>
                         <Button variant="outline" className="w-full">View All Transactions</Button>
                     </CardFooter>
