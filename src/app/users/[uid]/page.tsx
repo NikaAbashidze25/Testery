@@ -93,9 +93,11 @@ export default function UserProfilePage() {
                     const profileData = safeGetData(userDocSnap) as UserProfile;
                     setUserProfile(profileData);
                     
-                    const postedProjectsQuery = query(collection(db, 'projects'), where('authorId', '==', uid), orderBy('postedAt', 'desc'));
+                    const postedProjectsQuery = query(collection(db, 'projects'), where('authorId', '==', uid));
                     const postedProjectsSnapshot = await getDocs(postedProjectsQuery);
-                    const postedProjectsData = postedProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...safeGetData(doc) } as Project));
+                    const postedProjectsData = postedProjectsSnapshot.docs
+                        .map(doc => ({ id: doc.id, ...safeGetData(doc) } as Project))
+                        .sort((a,b) => b.postedAt.seconds - a.postedAt.seconds);
                     setPostedProjects(postedProjectsData);
 
                     const testedApplicationsQuery = query(
@@ -525,6 +527,8 @@ const ProfileStats = ({ postedProjects, testedProjects, reviews }: {
     </Card>
   </div>
 );
+
+    
 
     
 
