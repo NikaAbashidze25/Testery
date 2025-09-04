@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -170,7 +171,7 @@ export default function ProfilePage() {
                     description="Access projects you have saved to view later."
                 />
                  <ActivityCard
-                    href="/users/[uid]"
+                    href={`/users/${user.uid}`}
                     icon={Briefcase}
                     title="Public View"
                     description="See how your profile appears to other users."
