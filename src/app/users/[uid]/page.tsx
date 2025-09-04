@@ -525,3 +525,5 @@ const ProfileStats = ({ postedProjects, testedProjects, reviews }: {
     </Card>
   </div>
 );
+
+    
