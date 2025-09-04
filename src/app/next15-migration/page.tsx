@@ -359,7 +359,7 @@ export default function Next15MigrationPage() {
                   <br />
                   &nbsp;&nbsp;&nbsp;&nbsp;
                   <span className="code-comment">
-                    /* @next-codemod-error Manually await this call and refactor the function to be async */
+                    {`/* @next-codemod-error Manually await this call and refactor the function to be async */`}
                   </span>
                   <br />
                   &nbsp;&nbsp;&nbsp;&nbsp;cookies();
