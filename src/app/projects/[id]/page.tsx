@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check, Send, Clock, CheckCircle, XCircle, Bookmark, MessageSquare, Upload } from 'lucide-react';
+import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check, Send, Clock, CheckCircle, XCircle, Bookmark, MessageSquare, Upload, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -55,6 +55,7 @@ export default function ProjectDetailPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [application, setApplication] = useState<Application | null>(null);
+  const [hasSubmission, setHasSubmission] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -86,15 +87,24 @@ export default function ProjectDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    // Check if the user has already applied & fetch user profile for saved projects
+    // Check if the user has already applied, check for submission, & fetch user profile for saved projects
     const checkApplicationAndProfile = async () => {
         if (user && project) {
             const applicationsRef = collection(db, 'applications');
             const q = query(applicationsRef, where('projectId', '==', project.id), where('testerId', '==', user.uid));
             const querySnapshot = await getDocs(q);
+
             if (!querySnapshot.empty) {
                 const appDoc = querySnapshot.docs[0];
-                setApplication({id: appDoc.id, ...appDoc.data()} as Application);
+                const appData = {id: appDoc.id, ...appDoc.data()} as Application;
+                setApplication(appData);
+
+                if(appData.status === 'accepted') {
+                    // Check for submission only if application is accepted
+                    const submissionDocRef = doc(db, 'submissions', appDoc.id);
+                    const submissionDoc = await getDoc(submissionDocRef);
+                    setHasSubmission(submissionDoc.exists());
+                }
             }
 
             const userDocRef = doc(db, 'users', user.uid);
@@ -336,7 +346,7 @@ export default function ProjectDetailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
-            {application?.status === 'accepted' && (
+            {application?.status === 'accepted' && !hasSubmission && (
                 <Alert className="border-green-500 bg-green-50 dark:bg-green-900/20">
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <AlertTitle className="text-green-700 dark:text-green-400">Application Accepted!</AlertTitle>
@@ -353,6 +363,22 @@ export default function ProjectDetailPage() {
                                <Link href={`/project/${project.id}/submission/${application.id}`}>
                                    <Upload className="mr-2 h-4 w-4" />
                                    Submit Work
+                               </Link>
+                           </Button>
+                        </div>
+                    </AlertDescription>
+                </Alert>
+            )}
+            {application?.status === 'accepted' && hasSubmission && (
+                 <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-900/20">
+                    <FileText className="h-4 w-4 text-blue-500" />
+                    <AlertTitle className="text-blue-700 dark:text-blue-400">Work Submitted</AlertTitle>
+                    <AlertDescription className="text-blue-600 dark:text-blue-500">
+                        You have already submitted your work for this project.
+                        <div className="mt-3 flex gap-2">
+                             <Button asChild size="sm" variant="outline">
+                               <Link href={`/project/${project.id}/submission/${application.id}`}>
+                                   View Submission
                                </Link>
                            </Button>
                         </div>
@@ -410,3 +436,5 @@ export default function ProjectDetailPage() {
     </div>
   );
 }
+
+    
