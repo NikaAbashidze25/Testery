@@ -95,11 +95,11 @@ export default function ProfilePage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
             <Avatar className="h-24 w-24 text-3xl">
-              <AvatarImage src={isCompany ? userProfile.companyLogoUrl : userProfile.profilePictureUrl} />
+              <AvatarImage src={isCompany ? userProfile.companyLogoUrl || '' : userProfile.profilePictureUrl || ''} />
               <AvatarFallback>{getInitials(isCompany ? userProfile.companyName : userProfile.fullName)}</AvatarFallback>
             </Avatar>
             <div className="space-y-1">
-              <CardTitle className="text-3xl">{isCompany ? userProfile.companyName : userProfile.fullName}</CardTitle>
+              <CardTitle className="text-3xl">{isCompany ? userProfile.companyName || 'Unnamed Company' : userProfile.fullName || 'Unnamed User'}</CardTitle>
               <CardDescription className="flex items-center justify-center sm:justify-start gap-2">
                 <Mail className="h-4 w-4" />
                 {userProfile.email}
@@ -114,14 +114,14 @@ export default function ProfilePage() {
         <CardContent className="space-y-6 pt-6 border-t">
           {isCompany ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-               <div className="flex items-center gap-3">
+               {userProfile.contactPerson && <div className="flex items-center gap-3">
                   <UserIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                   <div><strong>Contact:</strong> {userProfile.contactPerson}</div>
-              </div>
-              <div className="flex items-center gap-3">
+              </div>}
+              {userProfile.industry && <div className="flex items-center gap-3">
                   <Briefcase className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                   <div><strong>Industry:</strong> {userProfile.industry}</div>
-              </div>
+              </div>}
               {userProfile.website && (
                  <div className="flex items-center gap-3 md:col-span-2">
                     <Globe className="h-5 w-5 text-muted-foreground flex-shrink-0" />
@@ -130,7 +130,7 @@ export default function ProfilePage() {
               )}
             </div>
           ) : (
-             userProfile.skills && userProfile.skills.length > 0 && (
+             Array.isArray(userProfile.skills) && userProfile.skills.length > 0 && (
                 <div>
                   <h3 className="font-semibold mb-3 flex items-center gap-2 text-lg"><Briefcase className="h-5 w-5"/> Skills</h3>
                   <div className="flex flex-wrap gap-2">
@@ -170,3 +170,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
