@@ -1,6 +1,7 @@
 
 'use client';
 
+import * as React from 'react';
 import { useEffect, useState, useRef, useCallback, useTransition } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import {
@@ -42,7 +43,7 @@ import { useTheme } from 'next-themes';
 import { Send, Smile, Reply, MoreHorizontal, X, Edit, Trash2, Pin, Info, Search, Paperclip, Menu, File as FileIcon, MessageSquare, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 // Interfaces
@@ -240,6 +241,7 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [newMessage, setNewMessage] = useState('');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
