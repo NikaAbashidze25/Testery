@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-provider';
-import { doc, getDoc, type DocumentData } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,9 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Briefcase, Edit, FileText, Send, Bookmark, User as UserIcon, Building } from 'lucide-react';
+import { Briefcase, Edit, FileText, Send, Bookmark, User as UserIcon, Building, Mail, Globe, ExternalLink } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 interface UserProfile {
   uid: string;
@@ -49,6 +51,7 @@ export default function ProfilePage() {
           setUserProfile(userDocSnap.data() as UserProfile);
         } else {
           console.error("User document not found in Firestore.");
+          // You might want to create a default profile here or redirect
         }
       } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -77,7 +80,9 @@ export default function ProfilePage() {
             <Skeleton className="h-8 w-48 mb-2" />
             <Skeleton className="h-5 w-64" />
           </CardHeader>
-           <CardContent>
+           <CardContent className="space-y-4">
+             <Skeleton className="h-5 w-32" />
+             <Skeleton className="h-5 w-full" />
             <div className="flex justify-center mt-4">
                 <Skeleton className="h-11 w-36" />
             </div>
@@ -129,14 +134,55 @@ export default function ProfilePage() {
           <div className="pt-4">
               <CardTitle className="text-3xl">{name || 'User'}</CardTitle>
               <CardDescription className="flex items-center justify-center gap-2 mt-2">
-                {isCompany ? <Building className="h-4 w-4" /> : <UserIcon className="h-4 w-4" />}
-                {isCompany ? 'Company Account' : 'Individual Account'}
+                 <Mail className="h-4 w-4" />
+                {userProfile.email || 'No email provided'}
               </CardDescription>
-              <CardDescription>{userProfile.email}</CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
-            <div className="flex justify-center mt-4">
+        <CardContent className="px-6 space-y-6">
+            <Separator />
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg flex items-center gap-3 text-muted-foreground">
+                  <UserIcon className="h-5 w-5" />
+                  About
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                   <div className="flex items-center gap-3">
+                      <Building className="h-5 w-5 text-muted-foreground" />
+                      <p><strong>Account Type:</strong> <span className="capitalize">{userProfile.accountType}</span></p>
+                  </div>
+                  {isCompany && userProfile.contactPerson && (
+                       <div className="flex items-center gap-3">
+                          <UserIcon className="h-5 w-5 text-muted-foreground" />
+                          <p><strong>Contact:</strong> {userProfile.contactPerson}</p>
+                      </div>
+                  )}
+                   {isCompany && userProfile.industry && (
+                       <div className="flex items-center gap-3">
+                          <Briefcase className="h-5 w-5 text-muted-foreground" />
+                          <p><strong>Industry:</strong> {userProfile.industry}</p>
+                      </div>
+                  )}
+                   {isCompany && userProfile.website && (
+                       <div className="flex items-center gap-3">
+                          <Globe className="h-5 w-5 text-muted-foreground" />
+                          <a href={userProfile.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">Website <ExternalLink className="h-4 w-4" /></a>
+                      </div>
+                  )}
+              </div>
+              {!isCompany && Array.isArray(userProfile.skills) && userProfile.skills.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <h4 className="font-semibold text-muted-foreground">Skills</h4>
+                  <div className="flex flex-wrap gap-2">
+                      {userProfile.skills.map((skill: string) => (
+                          <Badge key={skill} variant="secondary">{skill}</Badge>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-center pt-2">
                  <Button asChild size="lg">
                     <Link href="/profile/edit">
                     <Edit className="mr-2 h-4 w-4" />
