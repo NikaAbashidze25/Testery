@@ -21,6 +21,7 @@ import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud 
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { notifySubmissionReceived } from '@/lib/notifications';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const submissionSchema = z.object({
@@ -52,6 +53,11 @@ interface Submission extends DocumentData {
     feedback?: FeedbackFormValues;
 }
 
+interface ClientProfile {
+    name: string;
+    avatarUrl?: string;
+}
+
 export default function SubmissionPage() {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -61,6 +67,7 @@ export default function SubmissionPage() {
     const [application, setApplication] = useState<DocumentData | null>(null);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isDragging, setIsDragging] = useState(false);
+    const [clientProfile, setClientProfile] = useState<ClientProfile | null>(null);
 
 
     const router = useRouter();
@@ -91,6 +98,15 @@ export default function SubmissionPage() {
         });
         return () => unsubscribe();
     }, [router]);
+    
+    const getInitials = (name: string | undefined) => {
+        if (!name) return 'U';
+        const names = name.split(' ');
+        if (names.length > 1) {
+        return names[0][0] + names[names.length - 1][0];
+        }
+        return name[0];
+    };
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -130,6 +146,17 @@ export default function SubmissionPage() {
                     if(subData.feedback) {
                         feedbackForm.reset(subData.feedback);
                         setRating(subData.feedback.rating);
+                    }
+                    
+                    // Fetch client profile if submission exists
+                    const clientDocRef = doc(db, 'users', subData.clientId);
+                    const clientDocSnap = await getDoc(clientDocRef);
+                    if (clientDocSnap.exists()) {
+                        const clientData = clientDocSnap.data();
+                        setClientProfile({
+                            name: clientData.companyName || clientData.fullName,
+                            avatarUrl: clientData.companyLogoUrl || clientData.profilePictureUrl
+                        });
                     }
                 }
             } catch (e) {
@@ -406,19 +433,24 @@ export default function SubmissionPage() {
                             
                             <div className="border-t pt-6">
                                 <h3 className="font-semibold text-lg mb-4">Feedback</h3>
-                                {submission.feedback && (
+                                {submission.feedback && clientProfile && (
                                      <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
-                                        <div>
-                                            <p className="text-sm font-medium">Rating:</p>
-                                            <div className="flex items-center gap-1 mt-1">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <Star key={i} className={cn('h-6 w-6', i < submission.feedback!.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300')} />
-                                                ))}
+                                        <div className="flex items-start gap-4">
+                                            <Avatar>
+                                                <AvatarImage src={clientProfile.avatarUrl} alt={clientProfile.name} />
+                                                <AvatarFallback>{getInitials(clientProfile.name)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1 space-y-3">
+                                                <div>
+                                                    <p className="text-sm font-medium">Feedback from {clientProfile.name}</p>
+                                                    <div className="flex items-center gap-1 mt-1">
+                                                        {[...Array(5)].map((_, i) => (
+                                                            <Star key={i} className={cn('h-5 w-5', i < submission.feedback!.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300')} />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <p className="text-muted-foreground">{submission.feedback.comment}</p>
                                             </div>
-                                        </div>
-                                         <div>
-                                            <p className="text-sm font-medium">Client Comments:</p>
-                                            <p className="text-muted-foreground">{submission.feedback.comment}</p>
                                         </div>
                                     </div>
                                 )}
