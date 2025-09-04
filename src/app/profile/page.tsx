@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-provider';
-import { doc, getDoc, type DocumentData } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Edit } from 'lucide-react';
 
-interface UserProfile extends DocumentData {
+// Removed 'extends DocumentData' to ensure a plain interface
+interface UserProfile {
   uid: string;
   email: string;
   accountType: 'individual' | 'company';
@@ -38,15 +39,20 @@ export default function ProfilePage() {
 
     const fetchUserProfile = async () => {
       setIsLoading(true);
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      if (userDocSnap.exists()) {
-        setUserProfile(userDocSnap.data() as UserProfile);
-      } else {
-        // This case might happen if there's a delay in creating the Firestore doc after signup
-        console.error("User document not found in Firestore.");
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          // Cast to the clean UserProfile interface
+          setUserProfile(userDocSnap.data() as UserProfile);
+        } else {
+          console.error("User document not found in Firestore.");
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     fetchUserProfile();
