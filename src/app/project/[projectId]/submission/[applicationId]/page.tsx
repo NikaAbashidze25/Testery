@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud, Check, DollarSign, AlertTriangle, MessageSquare, Edit, Send } from 'lucide-react';
+import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud, Check, DollarSign, AlertTriangle, MessageSquare, Edit, Send, Gift } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { notifySubmissionReceived, notifySubmissionEdited, notifyFeedbackReceived } from '@/lib/notifications';
@@ -75,12 +75,14 @@ interface ApplicationData extends DocumentData {
     projectId: string;
     isApproved?: boolean;
     rewardedAmount?: number;
+    rewardedService?: string;
     reviewId?: string;
 }
 
 interface ProjectData extends DocumentData {
     title: string;
-    compensation: number;
+    rewardType: 'monetary' | 'service';
+    compensation: number | string;
 }
 
 interface UserProfile {
@@ -275,39 +277,57 @@ export default function SubmissionPage() {
     };
 
     const handleApproveAndPay = async (values: FeedbackFormValues) => {
-        if (!user || !application || !project || !clientWallet || !clientProfile) return;
-        const rewardAmount = parseFloat(String(project.compensation));
-        if (rewardAmount > clientWallet.balance) {
-            toast({ variant: 'destructive', title: 'Insufficient Funds' });
-            return;
-        }
-
-        setIsSubmitting(true);
+        if (!user || !application || !project || !clientProfile) return;
+        
         const batch = writeBatch(db);
         const appRef = doc(db, 'applications', applicationId);
-        batch.update(appRef, { isApproved: true, rewardedAmount: rewardAmount });
-
         const reviewRef = doc(collection(db, 'reviews'));
-        batch.set(reviewRef, { ...values, testerId: application.testerId, clientId: user.uid, clientName: clientProfile.name, clientAvatar: clientProfile.avatarUrl, projectId, createdAt: serverTimestamp() });
-        batch.update(appRef, { reviewId: reviewRef.id });
 
-        const clientWalletRef = doc(db, 'wallets', user.uid);
-        batch.update(clientWalletRef, { balance: clientWallet.balance - rewardAmount });
+        if (project.rewardType === 'monetary') {
+            const rewardAmount = parseFloat(String(project.compensation));
+            if (!clientWallet || rewardAmount > clientWallet.balance) {
+                toast({ variant: 'destructive', title: 'Insufficient Funds' });
+                return;
+            }
 
-        const testerWalletRef = doc(db, 'wallets', application.testerId);
-        const testerWalletSnap = await getDoc(testerWalletRef);
-        const newTesterBalance = (testerWalletSnap.data()?.balance || 0) + rewardAmount;
-        batch.set(testerWalletRef, { balance: newTesterBalance, currency: 'USD' }, { merge: true });
+            batch.update(appRef, { isApproved: true, rewardedAmount: rewardAmount, reviewId: reviewRef.id });
+
+            const clientWalletRef = doc(db, 'wallets', user.uid);
+            batch.update(clientWalletRef, { balance: clientWallet.balance - rewardAmount });
+
+            const testerWalletRef = doc(db, 'wallets', application.testerId);
+            const testerWalletSnap = await getDoc(testerWalletRef);
+            const newTesterBalance = (testerWalletSnap.data()?.balance || 0) + rewardAmount;
+            batch.set(testerWalletRef, { balance: newTesterBalance, currency: 'USD' }, { merge: true });
+            
+            batch.set(doc(collection(db, 'transactions')), { userId: user.uid, type: 'payment', amount: -rewardAmount, description: `Payment for project: ${project.title}`, status: 'completed', createdAt: serverTimestamp(), relatedUserId: application.testerId });
+            batch.set(doc(collection(db, 'transactions')), { userId: application.testerId, type: 'payout', amount: rewardAmount, description: `Reward for project: ${project.title}`, status: 'completed', createdAt: serverTimestamp(), relatedUserId: user.uid });
+        } else { // Service/Voucher Reward
+             const rewardDescription = String(project.compensation);
+             batch.update(appRef, { isApproved: true, rewardedService: rewardDescription, reviewId: reviewRef.id });
+
+             const testerWalletRewardsRef = doc(collection(db, 'wallets', application.testerId, 'rewards'));
+             batch.set(testerWalletRewardsRef, {
+                 projectId: projectId,
+                 projectTitle: project.title,
+                 rewardType: 'service',
+                 description: rewardDescription,
+                 status: 'issued',
+                 issuedBy: user.uid,
+                 issuedTo: application.testerId,
+                 issuedAt: serverTimestamp()
+             });
+        }
         
-        batch.set(doc(collection(db, 'transactions')), { userId: user.uid, type: 'payment', amount: -rewardAmount, description: `Payment for project: ${project.title}`, status: 'completed', createdAt: serverTimestamp(), relatedUserId: application.testerId });
-        batch.set(doc(collection(db, 'transactions')), { userId: application.testerId, type: 'payout', amount: rewardAmount, description: `Reward for project: ${project.title}`, status: 'completed', createdAt: serverTimestamp(), relatedUserId: user.uid });
+        setIsSubmitting(true);
+        batch.set(reviewRef, { ...values, testerId: application.testerId, clientId: user.uid, clientName: clientProfile.name, clientAvatar: clientProfile.avatarUrl, projectId, createdAt: serverTimestamp() });
 
         try {
             await batch.commit();
-            toast({ title: 'Project Approved & Payment Sent!', description: 'The tester has been paid and your review has been posted.' });
+            toast({ title: 'Project Approved & Reward Sent!', description: 'The tester has received their reward and your review has been posted.' });
             setApproveDialogOpen(false);
         } catch(error: any) {
-            toast({ variant: 'destructive', title: 'Failed to process payment', description: error.message });
+            toast({ variant: 'destructive', title: 'Failed to process approval', description: error.message });
         } finally {
             setIsSubmitting(false);
         }
@@ -409,10 +429,10 @@ export default function SubmissionPage() {
                                         </DialogTrigger>
                                         <DialogContent>
                                             <DialogHeader>
-                                                <DialogTitle>Approve Submission & Release Payment</DialogTitle>
-                                                <DialogDescription>Leave a final review for the tester. This will be public on their profile. Payment will be released upon submission.</DialogDescription>
+                                                <DialogTitle>Approve Submission & Release Reward</DialogTitle>
+                                                <DialogDescription>Leave a final review for the tester. This will be public on their profile. The reward will be released upon submission.</DialogDescription>
                                             </DialogHeader>
-                                            {!clientWallet || clientWallet.balance < (project?.compensation ?? 0) ? (
+                                            {project.rewardType === 'monetary' && (!clientWallet || clientWallet.balance < (project?.compensation as number ?? 0)) ? (
                                                 <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Insufficient Funds</AlertTitle><AlertDescription>Your balance is too low. Please <Link href="/wallet" className="font-bold underline">add funds</Link>.</AlertDescription></Alert>
                                             ) : (
                                                 <Form {...feedbackForm}>
@@ -425,7 +445,9 @@ export default function SubmissionPage() {
                                                         )} />
                                                         <DialogFooter>
                                                             <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
-                                                            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Processing...' : `Pay ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(project?.compensation ?? 0)}`}</Button>
+                                                            <Button type="submit" disabled={isSubmitting}>
+                                                                {isSubmitting ? 'Processing...' : `Release ${project.rewardType === 'monetary' ? 'Payment' : 'Reward'}`}
+                                                            </Button>
                                                         </DialogFooter>
                                                     </form>
                                                 </Form>
@@ -444,7 +466,7 @@ export default function SubmissionPage() {
                             <Check className="h-4 w-4 !text-green-500" />
                             <AlertTitle>Project Approved</AlertTitle>
                             <AlertDescription>
-                                You approved this project and paid the tester <strong>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(application.rewardedAmount ?? 0)}</strong>.
+                                You approved this project and sent the reward to the tester.
                                 {application.reviewId && isClient && (
                                     <Button asChild variant="link" className="p-0 h-auto ml-2"><Link href={`/profile`}>View your review</Link></Button>
                                 )}

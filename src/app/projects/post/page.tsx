@@ -25,14 +25,24 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import Link from 'next/link';
 import { FileText } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const projectFormSchema = z.object({
   title: z.string().min(10, 'Title must be at least 10 characters.'),
   location: z.string().min(2, 'Location is required.'),
-  compensation: z.coerce.number().positive({ message: 'Compensation must be a positive number.' }),
+  rewardType: z.enum(['monetary', 'service'], { required_error: 'You must select a reward type.' }),
+  compensation: z.string().min(1, 'A reward value or description is required.'),
   type: z.string().min(3, 'Type is required (e.g. Full-time, Contract)'),
   description: z.string().min(50, 'Description must be at least 50 characters.'),
   skills: z.string().min(3, 'Please list at least one skill.'),
+}).refine(data => {
+    if (data.rewardType === 'monetary') {
+        return !isNaN(parseFloat(data.compensation)) && parseFloat(data.compensation) > 0;
+    }
+    return true;
+}, {
+    message: 'Monetary reward must be a positive number.',
+    path: ['compensation'],
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -62,11 +72,14 @@ export default function PostProjectPage() {
       title: '',
       description: '',
       skills: '',
-      compensation: 0,
+      rewardType: 'monetary',
+      compensation: '',
       location: '',
       type: '',
     },
   });
+
+  const rewardType = form.watch('rewardType');
 
   const onSubmit = async (data: ProjectFormValues) => {
     if (!user) {
@@ -79,15 +92,19 @@ export default function PostProjectPage() {
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
         
-        let posterName = user.displayName; // Default to displayName from Auth
+        let posterName = user.displayName; 
         if(userDocSnap.exists()) {
           const userData = userDocSnap.data();
-          // For companies, use companyName. For individuals, it will be fullName (which is also their displayName).
           posterName = userData.companyName || userData.fullName;
         }
 
+        const compensationValue = data.rewardType === 'monetary' 
+            ? parseFloat(data.compensation) 
+            : data.compensation;
+
         await addDoc(collection(db, 'projects'), {
             ...data,
+            compensation: compensationValue,
             skills: data.skills.split(',').map(s => s.trim()),
             authorId: user.uid,
             companyName: posterName, 
@@ -139,7 +156,7 @@ export default function PostProjectPage() {
                   </FormItem>
                 )}
               />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                    <FormField
                     control={form.control}
                     name="location"
@@ -166,20 +183,66 @@ export default function PostProjectPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
+                </div>
+                
+                <FormField
+                    control={form.control}
+                    name="rewardType"
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                            <FormLabel>Reward Type</FormLabel>
+                            <FormControl>
+                                <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="flex flex-col space-y-1"
+                                >
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                    <RadioGroupItem value="monetary" />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                    Monetary Reward
+                                    </FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                    <RadioGroupItem value="service" />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                    Service / Voucher
+                                    </FormLabel>
+                                </FormItem>
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
                     control={form.control}
                     name="compensation"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Reward / Compensation ($)</FormLabel>
+                        <FormLabel>
+                          {rewardType === 'monetary' ? 'Reward Amount ($)' : 'Reward Description'}
+                        </FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="e.g., 500" {...field} disabled={isLoading}/>
+                          <Input 
+                            type={rewardType === 'monetary' ? 'number' : 'text'}
+                            step={rewardType === 'monetary' ? '0.01' : undefined}
+                            placeholder={rewardType === 'monetary' ? 'e.g., 500' : 'e.g., $20 Amazon Voucher'} 
+                            {...field} 
+                            disabled={isLoading}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
-                  />
-                </div>
+                />
+
+
               <FormField
                 control={form.control}
                 name="description"

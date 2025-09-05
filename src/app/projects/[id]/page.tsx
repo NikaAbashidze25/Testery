@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check, Send, Clock, CheckCircle, XCircle, Bookmark, MessageSquare, Upload, FileText } from 'lucide-react';
+import { ArrowLeft, MapPin, DollarSign, Type, Briefcase, Info, UserCircle, AlertTriangle, Edit, Check, Send, Clock, CheckCircle, XCircle, Bookmark, MessageSquare, Upload, FileText, Gift } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,8 @@ interface Project extends DocumentData {
     companyName: string;
     location: string;
     type: string;
-    compensation: number;
+    rewardType: 'monetary' | 'service';
+    compensation: number | string;
     description: string;
     skills: string[];
     authorId: string;
@@ -429,10 +430,19 @@ export default function ProjectDetailPage() {
                     </div>
                 </div>
                  <div className="flex items-start gap-3 rounded-lg border p-4">
-                    <DollarSign className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                    {project.rewardType === 'monetary' ? (
+                        <DollarSign className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                    ) : (
+                        <Gift className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                    )}
                     <div>
                         <h4 className="font-semibold">Reward / Compensation</h4>
-                        <p className="text-muted-foreground">{formatCurrency(project.compensation)}</p>
+                        <p className="text-muted-foreground">
+                            {project.rewardType === 'monetary'
+                                ? formatCurrency(project.compensation as number)
+                                : project.compensation
+                            }
+                        </p>
                     </div>
                 </div>
             </div>

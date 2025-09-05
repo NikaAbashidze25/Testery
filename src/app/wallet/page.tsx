@@ -9,16 +9,16 @@ import { Wallet as WalletIcon, DollarSign, ArrowUpRight, Gift, ShieldCheck, Inbo
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-provider';
-import { doc, getDoc, collection, query, where, getDocs, DocumentData, Timestamp, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, DocumentData, Timestamp, writeBatch, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 interface WalletData {
@@ -26,8 +26,16 @@ interface WalletData {
     currency: string;
 }
 
-interface Transaction extends DocumentData {
+interface Reward extends DocumentData {
     id: string;
+    projectTitle: string;
+    description: string;
+    status: 'issued' | 'claimed';
+    issuedAt: Timestamp;
+}
+
+interface Transaction extends DocumentData {
+    id:string;
     type: 'payment' | 'payout' | 'fee' | 'refund' | 'bonus' | 'deposit' | 'withdrawal';
     description: string;
     amount: number;
@@ -39,6 +47,7 @@ export default function WalletPage() {
     const { user, isLoading: isAuthLoading } = useAuth();
     const [wallet, setWallet] = useState<WalletData | null>(null);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [rewards, setRewards] = useState<Reward[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -54,6 +63,7 @@ export default function WalletPage() {
         if (!user) return;
         setIsLoading(true);
         try {
+            // Fetch wallet balance
             const walletRef = doc(db, 'wallets', user.uid);
             const walletSnap = await getDoc(walletRef);
             if (walletSnap.exists()) {
@@ -62,14 +72,19 @@ export default function WalletPage() {
                 setWallet({ balance: 0, currency: 'USD' });
             }
 
+            // Fetch monetary transactions
             const transRef = collection(db, 'transactions');
-            const q = query(transRef, where('userId', '==', user.uid));
-            const transSnap = await getDocs(q);
+            const qTrans = query(transRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+            const transSnap = await getDocs(qTrans);
             const transactionsData = transSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-            
-            transactionsData.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
-            
             setTransactions(transactionsData);
+
+            // Fetch service/voucher rewards
+            const rewardsRef = collection(db, 'wallets', user.uid, 'rewards');
+            const qRewards = query(rewardsRef, orderBy('issuedAt', 'desc'));
+            const rewardsSnap = await getDocs(qRewards);
+            const rewardsData = rewardsSnap.docs.map(doc => ({id: doc.id, ...doc.data()} as Reward));
+            setRewards(rewardsData);
 
         } catch (error) {
             console.error("Failed to fetch wallet data:", error);
@@ -79,13 +94,17 @@ export default function WalletPage() {
     };
 
     useEffect(() => {
-        if (!isAuthLoading) {
+        if (!isAuthLoading && user) {
             fetchWalletData();
         }
     }, [user, isAuthLoading]);
 
-    const handleTransaction = async (type: 'deposit' | 'withdrawal', amount: number) => {
-        if (!user || !wallet || amount <= 0) return;
+    const handleTransaction = async (type: 'deposit' | 'withdrawal', amountStr: string) => {
+        const amount = parseFloat(amountStr);
+        if (!user || !wallet || !amount || amount <= 0) {
+             toast({ variant: 'destructive', title: 'Invalid Amount', description: 'Please enter a valid positive number.' });
+             return;
+        }
 
         if (type === 'withdrawal' && amount > wallet.balance) {
             toast({ variant: 'destructive', title: 'Insufficient Funds', description: 'You cannot withdraw more than your available balance.' });
@@ -163,7 +182,6 @@ export default function WalletPage() {
             </div>
              <div className="space-y-6">
                 <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-32 w-full" />
             </div>
         </div>
     );
@@ -175,7 +193,7 @@ export default function WalletPage() {
           <WalletIcon className="h-10 w-10 text-primary" />
           My Wallet
         </h1>
-        <p className="text-muted-foreground">Manage your balance, view transactions, and explore services.</p>
+        <p className="text-muted-foreground">Manage your balance, view transactions, and keep track of your rewards.</p>
       </div>
 
        {isLoading || isAuthLoading ? renderSkeletons() : (
@@ -210,7 +228,7 @@ export default function WalletPage() {
                             </div>
                             <DialogFooter>
                                 <Button variant="outline" onClick={() => setAddFundsOpen(false)}>Cancel</Button>
-                                <Button onClick={() => handleTransaction('deposit', parseFloat(addFundsAmount))} disabled={isSubmitting || !addFundsAmount}>
+                                <Button onClick={() => handleTransaction('deposit', addFundsAmount)} disabled={isSubmitting || !addFundsAmount}>
                                     {isSubmitting ? 'Processing...' : 'Add Funds'}
                                 </Button>
                             </DialogFooter>
@@ -234,7 +252,7 @@ export default function WalletPage() {
                             </div>
                             <DialogFooter>
                                  <Button variant="outline" onClick={() => setIsWithdrawOpen(false)}>Cancel</Button>
-                                <Button onClick={() => handleTransaction('withdrawal', parseFloat(withdrawAmount))} disabled={isSubmitting || !withdrawAmount || parseFloat(withdrawAmount) > (wallet?.balance ?? 0)}>
+                                <Button onClick={() => handleTransaction('withdrawal', withdrawAmount)} disabled={isSubmitting || !withdrawAmount || parseFloat(withdrawAmount) > (wallet?.balance ?? 0)}>
                                     {isSubmitting ? 'Processing...' : 'Withdraw Funds'}
                                 </Button>
                             </DialogFooter>
@@ -243,77 +261,99 @@ export default function WalletPage() {
                 </CardFooter>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Transactions</CardTitle>
-                  <CardDescription>A history of your payments and payouts.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {transactions.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-10">
-                            <Inbox className="h-12 w-12 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold">No transactions yet</h3>
-                            <p>Your transaction history will appear here.</p>
-                        </div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                            <TableRow>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="text-right">Amount</TableHead>
-                                <TableHead className="hidden md:table-cell text-center">Status</TableHead>
-                                <TableHead className="hidden md:table-cell text-right">Date</TableHead>
-                            </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {transactions.map((tx) => (
-                                <TableRow key={tx.id}>
-                                <TableCell>
-                                    <div className="font-medium capitalize">{tx.type}</div>
-                                    <div className="text-sm text-muted-foreground">{tx.description}</div>
-                                </TableCell>
-                                <TableCell className={cn("text-right font-semibold", tx.amount > 0 ? 'text-green-600' : 'text-destructive')}>
-                                    {tx.amount > 0 ? '+' : ''}{formatCurrency(tx.amount, wallet?.currency)}
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell text-center">
-                                    <Badge variant={tx.status === 'completed' ? 'success' : tx.status === 'pending' ? 'secondary' : 'destructive'} className="capitalize">{tx.status}</Badge>
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell text-right">{format(tx.createdAt.toDate(), 'P')}</TableCell>
-                                </TableRow>
-                            ))}
-                            </TableBody>
-                        </Table>
-                    )}
-                </CardContent>
-                {transactions.length > 5 && (
-                    <CardFooter>
-                        <Button variant="outline" className="w-full">View All Transactions</Button>
-                    </CardFooter>
-                )}
-              </Card>
+                <Tabs defaultValue="transactions">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="transactions">Transactions</TabsTrigger>
+                        <TabsTrigger value="rewards">
+                            <span className="mr-2">Rewards</span> 
+                            {rewards.length > 0 && <Badge variant="secondary">{rewards.length}</Badge>}
+                        </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="transactions">
+                         <Card>
+                            <CardHeader>
+                            <CardTitle>Recent Transactions</CardTitle>
+                            <CardDescription>A history of your payments and payouts.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {transactions.length === 0 ? (
+                                    <div className="text-center text-muted-foreground py-10">
+                                        <Inbox className="h-12 w-12 mx-auto mb-4" />
+                                        <h3 className="text-lg font-semibold">No transactions yet</h3>
+                                        <p>Your monetary transaction history will appear here.</p>
+                                    </div>
+                                ) : (
+                                    <Table>
+                                        <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Description</TableHead>
+                                            <TableHead className="text-right">Amount</TableHead>
+                                            <TableHead className="hidden md:table-cell text-center">Status</TableHead>
+                                            <TableHead className="hidden md:table-cell text-right">Date</TableHead>
+                                        </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                        {transactions.map((tx) => (
+                                            <TableRow key={tx.id}>
+                                            <TableCell>
+                                                <div className="font-medium capitalize">{tx.type}</div>
+                                                <div className="text-sm text-muted-foreground">{tx.description}</div>
+                                            </TableCell>
+                                            <TableCell className={cn("text-right font-semibold", tx.amount > 0 ? 'text-green-600' : 'text-destructive')}>
+                                                {tx.amount > 0 ? '+' : ''}{formatCurrency(tx.amount, wallet?.currency)}
+                                            </TableCell>
+                                            <TableCell className="hidden md:table-cell text-center">
+                                                <Badge variant={tx.status === 'completed' ? 'success' : tx.status === 'pending' ? 'secondary' : 'destructive'} className="capitalize">{tx.status}</Badge>
+                                            </TableCell>
+                                            <TableCell className="hidden md:table-cell text-right">{format(tx.createdAt.toDate(), 'P')}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                        </TableBody>
+                                    </Table>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="rewards">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>My Rewards & Vouchers</CardTitle>
+                                <CardDescription>A list of non-monetary rewards you have earned.</CardDescription>
+                            </CardHeader>
+                             <CardContent>
+                                {rewards.length === 0 ? (
+                                     <div className="text-center text-muted-foreground py-10">
+                                        <Gift className="h-12 w-12 mx-auto mb-4" />
+                                        <h3 className="text-lg font-semibold">No rewards yet</h3>
+                                        <p>Complete service-based projects to earn rewards.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {rewards.map(reward => (
+                                            <Card key={reward.id} className="p-4 flex justify-between items-center bg-muted/50">
+                                                <div>
+                                                    <p className="font-semibold">{reward.description}</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        From project: <Link href={`/projects/${reward.projectId}`} className="text-primary hover:underline">{reward.projectTitle}</Link>
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Issued {formatDistanceToNow(reward.issuedAt.toDate(), { addSuffix: true })}
+                                                    </p>
+                                                </div>
+                                                <Badge>{reward.status}</Badge>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                )}
+                             </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
             </div>
 
             {/* Sidebar */}
             <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Gift className="h-5 w-5" /> Rewards
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    You have no active rewards. Complete more projects to earn exclusive perks!
-                  </p>
-                </CardContent>
-                <CardFooter>
-                    <Button variant="secondary" className="w-full" asChild>
-                        <Link href="/projects">Browse Projects</Link>
-                    </Button>
-                </CardFooter>
-              </Card>
-
-              <Card>
+               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <ShieldCheck className="h-5 w-5" /> Secure Payments
