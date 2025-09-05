@@ -468,7 +468,7 @@ export default function SubmissionPage() {
                                     {index > 0 && <Separator className="my-6" />}
                                     <CardHeader className="p-0 mb-4">
                                         <CardTitle className="text-lg">Version {version.version}</CardTitle>
-                                        <CardDescription>Submitted {formatDistanceToNow(version.submittedAt.toDate(), { addSuffix: true })}</CardDescription>
+                                        <CardDescription>Submitted {version.submittedAt ? formatDistanceToNow(version.submittedAt.toDate(), { addSuffix: true }) : 'just now'}</CardDescription>
                                     </CardHeader>
                                     <div className="space-y-4">
                                         <div className="flex items-start gap-4">
@@ -490,7 +490,9 @@ export default function SubmissionPage() {
                                                         <div>
                                                             <div className="flex items-center gap-2">
                                                                 <p className="font-semibold">{clientProfile?.name}</p>
-                                                                <p className="text-xs text-muted-foreground">{formatDistanceToNow(fb.createdAt.toDate(), { addSuffix: true })}</p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {fb.createdAt ? formatDistanceToNow(fb.createdAt.toDate(), { addSuffix: true }) : 'just now'}
+                                                                </p>
                                                             </div>
                                                             <p className="text-sm text-muted-foreground">{fb.feedbackText}</p>
                                                         </div>
@@ -509,5 +511,3 @@ export default function SubmissionPage() {
         </div>
     );
 }
-
-    
