@@ -21,6 +21,8 @@ interface Project extends DocumentData {
     location: string;
     description: string;
     skills: string[];
+    rewardType: 'monetary' | 'service';
+    compensation: number | string;
     postedAt: {
         seconds: number;
         nanoseconds: number;
@@ -35,6 +37,13 @@ interface Application extends DocumentData {
 interface UserProfile {
     savedProjects?: string[];
 }
+
+const formatCurrency = (amount: number, currency = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+    }).format(amount);
+};
 
 export default function SavedProjectsPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -204,9 +213,17 @@ export default function SavedProjectsPage() {
                             </div>
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-grow">
+                    <CardContent className="flex-grow space-y-4">
                         <p className="text-sm text-muted-foreground line-clamp-3">{project.description}</p>
-                        <div className="mt-4 flex flex-wrap gap-2">
+                        
+                        <div className="text-sm font-semibold text-foreground">
+                            {project.rewardType === 'monetary'
+                                ? `Reward: ${formatCurrency(project.compensation as number)}`
+                                : `Reward: ${project.compensation}`
+                            }
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
                             {project.skills.map(skill => (
                             <Badge key={skill} variant="secondary">{skill}</Badge>
                             ))}

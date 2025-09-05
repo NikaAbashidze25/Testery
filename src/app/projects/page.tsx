@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { auth, db } from "@/lib/firebase";
 import { collection, getDocs, orderBy, query, where, type DocumentData } from "firebase/firestore";
 import { formatDistanceToNow } from 'date-fns';
-import { Search, MapPin, Inbox, Clock, CheckCircle } from "lucide-react";
+import { Search, MapPin, Inbox, Clock, CheckCircle, DollarSign, Gift } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
@@ -21,7 +21,8 @@ interface Project extends DocumentData {
     companyName: string;
     location: string;
     type: string;
-    compensation: string;
+    compensation: number | string;
+    rewardType: 'monetary' | 'service';
     description: string;
     skills: string[];
     postedAt: {
@@ -35,6 +36,13 @@ interface Application extends DocumentData {
     projectId: string;
     status: 'pending' | 'accepted' | 'declined';
 }
+
+const formatCurrency = (amount: number, currency = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+    }).format(amount);
+};
 
 
 export default function ProjectsPage() {
@@ -223,9 +231,17 @@ export default function ProjectsPage() {
                     </div>
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex-grow">
+                <CardContent className="flex-grow space-y-4">
                   <p className="text-sm text-muted-foreground line-clamp-3">{project.description}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  
+                  <div className="text-sm font-semibold text-foreground">
+                    {project.rewardType === 'monetary'
+                        ? `Reward: ${formatCurrency(project.compensation as number)}`
+                        : `Reward: ${project.compensation}`
+                    }
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
                     {project.skills.map(skill => (
                       <Badge key={skill} variant="secondary">{skill}</Badge>
                     ))}
