@@ -17,13 +17,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud, Check, DollarSign } from 'lucide-react';
+import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud, Check, DollarSign, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { notifySubmissionReceived } from '@/lib/notifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const submissionSchema = z.object({
   comments: z.string().optional(),
@@ -55,6 +54,12 @@ interface Submission extends DocumentData {
     rewardedAmount?: number;
 }
 
+interface ProjectData extends DocumentData {
+    title: string;
+    compensation: number;
+}
+
+
 interface ClientProfile {
     uid: string;
     name: string;
@@ -72,16 +77,12 @@ export default function SubmissionPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submission, setSubmission] = useState<Submission | null>(null);
-    const [project, setProject] = useState<DocumentData | null>(null);
+    const [project, setProject] = useState<ProjectData | null>(null);
     const [application, setApplication] = useState<DocumentData | null>(null);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [clientProfile, setClientProfile] = useState<ClientProfile | null>(null);
     const [clientWallet, setClientWallet] = useState<WalletData | null>(null);
-
-    const [isRewardDialogOpen, setIsRewardDialogOpen] = useState(false);
-    const [rewardAmount, setRewardAmount] = useState('');
-
 
     const router = useRouter();
     const { toast } = useToast();
@@ -129,7 +130,7 @@ export default function SubmissionPage() {
             try {
                 // Fetch Project and Application
                 const projectDoc = await getDoc(doc(db, 'projects', projectId));
-                if (projectDoc.exists()) setProject(projectDoc.data());
+                if (projectDoc.exists()) setProject(projectDoc.data() as ProjectData);
 
                 const appDoc = await getDoc(doc(db, 'applications', applicationId));
                  if (appDoc.exists()) {
@@ -284,28 +285,77 @@ export default function SubmissionPage() {
     };
     
     const handleFeedback = async (values: FeedbackFormValues) => {
-         if (!user || !submission) return;
+         if (!user || !submission || !project || !clientWallet) return;
+
+         const rewardAmount = project.compensation;
+         if (rewardAmount > clientWallet.balance) {
+             toast({ variant: 'destructive', title: 'Insufficient Funds', description: 'Your wallet balance is too low to release the payment. Please add funds.' });
+             return;
+         }
+         
          setIsSubmitting(true);
+         const batch = writeBatch(db);
+
+         // 1. Update submission with feedback and rewarded amount
+         const submissionRef = doc(db, 'submissions', applicationId);
+         batch.update(submissionRef, { feedback: values, rewardedAmount: rewardAmount });
+
+         // 2. Add review to the `reviews` collection
+         const clientUser = await getDoc(doc(db, 'users', user.uid));
+         const clientData = clientUser.data();
+         const reviewRef = doc(db, 'reviews', `${applicationId}`);
+         batch.set(reviewRef, {
+             ...values,
+             testerId: submission.testerId,
+             clientId: user.uid,
+             clientName: clientData?.companyName || clientData?.fullName,
+             clientAvatar: clientData?.companyLogoUrl || clientData?.profilePictureUrl,
+             projectId: submission.projectId,
+             createdAt: serverTimestamp()
+         });
+         
+        // 3. Update client's wallet
+        const clientWalletRef = doc(db, 'wallets', user.uid);
+        batch.update(clientWalletRef, { balance: clientWallet.balance - rewardAmount });
+
+        // 4. Update tester's wallet
+        const testerWalletRef = doc(db, 'wallets', submission.testerId);
+        const testerWalletSnap = await getDoc(testerWalletRef);
+        const testerWalletData = testerWalletSnap.data();
+        const newTesterBalance = (testerWalletData?.balance || 0) + rewardAmount;
+        batch.set(testerWalletRef, { balance: newTesterBalance, currency: 'USD' }, { merge: true });
+        
+        // 5. Create transaction for client
+        const clientTransactionRef = doc(collection(db, 'transactions'));
+        batch.set(clientTransactionRef, {
+            userId: user.uid,
+            type: 'payment',
+            amount: -rewardAmount,
+            description: `Payment for project: ${project.title}`,
+            status: 'completed',
+            createdAt: serverTimestamp(),
+            relatedUserId: submission.testerId,
+        });
+        
+        // 6. Create transaction for tester
+        const testerTransactionRef = doc(collection(db, 'transactions'));
+        batch.set(testerTransactionRef, {
+            userId: submission.testerId,
+            type: 'payout',
+            amount: rewardAmount,
+            description: `Reward for project: ${project.title}`,
+            status: 'completed',
+            createdAt: serverTimestamp(),
+            relatedUserId: user.uid,
+        });
+
          try {
-             const submissionRef = doc(db, 'submissions', applicationId);
-             await updateDoc(submissionRef, { feedback: values });
-
-             const clientUser = await getDoc(doc(db, 'users', user.uid));
-             const clientData = clientUser.data();
-             
-             // Add review to a separate collection for querying on profile page
-             await setDoc(doc(db, 'reviews', `${applicationId}`), {
-                 ...values,
-                 testerId: submission.testerId,
-                 clientId: user.uid,
-                 clientName: clientData?.companyName || clientData?.fullName,
-                 clientAvatar: clientData?.companyLogoUrl || clientData?.profilePictureUrl,
-                 projectId: submission.projectId,
-                 createdAt: serverTimestamp()
-             });
-
-             toast({ title: 'Feedback Submitted', description: 'Thank you for your feedback.' });
-             setSubmission(prev => prev ? {...prev, feedback: values} : null);
+            await batch.commit();
+            toast({ title: 'Feedback & Payment Sent!', description: 'You have successfully submitted feedback and the payment has been sent.' });
+            
+            // Manually update local state to reflect changes immediately
+            setSubmission(prev => prev ? {...prev, feedback: values, rewardedAmount: rewardAmount} : null);
+            setClientWallet(prev => prev ? { ...prev, balance: prev.balance - rewardAmount } : null);
 
          } catch(error: any) {
               toast({ variant: 'destructive', title: 'Failed to submit feedback', description: error.message });
@@ -314,76 +364,10 @@ export default function SubmissionPage() {
          }
     };
     
-    const handleReward = async () => {
-        if (!user || !submission || !project || !clientWallet) return;
-        const amount = parseFloat(rewardAmount);
-        if (isNaN(amount) || amount <= 0) {
-            toast({ variant: 'destructive', title: 'Invalid Amount', description: 'Please enter a valid reward amount.' });
-            return;
-        }
-        if (amount > clientWallet.balance) {
-             toast({ variant: 'destructive', title: 'Insufficient Funds', description: 'Your wallet balance is too low to complete this transaction.' });
-            return;
-        }
-        setIsSubmitting(true);
-
-        const batch = writeBatch(db);
-
-        // 1. Update client's wallet
-        const clientWalletRef = doc(db, 'wallets', user.uid);
-        batch.update(clientWalletRef, { balance: clientWallet.balance - amount });
-
-        // 2. Update tester's wallet
-        const testerWalletRef = doc(db, 'wallets', submission.testerId);
-        const testerWalletSnap = await getDoc(testerWalletRef);
-        const testerWalletData = testerWalletSnap.data();
-        const newTesterBalance = (testerWalletData?.balance || 0) + amount;
-        batch.set(testerWalletRef, { balance: newTesterBalance, currency: 'USD' }, { merge: true });
-
-        // 3. Create transaction for client
-        const clientTransactionRef = doc(collection(db, 'transactions'));
-        batch.set(clientTransactionRef, {
-            userId: user.uid,
-            type: 'payment',
-            amount: -amount,
-            description: `Payment to tester for project: ${project.title}`,
-            status: 'completed',
-            createdAt: serverTimestamp(),
-            relatedUserId: submission.testerId,
-        });
-        
-        // 4. Create transaction for tester
-        const testerTransactionRef = doc(collection(db, 'transactions'));
-        batch.set(testerTransactionRef, {
-            userId: submission.testerId,
-            type: 'payout',
-            amount: amount,
-            description: `Reward for project: ${project.title}`,
-            status: 'completed',
-            createdAt: serverTimestamp(),
-            relatedUserId: user.uid,
-        });
-
-        // 5. Update submission with rewarded amount
-        const submissionRef = doc(db, 'submissions', applicationId);
-        batch.update(submissionRef, { rewardedAmount: amount });
-
-        try {
-            await batch.commit();
-            toast({ title: 'Reward Sent!', description: `You have successfully rewarded the tester.` });
-            setSubmission(prev => prev ? {...prev, rewardedAmount: amount} : null);
-            setClientWallet(prev => prev ? {...prev, balance: prev.balance - amount} : null);
-            setIsRewardDialogOpen(false);
-            setRewardAmount('');
-        } catch(error: any) {
-            toast({ variant: 'destructive', title: 'Reward Failed', description: error.message });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-    
     const isClient = user?.uid === application?.ownerId;
     const isTester = user?.uid === application?.testerId;
+    const hasSufficientFunds = isClient && project && clientWallet ? clientWallet.balance >= project.compensation : false;
+
 
      if (isLoading) {
         return (
@@ -414,7 +398,7 @@ export default function SubmissionPage() {
                  <CardHeader>
                     <CardTitle className="text-2xl">Project Submission</CardTitle>
                     <CardDescription>
-                        Project: <Link href={`/projects/${projectId}`} className="text-primary hover:underline">{project?.title || 'Loading...'}</Link>
+                         Project: <Link href={`/projects/${projectId}`} className="text-primary hover:underline">{project?.title || 'Loading...'}</Link>
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -524,9 +508,17 @@ export default function SubmissionPage() {
                             </div>
                             
                             <div className="border-t pt-6">
-                                <h3 className="font-semibold text-lg mb-4">Feedback</h3>
+                                {submission.rewardedAmount ? (
+                                    <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 flex items-center gap-3">
+                                        <Check className="h-5 w-5" />
+                                        <p>You have rewarded this tester with <strong>${submission.rewardedAmount.toFixed(2)}</strong>.</p>
+                                     </div>
+                                ) : (
+                                    <h3 className="font-semibold text-lg mb-4">Feedback & Payment</h3>
+                                )}
+
                                 {submission.feedback && clientProfile && (
-                                     <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
+                                     <div className="p-4 border rounded-lg bg-muted/50 space-y-4 mt-4">
                                         <div className="flex items-start gap-4">
                                             <Link href={`/users/${clientProfile.uid}`}>
                                                 <Avatar>
@@ -552,50 +544,71 @@ export default function SubmissionPage() {
                                 )}
 
                                 {!submission.feedback && isClient && (
-                                    <Form {...feedbackForm}>
-                                        <form onSubmit={feedbackForm.handleSubmit(handleFeedback)} className="space-y-6">
-                                            <FormField
-                                                control={feedbackForm.control}
-                                                name="rating"
-                                                render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Rating</FormLabel>
-                                                    <FormControl>
-                                                        <div className="flex items-center gap-2">
-                                                            {[...Array(5)].map((_, i) => (
-                                                                <Star 
-                                                                    key={i} 
-                                                                    className={cn('h-8 w-8 cursor-pointer', i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 hover:text-yellow-300')}
-                                                                    onClick={() => {
-                                                                        setRating(i + 1);
-                                                                        field.onChange(i + 1);
-                                                                    }}
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                                )}
-                                            />
-                                            <FormField
-                                                control={feedbackForm.control}
-                                                name="comment"
-                                                render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Comments</FormLabel>
-                                                    <FormControl>
-                                                        <Textarea placeholder="Provide feedback on the tester's work..." {...field} disabled={isSubmitting} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                                )}
-                                            />
-                                            <Button type="submit" disabled={isSubmitting}>
-                                                {isSubmitting ? 'Submitting Feedback...' : 'Submit Feedback'}
-                                            </Button>
-                                        </form>
-                                    </Form>
+                                    <>
+                                        {!hasSufficientFunds && project && (
+                                            <Alert variant="destructive" className="mb-6">
+                                                <AlertTriangle className="h-4 w-4" />
+                                                <AlertTitle>Insufficient Funds</AlertTitle>
+                                                <AlertDescription>
+                                                    Your wallet balance is too low to pay the project compensation of ${project.compensation.toFixed(2)}. 
+                                                    Please <Link href="/wallet" className="font-bold underline">add funds</Link> to your wallet before providing feedback.
+                                                </AlertDescription>
+                                            </Alert>
+                                        )}
+                                        <Form {...feedbackForm}>
+                                            <form onSubmit={feedbackForm.handleSubmit(handleFeedback)} className="space-y-6">
+                                                <FormField
+                                                    control={feedbackForm.control}
+                                                    name="rating"
+                                                    render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Rating</FormLabel>
+                                                        <FormControl>
+                                                            <div className="flex items-center gap-2">
+                                                                {[...Array(5)].map((_, i) => (
+                                                                    <Star 
+                                                                        key={i} 
+                                                                        className={cn('h-8 w-8 cursor-pointer', i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 hover:text-yellow-300')}
+                                                                        onClick={() => {
+                                                                            if (!isSubmitting && hasSufficientFunds) {
+                                                                                setRating(i + 1);
+                                                                                field.onChange(i + 1);
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={feedbackForm.control}
+                                                    name="comment"
+                                                    render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Comments</FormLabel>
+                                                        <FormControl>
+                                                            <Textarea placeholder="Provide feedback on the tester's work..." {...field} disabled={isSubmitting || !hasSufficientFunds} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                    )}
+                                                />
+                                                <div>
+                                                    <Button type="submit" disabled={isSubmitting || !hasSufficientFunds}>
+                                                        {isSubmitting ? 'Processing...' : 'Submit Feedback & Pay Tester'}
+                                                    </Button>
+                                                    {project && (
+                                                        <p className="text-xs text-muted-foreground mt-2">
+                                                            Submitting feedback will automatically transfer ${project.compensation.toFixed(2)} to the tester.
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </form>
+                                        </Form>
+                                    </>
                                 )}
                                 {!submission.feedback && isTester && (
                                      <div className="text-center text-muted-foreground py-8">
@@ -604,48 +617,6 @@ export default function SubmissionPage() {
                                     </div>
                                 )}
                             </div>
-                            
-                            {/* Reward Section */}
-                            {isClient && submission.feedback && (
-                                <div className="border-t pt-6">
-                                <h3 className="font-semibold text-lg mb-4">Reward Tester</h3>
-                                {submission.rewardedAmount ? (
-                                     <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 flex items-center gap-3">
-                                        <Check className="h-5 w-5" />
-                                        <p>You have rewarded this tester with <strong>${submission.rewardedAmount.toFixed(2)}</strong>.</p>
-                                     </div>
-                                ) : (
-                                    <Dialog open={isRewardDialogOpen} onOpenChange={setIsRewardDialogOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button>
-                                                <DollarSign className="mr-2 h-4 w-4" />
-                                                Reward Tester
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                            <DialogHeader>
-                                                <DialogTitle>Reward Tester</DialogTitle>
-                                                <DialogDescription>
-                                                    Enter the amount you'd like to send from your wallet to the tester.
-                                                    Your current balance is <strong>${clientWallet?.balance.toFixed(2)}</strong>.
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <div className="grid gap-4 py-4">
-                                                <Label htmlFor="reward-amount">Amount (USD)</Label>
-                                                <Input id="reward-amount" type="number" placeholder="e.g., 50.00" value={rewardAmount} onChange={(e) => setRewardAmount(e.target.value)} />
-                                            </div>
-                                            <DialogFooter>
-                                                <Button variant="outline" onClick={() => setIsRewardDialogOpen(false)}>Cancel</Button>
-                                                <Button onClick={handleReward} disabled={isSubmitting || !rewardAmount || parseFloat(rewardAmount) > (clientWallet?.balance ?? 0)}>
-                                                    {isSubmitting ? 'Sending...' : 'Send Reward'}
-                                                </Button>
-                                            </DialogFooter>
-                                        </DialogContent>
-                                    </Dialog>
-                                )}
-                                </div>
-                            )}
-
                         </div>
                     )}
                      {!submission && isClient && (

@@ -24,7 +24,7 @@ interface Project extends DocumentData {
     companyName: string;
     location: string;
     type: string;
-    compensation: string;
+    compensation: number;
     description: string;
     skills: string[];
     authorId: string;
@@ -42,6 +42,13 @@ interface Application {
 interface UserProfile {
     savedProjects?: string[];
 }
+
+const formatCurrency = (amount: number, currency = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+    }).format(amount);
+};
 
 
 export default function ProjectDetailPage() {
@@ -425,7 +432,7 @@ export default function ProjectDetailPage() {
                     <DollarSign className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
                     <div>
                         <h4 className="font-semibold">Reward / Compensation</h4>
-                        <p className="text-muted-foreground">{project.compensation}</p>
+                        <p className="text-muted-foreground">{formatCurrency(project.compensation)}</p>
                     </div>
                 </div>
             </div>

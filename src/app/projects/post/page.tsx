@@ -29,7 +29,7 @@ import { FileText } from 'lucide-react';
 const projectFormSchema = z.object({
   title: z.string().min(10, 'Title must be at least 10 characters.'),
   location: z.string().min(2, 'Location is required.'),
-  compensation: z.string().min(1, 'Reward / Compensation is required.'),
+  compensation: z.coerce.number().positive({ message: 'Compensation must be a positive number.' }),
   type: z.string().min(3, 'Type is required (e.g. Full-time, Contract)'),
   description: z.string().min(50, 'Description must be at least 50 characters.'),
   skills: z.string().min(3, 'Please list at least one skill.'),
@@ -62,7 +62,7 @@ export default function PostProjectPage() {
       title: '',
       description: '',
       skills: '',
-      compensation: '',
+      compensation: 0,
       location: '',
       type: '',
     },
@@ -171,9 +171,9 @@ export default function PostProjectPage() {
                     name="compensation"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Reward / Compensation</FormLabel>
+                        <FormLabel>Reward / Compensation ($)</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g., $500, free product, etc." {...field} disabled={isLoading}/>
+                          <Input type="number" step="0.01" placeholder="e.g., 500" {...field} disabled={isLoading}/>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
