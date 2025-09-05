@@ -48,6 +48,8 @@ interface TestedProject extends Project {
     nanoseconds: number;
   };
   applicationStatus: 'accepted' | 'pending' | 'declined';
+  authorId: string;
+  companyName: string;
 }
 
 
@@ -121,6 +123,8 @@ export default function UserProfilePage() {
                                     id: projectDoc.id,
                                     testedAt: appData.appliedAt, 
                                     applicationStatus: appData.status,
+                                    authorId: projectData.authorId,
+                                    companyName: projectData.companyName,
                                 } as TestedProject;
                             } catch (error) {
                                 console.error("Error fetching tested project:", error);
@@ -414,11 +418,13 @@ const TestedProjectsSection = ({ projects, userProfile, formatDate }: { projects
                             {project.title}
                         </CardTitle>
                         <CardDescription>
-                            Application accepted {formatDate(project.testedAt)}
+                            From client: <Link href={`/users/${project.authorId}`} className="text-primary hover:underline font-medium">{project.companyName}</Link>
+                            <span className="mx-1">·</span>
+                            <span>Accepted {formatDate(project.testedAt)}</span>
                         </CardDescription>
                     </CardHeader>
                      <CardContent>
-                        <p className="text-sm text-muted-foreground">{project.description}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
                     </CardContent>
                     <CardFooter>
                         <Button asChild variant="outline" size="sm">
