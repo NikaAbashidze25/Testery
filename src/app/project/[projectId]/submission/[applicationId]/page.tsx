@@ -52,6 +52,14 @@ interface SubmissionFile {
     path: string;
 }
 
+interface Feedback extends DocumentData {
+    id: string;
+    feedbackText: string;
+    senderId: string;
+    createdAt: Timestamp;
+    version: number;
+}
+
 interface SubmissionVersion extends DocumentData {
     id: string;
     comments: string;
@@ -65,7 +73,6 @@ interface ApplicationData extends DocumentData {
     testerId: string;
     ownerId: string;
     projectId: string;
-    feedbackComment?: string;
     isApproved?: boolean;
     rewardedAmount?: number;
     reviewId?: string;
@@ -92,9 +99,11 @@ export default function SubmissionPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submissions, setSubmissions] = useState<SubmissionVersion[]>([]);
+    const [feedbackHistory, setFeedbackHistory] = useState<Feedback[]>([]);
     const [project, setProject] = useState<ProjectData | null>(null);
     const [application, setApplication] = useState<ApplicationData | null>(null);
     const [testerProfile, setTesterProfile] = useState<UserProfile | null>(null);
+    const [clientProfile, setClientProfile] = useState<UserProfile | null>(null);
     const [clientWallet, setClientWallet] = useState<WalletData | null>(null);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isDragging, setIsDragging] = useState(false);
@@ -137,16 +146,15 @@ export default function SubmissionPage() {
                 setApplication(appData);
 
                 const fetchProfilesAndWallet = async () => {
-                    if (!testerProfile) {
-                        const testerDoc = await getDoc(doc(db, 'users', appData.testerId));
-                        if (testerDoc.exists()) {
-                            const data = testerDoc.data();
-                            setTesterProfile({
-                                uid: appData.testerId,
-                                name: data.fullName || 'Unknown Tester',
-                                avatarUrl: data.profilePictureUrl,
-                            });
-                        }
+                    const testerDoc = await getDoc(doc(db, 'users', appData.testerId));
+                    if (testerDoc.exists()) {
+                        const data = testerDoc.data();
+                        setTesterProfile({ uid: appData.testerId, name: data.fullName || 'Unknown Tester', avatarUrl: data.profilePictureUrl });
+                    }
+                    const clientDoc = await getDoc(doc(db, 'users', appData.ownerId));
+                     if (clientDoc.exists()) {
+                        const data = clientDoc.data();
+                        setClientProfile({ uid: appData.ownerId, name: data.companyName || data.fullName || 'Client', avatarUrl: data.companyLogoUrl || data.profilePictureUrl });
                     }
 
                     if (user.uid === appData.ownerId && !clientWallet) {
@@ -173,17 +181,24 @@ export default function SubmissionPage() {
         });
 
         const submissionsRef = collection(db, 'applications', applicationId, 'submissions');
-        const q = query(submissionsRef, orderBy('submittedAt', 'desc'));
-        const subsUnsub = onSnapshot(q, (snapshot) => {
+        const qSubmissions = query(submissionsRef, orderBy('submittedAt', 'desc'));
+        const subsUnsub = onSnapshot(qSubmissions, (snapshot) => {
             setSubmissions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubmissionVersion)));
             setIsLoading(false);
+        });
+
+        const feedbackRef = collection(db, 'applications', applicationId, 'feedback');
+        const qFeedback = query(feedbackRef, orderBy('createdAt', 'asc'));
+        const feedbackUnsub = onSnapshot(qFeedback, (snapshot) => {
+            setFeedbackHistory(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Feedback)));
         });
 
         return () => {
             appUnsub();
             subsUnsub();
+            feedbackUnsub();
         };
-    }, [user, applicationId, projectId, router, toast, testerProfile, clientWallet]);
+    }, [user, applicationId, projectId, router, toast, clientWallet]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
@@ -220,7 +235,6 @@ export default function SubmissionPage() {
                 version: submissions.length + 1,
             });
 
-            // Notify on both initial submission and edits
             if(submissions.length > 0){
                 await notifySubmissionEdited(application.ownerId, projectId, project.title, user.displayName || 'A tester', applicationId);
             } else {
@@ -240,10 +254,15 @@ export default function SubmissionPage() {
       if (!user || !application || !project) return;
       setIsSubmitting(true);
       try {
-        await updateDoc(doc(db, 'applications', applicationId), {
-          feedbackComment: values.feedbackComment,
+        const feedbackRef = collection(db, 'applications', applicationId, 'feedback');
+        await addDoc(feedbackRef, {
+            feedbackText: values.feedbackComment,
+            version: submissions.length, // Link to the latest version
+            senderId: user.uid,
+            recipientId: application.testerId,
+            createdAt: serverTimestamp(),
         });
-
+        
         await notifyFeedbackReceived(application.testerId, projectId, project.title, applicationId);
 
         toast({ title: "Feedback Sent", description: "The tester has been notified about your feedback." });
@@ -256,7 +275,7 @@ export default function SubmissionPage() {
     };
 
     const handleApproveAndPay = async (values: FeedbackFormValues) => {
-        if (!user || !application || !project || !clientWallet) return;
+        if (!user || !application || !project || !clientWallet || !clientProfile) return;
         const rewardAmount = parseFloat(String(project.compensation));
         if (rewardAmount > clientWallet.balance) {
             toast({ variant: 'destructive', title: 'Insufficient Funds' });
@@ -268,9 +287,8 @@ export default function SubmissionPage() {
         const appRef = doc(db, 'applications', applicationId);
         batch.update(appRef, { isApproved: true, rewardedAmount: rewardAmount });
 
-        const clientDoc = await getDoc(doc(db, 'users', user.uid));
         const reviewRef = doc(collection(db, 'reviews'));
-        batch.set(reviewRef, { ...values, testerId: application.testerId, clientId: user.uid, clientName: clientDoc.data()?.companyName || clientDoc.data()?.fullName, clientAvatar: clientDoc.data()?.companyLogoUrl || clientDoc.data()?.profilePictureUrl, projectId, createdAt: serverTimestamp() });
+        batch.set(reviewRef, { ...values, testerId: application.testerId, clientId: user.uid, clientName: clientProfile.name, clientAvatar: clientProfile.avatarUrl, projectId, createdAt: serverTimestamp() });
         batch.update(appRef, { reviewId: reviewRef.id });
 
         const clientWalletRef = doc(db, 'wallets', user.uid);
@@ -298,7 +316,7 @@ export default function SubmissionPage() {
     const isClient = user?.uid === application?.ownerId;
     const isTester = user?.uid === application?.testerId;
 
-    if (isLoading || !application || !project || !testerProfile || (isClient && !clientWallet)) {
+    if (isLoading || !application || !project || !testerProfile || !clientProfile) {
         return (
             <div className="container py-12">
                 <Skeleton className="h-10 w-32 mb-8" />
@@ -434,15 +452,6 @@ export default function SubmissionPage() {
                         </Alert>
                      )}
                      
-                    {/* Tester's view of feedback */}
-                    {isTester && application?.feedbackComment && (
-                        <Alert>
-                            <AlertTriangle className="h-4 w-4" />
-                            <AlertTitle>Feedback from Client</AlertTitle>
-                            <AlertDescription>{application.feedbackComment}</AlertDescription>
-                        </Alert>
-                    )}
-                    
                     {/* Submission History */}
                     <div className="space-y-6">
                         <h3 className="font-semibold text-xl">Submission History</h3>
@@ -452,7 +461,9 @@ export default function SubmissionPage() {
                                 <p>{isTester ? "You have not submitted your work yet." : "The tester has not submitted any work yet."}</p>
                             </div>
                         ) : (
-                            submissions.map((version, index) => (
+                            submissions.map((version, index) => {
+                                const versionFeedback = feedbackHistory.filter(f => f.version === version.version);
+                                return (
                                 <div key={version.id}>
                                     {index > 0 && <Separator className="my-6" />}
                                     <CardHeader className="p-0 mb-4">
@@ -470,9 +481,26 @@ export default function SubmissionPage() {
                                                 <div className="flex flex-wrap gap-2">{version.files.map((file, fIndex) => (<Button asChild variant="outline" key={fIndex} className="mr-2"><a href={file.url} target="_blank" download={file.name}><Download className="mr-2 h-4 w-4" />{file.name}</a></Button>))}</div>
                                             </div>
                                         )}
+                                        {/* Display Feedback for this version */}
+                                        {versionFeedback.length > 0 && (
+                                            <div className="pl-4 border-l-2 ml-5 space-y-4 pt-4">
+                                                {versionFeedback.map(fb => (
+                                                    <div key={fb.id} className="flex items-start gap-4">
+                                                        <Link href={`/users/${fb.senderId}`}><Avatar><AvatarImage src={clientProfile?.avatarUrl} /><AvatarFallback>{getInitials(clientProfile?.name)}</AvatarFallback></Avatar></Link>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-semibold">{clientProfile?.name}</p>
+                                                                <p className="text-xs text-muted-foreground">{formatDistanceToNow(fb.createdAt.toDate(), { addSuffix: true })}</p>
+                                                            </div>
+                                                            <p className="text-sm text-muted-foreground">{fb.feedbackText}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            ))
+                            )})
                         )}
                     </div>
 
@@ -481,3 +509,5 @@ export default function SubmissionPage() {
         </div>
     );
 }
+
+    
