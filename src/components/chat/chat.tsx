@@ -23,6 +23,7 @@ import {
   DocumentData,
   writeBatch,
   or,
+  and,
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
@@ -313,12 +314,15 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
       const fetchChats = async () => {
         try {
             const applicationsRef = collection(db, 'applications');
-            const q = query(applicationsRef, 
+            const q = query(
+              applicationsRef,
+              and(
                 or(
-                    where('testerId', '==', user.uid),
-                    where('ownerId', '==', user.uid)
+                  where('testerId', '==', user.uid),
+                  where('ownerId', '==', user.uid)
                 ),
                 where('status', '==', 'accepted')
+              )
             );
 
           const querySnapshot = await getDocs(q);
