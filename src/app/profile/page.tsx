@@ -255,7 +255,7 @@ export default function ProfilePage() {
                                 <TabsTrigger value="client">My Projects</TabsTrigger>
                             )}
                             {userProfile.accountType === 'individual' && (
-                                <TabsTrigger value="tester">My Work History</TabsTrigger>
+                                <TabsTrigger value="tester">My Tested Projects</TabsTrigger>
                             )}
                             {reviews.length > 0 && (
                                 <TabsTrigger value="reviews">My Reviews</TabsTrigger>
