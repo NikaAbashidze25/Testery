@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc, type DocumentData, writeBatch, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc, type DocumentData, writeBatch, collection, onSnapshot, Timestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
@@ -123,12 +123,11 @@ export default function SubmissionPage() {
     };
 
     useEffect(() => {
-        const fetchInitialData = async () => {
-            if (!user || !applicationId) return;
-            setIsLoading(true);
+        if (!user || !applicationId) return;
 
+        const fetchStaticData = async () => {
+             setIsLoading(true);
             try {
-                // Fetch Project and Application
                 const projectDoc = await getDoc(doc(db, 'projects', projectId));
                 if (projectDoc.exists()) setProject(projectDoc.data() as ProjectData);
 
@@ -137,61 +136,66 @@ export default function SubmissionPage() {
                     const appData = appDoc.data();
                     setApplication(appData);
 
-                    // Authorization check
                     const isTester = user.uid === appData.testerId;
                     const isClient = user.uid === appData.ownerId;
+
                     if (!isTester && !isClient) {
                          toast({ variant: 'destructive', title: 'Unauthorized', description: 'You cannot view this page.' });
                          router.push('/');
                          return;
                     }
-
-                    if(isClient) {
-                        const walletRef = doc(db, 'wallets', user.uid);
-                        const walletSnap = await getDoc(walletRef);
-                        if (walletSnap.exists()) {
-                            setClientWallet(walletSnap.data() as WalletData);
-                        } else {
-                            setClientWallet({ balance: 0, currency: 'USD' });
-                        }
-                    }
-
                 } else {
                     toast({ variant: 'destructive', title: 'Not Found', description: 'Application not found.' });
                     router.push('/');
                     return;
                 }
-
-                // Fetch Submission
-                const submissionDoc = await getDoc(doc(db, 'submissions', applicationId));
-                if (submissionDoc.exists()) {
-                    const subData = submissionDoc.data() as Submission;
-                    setSubmission(subData);
-                    if(subData.feedback) {
-                        feedbackForm.reset(subData.feedback);
-                        setRating(subData.feedback.rating);
-                    }
-                    
-                    // Fetch client profile if submission exists
-                    const clientDocRef = doc(db, 'users', subData.clientId);
-                    const clientDocSnap = await getDoc(clientDocRef);
-                    if (clientDocSnap.exists()) {
-                        const clientData = clientDocSnap.data();
-                        setClientProfile({
-                            uid: subData.clientId,
-                            name: clientData.companyName || clientData.fullName,
-                            avatarUrl: clientData.companyLogoUrl || clientData.profilePictureUrl
-                        });
-                    }
-                }
             } catch (e) {
-                console.error(e);
+                 console.error(e);
                 toast({ variant: 'destructive', title: 'Error', description: 'Failed to load page data.' });
             } finally {
                 setIsLoading(false);
             }
+        }
+        
+        fetchStaticData();
+
+        const submissionUnsub = onSnapshot(doc(db, 'submissions', applicationId), async (docSnap) => {
+            if (docSnap.exists()) {
+                const subData = docSnap.data() as Submission;
+                setSubmission(subData);
+                if (subData.feedback) {
+                    feedbackForm.reset(subData.feedback);
+                    setRating(subData.feedback.rating);
+                }
+
+                const clientDocRef = doc(db, 'users', subData.clientId);
+                const clientDocSnap = await getDoc(clientDocRef);
+                if (clientDocSnap.exists()) {
+                    const clientData = clientDocSnap.data();
+                    setClientProfile({
+                        uid: subData.clientId,
+                        name: clientData.companyName || clientData.fullName,
+                        avatarUrl: clientData.companyLogoUrl || clientData.profilePictureUrl
+                    });
+                }
+            } else {
+                setSubmission(null);
+            }
+        });
+
+        const walletUnsub = onSnapshot(doc(db, 'wallets', user.uid), (docSnap) => {
+            if (docSnap.exists()) {
+                setClientWallet(docSnap.data() as WalletData);
+            } else {
+                setClientWallet({ balance: 0, currency: 'USD' });
+            }
+        });
+
+        return () => {
+            submissionUnsub();
+            walletUnsub();
         };
-        fetchInitialData();
+
     }, [user, applicationId, projectId, router, toast, feedbackForm]);
 
 
@@ -229,8 +233,7 @@ export default function SubmissionPage() {
             );
 
             toast({ title: 'Success', description: 'Your work has been submitted.' });
-            setSubmission({ id: applicationId, ...submissionData, submittedAt: new Date() });
-
+            
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: error.message });
         } finally {
@@ -296,14 +299,12 @@ export default function SubmissionPage() {
          setIsSubmitting(true);
          const batch = writeBatch(db);
 
-         // 1. Update submission with feedback and rewarded amount
          const submissionRef = doc(db, 'submissions', applicationId);
          batch.update(submissionRef, { feedback: values, rewardedAmount: rewardAmount });
 
-         // 2. Add review to the `reviews` collection
          const clientUser = await getDoc(doc(db, 'users', user.uid));
          const clientData = clientUser.data();
-         const reviewRef = doc(db, 'reviews', `${applicationId}`);
+         const reviewRef = doc(collection(db, 'reviews'));
          batch.set(reviewRef, {
              ...values,
              testerId: submission.testerId,
@@ -314,18 +315,15 @@ export default function SubmissionPage() {
              createdAt: serverTimestamp()
          });
          
-        // 3. Update client's wallet
         const clientWalletRef = doc(db, 'wallets', user.uid);
         batch.update(clientWalletRef, { balance: clientWallet.balance - rewardAmount });
 
-        // 4. Update tester's wallet
         const testerWalletRef = doc(db, 'wallets', submission.testerId);
         const testerWalletSnap = await getDoc(testerWalletRef);
         const testerWalletData = testerWalletSnap.data();
         const newTesterBalance = (testerWalletData?.balance || 0) + rewardAmount;
         batch.set(testerWalletRef, { balance: newTesterBalance, currency: 'USD' }, { merge: true });
         
-        // 5. Create transaction for client
         const clientTransactionRef = doc(collection(db, 'transactions'));
         batch.set(clientTransactionRef, {
             userId: user.uid,
@@ -337,7 +335,6 @@ export default function SubmissionPage() {
             relatedUserId: submission.testerId,
         });
         
-        // 6. Create transaction for tester
         const testerTransactionRef = doc(collection(db, 'transactions'));
         batch.set(testerTransactionRef, {
             userId: submission.testerId,
@@ -352,11 +349,6 @@ export default function SubmissionPage() {
          try {
             await batch.commit();
             toast({ title: 'Feedback & Payment Sent!', description: 'You have successfully submitted feedback and the payment has been sent.' });
-            
-            // Manually update local state to reflect changes immediately
-            setSubmission(prev => prev ? {...prev, feedback: values, rewardedAmount: rewardAmount} : null);
-            setClientWallet(prev => prev ? { ...prev, balance: prev.balance - rewardAmount } : null);
-
          } catch(error: any) {
               toast({ variant: 'destructive', title: 'Failed to submit feedback', description: error.message });
          } finally {
@@ -610,7 +602,7 @@ export default function SubmissionPage() {
                                         </Form>
                                     </>
                                 )}
-                                {!submission.feedback && isTester && (
+                                {submission && !submission.feedback && isTester && (
                                      <div className="text-center text-muted-foreground py-8">
                                         <FileText className="mx-auto h-12 w-12 mb-4" />
                                         <p>Waiting for client to provide feedback.</p>
