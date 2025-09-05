@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud, Check, DollarSign, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud, Check, DollarSign, AlertTriangle, MessageSquare, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { notifySubmissionReceived } from '@/lib/notifications';
@@ -83,6 +83,7 @@ export default function SubmissionPage() {
     const [isDragging, setIsDragging] = useState(false);
     const [clientProfile, setClientProfile] = useState<ClientProfile | null>(null);
     const [clientWallet, setClientWallet] = useState<WalletData | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
 
     const router = useRouter();
     const { toast } = useToast();
@@ -214,7 +215,10 @@ export default function SubmissionPage() {
                 }
             }
 
-            const submissionData: Omit<Submission, 'id' | 'submittedAt'> & { submittedAt: any } = {
+            const submissionRef = doc(db, 'submissions', applicationId);
+            const submissionDoc = await getDoc(submissionRef);
+
+            const submissionData = {
                 testerId: user.uid,
                 clientId: application.ownerId,
                 projectId,
@@ -223,17 +227,23 @@ export default function SubmissionPage() {
                 files: uploadedFiles,
             };
             
-            await setDoc(doc(db, 'submissions', applicationId), submissionData);
-
-            await notifySubmissionReceived(
-                application.ownerId, 
-                projectId, 
-                project.title, 
-                user.displayName || 'A tester', 
-                applicationId
-            );
-
-            toast({ title: 'Success', description: 'Your work has been submitted.' });
+            if (submissionDoc.exists()) {
+                // Editing existing submission
+                await updateDoc(submissionRef, submissionData);
+                toast({ title: 'Success', description: 'Your submission has been updated.' });
+            } else {
+                 // New submission
+                await setDoc(submissionRef, submissionData);
+                await notifySubmissionReceived(
+                    application.ownerId, 
+                    projectId, 
+                    project.title, 
+                    user.displayName || 'A tester', 
+                    applicationId
+                );
+                toast({ title: 'Success', description: 'Your work has been submitted.' });
+            }
+            setIsEditing(false); // Exit editing mode
             
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: error.message });
@@ -359,6 +369,14 @@ export default function SubmissionPage() {
          }
     };
     
+    const handleStartEdit = () => {
+        setIsEditing(true);
+        submissionForm.setValue('comments', submission?.comments || '');
+        // Note: We don't pre-fill files, user needs to re-upload.
+        // This is a common pattern to avoid handling complex file state.
+        setSelectedFiles([]); 
+    };
+
     const isClient = user?.uid === application?.ownerId;
     const isTester = user?.uid === application?.testerId;
     const projectCompensation = project ? parseFloat(project.compensation as any) : 0;
@@ -381,6 +399,92 @@ export default function SubmissionPage() {
         )
      }
 
+    const renderSubmissionForm = () => (
+        <Form {...submissionForm}>
+            <form onSubmit={submissionForm.handleSubmit(handleSubmission)} className="space-y-8">
+                <FormField
+                    control={submissionForm.control}
+                    name="files"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Upload Files</FormLabel>
+                        <FormControl>
+                            <label
+                                onDragEnter={handleDragEnter}
+                                onDragLeave={handleDragLeave}
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                                className={cn(
+                                    "flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/80 transition-colors",
+                                    isDragging && "border-primary bg-primary/10"
+                                )}
+                            >
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <UploadCloud className={cn("w-10 h-10 mb-3 text-muted-foreground", isDragging && "text-primary")} />
+                                    <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                    <p className="text-xs text-muted-foreground">Any relevant project files</p>
+                                </div>
+                                <Input 
+                                    id="dropzone-file" 
+                                    type="file" 
+                                    className="hidden" 
+                                    multiple
+                                    onChange={handleFileChange}
+                                    disabled={isSubmitting} 
+                                />
+                            </label>
+                        </FormControl>
+                        <FormMessage />
+                            {selectedFiles.length > 0 && (
+                            <div className="mt-4 space-y-2">
+                                <h4 className="text-sm font-medium">Selected files:</h4>
+                                <ul className="space-y-2 bg-muted/50 p-3 rounded-md">
+                                    {selectedFiles.map((file, index) => (
+                                        <li key={index} className="text-sm text-muted-foreground flex items-center justify-between gap-2 bg-background p-2 rounded-md border">
+                                            <div className="flex items-center gap-2 truncate">
+                                                <Paperclip className="h-4 w-4 flex-shrink-0" />
+                                                <span className="truncate">{file.name}</span>
+                                            </div>
+                                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveFile(index)}>
+                                                <X className="h-4 w-4 text-destructive" />
+                                                <span className="sr-only">Remove file</span>
+                                            </Button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={submissionForm.control}
+                    name="comments"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Comments</FormLabel>
+                        <FormControl>
+                            <Textarea placeholder="Add any comments about your submission..." {...field} disabled={isSubmitting} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <div className="flex gap-4">
+                    <Button type="submit" disabled={isSubmitting || selectedFiles.length === 0}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        {isSubmitting ? 'Submitting...' : (isEditing ? 'Update Submission' : 'Submit Work')}
+                    </Button>
+                    {isEditing && (
+                        <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSubmitting}>
+                            Cancel
+                        </Button>
+                    )}
+                </div>
+            </form>
+        </Form>
+    );
+
     return (
         <div className="container py-12">
              <div className="mb-8">
@@ -392,92 +496,25 @@ export default function SubmissionPage() {
             
             <Card className="max-w-3xl mx-auto">
                  <CardHeader>
-                    <CardTitle className="text-2xl">Project Submission</CardTitle>
-                    <CardDescription>
-                         Project: <Link href={`/projects/${projectId}`} className="text-primary hover:underline">{project?.title || 'Loading...'}</Link>
-                    </CardDescription>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle className="text-2xl">Project Submission</CardTitle>
+                            <CardDescription>
+                                Project: <Link href={`/projects/${projectId}`} className="text-primary hover:underline">{project?.title || 'Loading...'}</Link>
+                            </CardDescription>
+                        </div>
+                         <Button variant="outline" asChild>
+                            <Link href={`/chat/${applicationId}`}>
+                                <MessageSquare className="mr-2 h-4 w-4" />
+                                Chat
+                            </Link>
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    {!submission && isTester && (
-                        <Form {...submissionForm}>
-                            <form onSubmit={submissionForm.handleSubmit(handleSubmission)} className="space-y-8">
-                                 <FormField
-                                    control={submissionForm.control}
-                                    name="files"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Upload Files</FormLabel>
-                                        <FormControl>
-                                            <label
-                                                onDragEnter={handleDragEnter}
-                                                onDragLeave={handleDragLeave}
-                                                onDragOver={handleDragOver}
-                                                onDrop={handleDrop}
-                                                className={cn(
-                                                    "flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/80 transition-colors",
-                                                    isDragging && "border-primary bg-primary/10"
-                                                )}
-                                            >
-                                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                    <UploadCloud className={cn("w-10 h-10 mb-3 text-muted-foreground", isDragging && "text-primary")} />
-                                                    <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                                    <p className="text-xs text-muted-foreground">Any relevant project files</p>
-                                                </div>
-                                                <Input 
-                                                    id="dropzone-file" 
-                                                    type="file" 
-                                                    className="hidden" 
-                                                    multiple
-                                                    onChange={handleFileChange}
-                                                    disabled={isSubmitting} 
-                                                />
-                                            </label>
-                                        </FormControl>
-                                        <FormMessage />
-                                         {selectedFiles.length > 0 && (
-                                            <div className="mt-4 space-y-2">
-                                                <h4 className="text-sm font-medium">Selected files:</h4>
-                                                <ul className="space-y-2 bg-muted/50 p-3 rounded-md">
-                                                    {selectedFiles.map((file, index) => (
-                                                        <li key={index} className="text-sm text-muted-foreground flex items-center justify-between gap-2 bg-background p-2 rounded-md border">
-                                                           <div className="flex items-center gap-2 truncate">
-                                                                <Paperclip className="h-4 w-4 flex-shrink-0" />
-                                                                <span className="truncate">{file.name}</span>
-                                                           </div>
-                                                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveFile(index)}>
-                                                                <X className="h-4 w-4 text-destructive" />
-                                                                <span className="sr-only">Remove file</span>
-                                                            </Button>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        )}
-                                    </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={submissionForm.control}
-                                    name="comments"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Comments</FormLabel>
-                                        <FormControl>
-                                            <Textarea placeholder="Add any comments about your submission..." {...field} disabled={isSubmitting} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                                <Button type="submit" disabled={isSubmitting || selectedFiles.length === 0}>
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    {isSubmitting ? 'Submitting...' : 'Submit Work'}
-                                </Button>
-                            </form>
-                        </Form>
-                    )}
+                    {(!submission || isEditing) && isTester && renderSubmissionForm()}
 
-                    {submission && (
+                    {submission && !isEditing && (
                         <div className="space-y-6">
                             <div>
                                 <h3 className="font-semibold text-lg mb-4">Submission Details</h3>
@@ -498,6 +535,14 @@ export default function SubmissionPage() {
                                                     </Button>
                                                 ))}
                                             </div>
+                                        </div>
+                                    )}
+                                     {isTester && !submission.feedback && (
+                                        <div className="pt-4 border-t">
+                                            <Button onClick={handleStartEdit}>
+                                                <Edit className="mr-2 h-4 w-4" />
+                                                Edit Submission
+                                            </Button>
                                         </div>
                                     )}
                                 </div>
@@ -598,7 +643,7 @@ export default function SubmissionPage() {
                                                     </Button>
                                                     {project && (
                                                         <p className="text-xs text-muted-foreground mt-2">
-                                                            Submitting feedback will automatically transfer ${projectCompensation.toFixed(2)} to the tester.
+                                                            Submitting feedback will automatically transfer ${parseFloat(String(project.compensation)).toFixed(2)} to the tester.
                                                         </p>
                                                     )}
                                                 </div>
@@ -615,7 +660,7 @@ export default function SubmissionPage() {
                             </div>
                         </div>
                     )}
-                     {!submission && isClient && (
+                     {!submission && !isEditing && isClient && (
                          <div className="text-center text-muted-foreground py-8">
                             <FileText className="mx-auto h-12 w-12 mb-4" />
                             <p>The tester has not submitted their work yet.</p>
@@ -628,3 +673,5 @@ export default function SubmissionPage() {
     )
 
 }
+
+    
