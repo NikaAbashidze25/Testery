@@ -396,9 +396,11 @@ export default function ProjectDetailPage() {
   return (
     <div className="container py-12">
         <div className="mb-6">
-            <Button variant="outline" onClick={() => router.back()}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Projects
+            <Button variant="outline" asChild>
+                <Link href="/projects">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Projects
+                </Link>
             </Button>
         </div>
       <Card className="max-w-4xl mx-auto">
