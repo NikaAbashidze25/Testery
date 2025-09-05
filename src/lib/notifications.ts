@@ -6,7 +6,7 @@ import { db } from './firebase';
 
 export const sendNotification = async (
   userId: string,
-  type: 'application_received' | 'application_accepted' | 'application_rejected' | 'submission_received' | 'submission_edited' | 'message',
+  type: 'application_received' | 'application_accepted' | 'application_rejected' | 'submission_received' | 'submission_edited' | 'feedback_received' | 'message',
   title: string,
   message: string,
   link: string,
@@ -93,5 +93,18 @@ export const notifySubmissionEdited = async (projectOwnerId: string, projectId: 
     projectTitle
   );
 };
+
+export const notifyFeedbackReceived = async (testerId: string, projectId: string, projectTitle: string, applicationId: string) => {
+    return await sendNotification(
+        testerId,
+        'feedback_received',
+        'Feedback Received',
+        `You have received feedback on your submission for "${projectTitle}". Edits may have been requested.`,
+        `/project/${projectId}/submission/${applicationId}`,
+        projectId,
+        projectTitle
+    );
+};
+    
 
     

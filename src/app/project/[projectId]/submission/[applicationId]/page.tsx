@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud, Check, DollarSign, AlertTriangle, MessageSquare, Edit, Send } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { notifySubmissionReceived, notifySubmissionEdited } from '@/lib/notifications';
+import { notifySubmissionReceived, notifySubmissionEdited, notifyFeedbackReceived } from '@/lib/notifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
@@ -237,12 +237,15 @@ export default function SubmissionPage() {
     };
 
     const handleRequestEdits = async (values: RequestEditsFormValues) => {
-      if (!user || !application) return;
+      if (!user || !application || !project) return;
       setIsSubmitting(true);
       try {
         await updateDoc(doc(db, 'applications', applicationId), {
           feedbackComment: values.feedbackComment,
         });
+
+        await notifyFeedbackReceived(application.testerId, projectId, project.title, applicationId);
+
         toast({ title: "Feedback Sent", description: "The tester has been notified about your feedback." });
         requestEditsForm.reset();
       } catch (error: any) {
@@ -413,9 +416,7 @@ export default function SubmissionPage() {
                                     </Dialog>
                                 </div>
                             </Card>
-                            {application?.feedbackComment && (
-                                <Alert><AlertTriangle className="h-4 w-4" /><AlertTitle>Latest Feedback Sent</AlertTitle><AlertDescription>{application.feedbackComment}</AlertDescription></Alert>
-                            )}
+                            
                         </div>
                     )}
                     
@@ -432,6 +433,15 @@ export default function SubmissionPage() {
                             </AlertDescription>
                         </Alert>
                      )}
+                     
+                    {/* Tester's view of feedback */}
+                    {isTester && application?.feedbackComment && (
+                        <Alert>
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertTitle>Feedback from Client</AlertTitle>
+                            <AlertDescription>{application.feedbackComment}</AlertDescription>
+                        </Alert>
+                    )}
                     
                     {/* Submission History */}
                     <div className="space-y-6">
@@ -471,3 +481,6 @@ export default function SubmissionPage() {
         </div>
     );
 }
+
+
+    
