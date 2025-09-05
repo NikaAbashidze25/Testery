@@ -183,7 +183,7 @@ export default function SubmissionPage() {
             appUnsub();
             subsUnsub();
         };
-    }, [user, applicationId, projectId, router, toast]);
+    }, [user, applicationId, projectId, router, toast, testerProfile, clientWallet]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
@@ -481,6 +481,3 @@ export default function SubmissionPage() {
         </div>
     );
 }
-
-
-    
