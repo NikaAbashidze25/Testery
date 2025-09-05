@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, updateDoc, type DocumentData, writeBatch, collection, onSnapshot, Timestamp } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +40,7 @@ type FeedbackFormValues = z.infer<typeof feedbackSchema>;
 interface SubmissionFile {
     name: string;
     url: string;
+    path: string; // Add path for deletion
 }
 
 interface Submission extends DocumentData {
@@ -52,6 +53,10 @@ interface Submission extends DocumentData {
     submittedAt: any;
     feedback?: FeedbackFormValues;
     rewardedAmount?: number;
+    testerInfo?: {
+        fullName: string;
+        profilePictureUrl: string;
+    };
 }
 
 interface ProjectData extends DocumentData {
@@ -80,6 +85,7 @@ export default function SubmissionPage() {
     const [project, setProject] = useState<ProjectData | null>(null);
     const [application, setApplication] = useState<DocumentData | null>(null);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [existingFiles, setExistingFiles] = useState<SubmissionFile[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [clientProfile, setClientProfile] = useState<ClientProfile | null>(null);
     const [clientWallet, setClientWallet] = useState<WalletData | null>(null);
@@ -163,6 +169,20 @@ export default function SubmissionPage() {
         const submissionUnsub = onSnapshot(doc(db, 'submissions', applicationId), async (docSnap) => {
             if (docSnap.exists()) {
                 const subData = docSnap.data() as Submission;
+
+                // Fetch tester info if not already present
+                 if (subData.testerId && !subData.testerInfo) {
+                    const testerDocRef = doc(db, 'users', subData.testerId);
+                    const testerDocSnap = await getDoc(testerDocRef);
+                    if (testerDocSnap.exists()) {
+                        const testerData = testerDocSnap.data();
+                        subData.testerInfo = {
+                            fullName: testerData.fullName || 'Unknown Tester',
+                            profilePictureUrl: testerData.profilePictureUrl || ''
+                        };
+                    }
+                }
+
                 setSubmission(subData);
                 if (subData.feedback) {
                     feedbackForm.reset(subData.feedback);
@@ -185,17 +205,22 @@ export default function SubmissionPage() {
             }
         });
 
-        const walletUnsub = onSnapshot(doc(db, 'wallets', user.uid), (docSnap) => {
-            if (docSnap.exists()) {
-                setClientWallet(docSnap.data() as WalletData);
-            } else {
-                setClientWallet({ balance: 0, currency: 'USD' });
-            }
-        });
+        if (user) {
+            const walletUnsub = onSnapshot(doc(db, 'wallets', user.uid), (docSnap) => {
+                if (docSnap.exists()) {
+                    setClientWallet(docSnap.data() as WalletData);
+                } else {
+                    setClientWallet({ balance: 0, currency: 'USD' });
+                }
+            });
+             return () => {
+                submissionUnsub();
+                walletUnsub();
+            };
+        }
 
         return () => {
             submissionUnsub();
-            walletUnsub();
         };
 
     }, [user, applicationId, projectId, router, toast, feedbackForm]);
@@ -205,13 +230,33 @@ export default function SubmissionPage() {
         if (!user || !application || !project) return;
         setIsSubmitting(true);
         try {
-            const uploadedFiles: SubmissionFile[] = [];
+            const finalFiles: SubmissionFile[] = [...existingFiles];
             if (selectedFiles.length > 0) {
                 for (const file of selectedFiles) {
-                     const storageRef = ref(storage, `submissions/${applicationId}/${file.name}`);
-                     await uploadBytes(storageRef, file);
-                     const url = await getDownloadURL(storageRef);
-                     uploadedFiles.push({ name: file.name, url });
+                    const filePath = `submissions/${applicationId}/${Date.now()}-${file.name}`;
+                    const storageRef = ref(storage, filePath);
+                    await uploadBytes(storageRef, file);
+                    const url = await getDownloadURL(storageRef);
+                    finalFiles.push({ name: file.name, url, path: filePath });
+                }
+            }
+    
+            // Handle removed files
+            if (submission?.files) {
+                const filesToDelete = submission.files.filter(
+                    (sf) => !existingFiles.some((ef) => ef.url === sf.url)
+                );
+    
+                for (const fileToDelete of filesToDelete) {
+                    try {
+                        const fileRef = ref(storage, fileToDelete.path);
+                        await deleteObject(fileRef);
+                    } catch (error: any) {
+                        // If file not found, we can ignore, otherwise log it
+                        if (error.code !== 'storage/object-not-found') {
+                            console.error("Error deleting file from storage:", error);
+                        }
+                    }
                 }
             }
 
@@ -224,15 +269,13 @@ export default function SubmissionPage() {
                 projectId,
                 comments: values.comments || '',
                 submittedAt: serverTimestamp(),
-                files: uploadedFiles,
+                files: finalFiles,
             };
             
             if (submissionDoc.exists()) {
-                // Editing existing submission
                 await updateDoc(submissionRef, submissionData);
                 toast({ title: 'Success', description: 'Your submission has been updated.' });
             } else {
-                 // New submission
                 await setDoc(submissionRef, submissionData);
                 await notifySubmissionReceived(
                     application.ownerId, 
@@ -244,6 +287,7 @@ export default function SubmissionPage() {
                 toast({ title: 'Success', description: 'Your work has been submitted.' });
             }
             setIsEditing(false); // Exit editing mode
+            setSelectedFiles([]); // Clear new files
             
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: error.message });
@@ -263,7 +307,7 @@ export default function SubmissionPage() {
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         addFilesToList(event.target.files);
-        event.target.value = ''; // Clear input to allow re-selecting same file
+        event.target.value = '';
     };
     
     const handleDragEnter = (e: React.DragEvent<HTMLLabelElement>) => {
@@ -281,7 +325,6 @@ export default function SubmissionPage() {
     const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
         e.preventDefault();
         e.stopPropagation();
-        // This is necessary to show the drop cursor
     };
 
     const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
@@ -292,39 +335,44 @@ export default function SubmissionPage() {
     };
 
 
-    const handleRemoveFile = (indexToRemove: number) => {
+    const handleRemoveNewFile = (indexToRemove: number) => {
         const updatedFiles = selectedFiles.filter((_, index) => index !== indexToRemove);
         setSelectedFiles(updatedFiles);
         submissionForm.setValue('files', updatedFiles);
     };
+
+    const handleRemoveExistingFile = (urlToRemove: string) => {
+        const updatedFiles = existingFiles.filter((file) => file.url !== urlToRemove);
+        setExistingFiles(updatedFiles);
+    };
     
     const handleFeedback = async (values: FeedbackFormValues) => {
-         if (!user || !submission || !project || !clientWallet) return;
+        if (!user || !submission || !project || !clientWallet) return;
 
-         const rewardAmount = project.compensation;
-         if (rewardAmount > clientWallet.balance) {
-             toast({ variant: 'destructive', title: 'Insufficient Funds', description: 'Your wallet balance is too low to release the payment. Please add funds.' });
-             return;
-         }
+        const rewardAmount = parseFloat(String(project.compensation));
+        if (rewardAmount > clientWallet.balance) {
+            toast({ variant: 'destructive', title: 'Insufficient Funds', description: 'Your wallet balance is too low to release the payment. Please add funds.' });
+            return;
+        }
          
-         setIsSubmitting(true);
-         const batch = writeBatch(db);
+        setIsSubmitting(true);
+        const batch = writeBatch(db);
 
-         const submissionRef = doc(db, 'submissions', applicationId);
-         batch.update(submissionRef, { feedback: values, rewardedAmount: rewardAmount });
+        const submissionRef = doc(db, 'submissions', applicationId);
+        batch.update(submissionRef, { feedback: values, rewardedAmount: rewardAmount });
 
-         const clientUser = await getDoc(doc(db, 'users', user.uid));
-         const clientData = clientUser.data();
-         const reviewRef = doc(collection(db, 'reviews'));
-         batch.set(reviewRef, {
-             ...values,
-             testerId: submission.testerId,
-             clientId: user.uid,
-             clientName: clientData?.companyName || clientData?.fullName,
-             clientAvatar: clientData?.companyLogoUrl || clientData?.profilePictureUrl,
-             projectId: submission.projectId,
-             createdAt: serverTimestamp()
-         });
+        const clientUser = await getDoc(doc(db, 'users', user.uid));
+        const clientData = clientUser.data();
+        const reviewRef = doc(collection(db, 'reviews'));
+        batch.set(reviewRef, {
+            ...values,
+            testerId: submission.testerId,
+            clientId: user.uid,
+            clientName: clientData?.companyName || clientData?.fullName,
+            clientAvatar: clientData?.companyLogoUrl || clientData?.profilePictureUrl,
+            projectId: submission.projectId,
+            createdAt: serverTimestamp()
+        });
          
         const clientWalletRef = doc(db, 'wallets', user.uid);
         batch.update(clientWalletRef, { balance: clientWallet.balance - rewardAmount });
@@ -360,7 +408,6 @@ export default function SubmissionPage() {
          try {
             await batch.commit();
             toast({ title: 'Feedback & Payment Sent!', description: 'You have successfully submitted feedback and the payment has been sent.' });
-            // Manually update local state after successful transaction
             setClientWallet(prev => prev ? { ...prev, balance: prev.balance - rewardAmount } : null);
          } catch(error: any) {
               toast({ variant: 'destructive', title: 'Failed to submit feedback', description: error.message });
@@ -372,14 +419,13 @@ export default function SubmissionPage() {
     const handleStartEdit = () => {
         setIsEditing(true);
         submissionForm.setValue('comments', submission?.comments || '');
-        // Note: We don't pre-fill files, user needs to re-upload.
-        // This is a common pattern to avoid handling complex file state.
+        setExistingFiles(submission?.files || []);
         setSelectedFiles([]); 
     };
 
     const isClient = user?.uid === application?.ownerId;
     const isTester = user?.uid === application?.testerId;
-    const projectCompensation = project ? parseFloat(project.compensation as any) : 0;
+    const projectCompensation = project ? parseFloat(String(project.compensation)) : 0;
     const hasSufficientFunds = isClient && project && clientWallet ? clientWallet.balance >= projectCompensation : false;
 
 
@@ -435,23 +481,46 @@ export default function SubmissionPage() {
                             </label>
                         </FormControl>
                         <FormMessage />
-                            {selectedFiles.length > 0 && (
-                            <div className="mt-4 space-y-2">
-                                <h4 className="text-sm font-medium">Selected files:</h4>
-                                <ul className="space-y-2 bg-muted/50 p-3 rounded-md">
-                                    {selectedFiles.map((file, index) => (
-                                        <li key={index} className="text-sm text-muted-foreground flex items-center justify-between gap-2 bg-background p-2 rounded-md border">
-                                            <div className="flex items-center gap-2 truncate">
-                                                <Paperclip className="h-4 w-4 flex-shrink-0" />
-                                                <span className="truncate">{file.name}</span>
-                                            </div>
-                                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveFile(index)}>
-                                                <X className="h-4 w-4 text-destructive" />
-                                                <span className="sr-only">Remove file</span>
-                                            </Button>
-                                        </li>
-                                    ))}
-                                </ul>
+                        {(existingFiles.length > 0 || selectedFiles.length > 0) && (
+                             <div className="mt-4 space-y-4">
+                                {existingFiles.length > 0 && (
+                                    <div>
+                                        <h4 className="text-sm font-medium mb-2">Current files:</h4>
+                                        <ul className="space-y-2 bg-muted/50 p-3 rounded-md">
+                                        {existingFiles.map((file, index) => (
+                                            <li key={index} className="text-sm text-muted-foreground flex items-center justify-between gap-2 bg-background p-2 rounded-md border">
+                                                <div className="flex items-center gap-2 truncate">
+                                                    <Paperclip className="h-4 w-4 flex-shrink-0" />
+                                                    <span className="truncate">{file.name}</span>
+                                                </div>
+                                                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveExistingFile(file.url)}>
+                                                    <X className="h-4 w-4 text-destructive" />
+                                                    <span className="sr-only">Remove file</span>
+                                                </Button>
+                                            </li>
+                                        ))}
+                                        </ul>
+                                    </div>
+                                )}
+                                {selectedFiles.length > 0 && (
+                                    <div>
+                                        <h4 className="text-sm font-medium mb-2">New files to upload:</h4>
+                                        <ul className="space-y-2 bg-muted/50 p-3 rounded-md">
+                                        {selectedFiles.map((file, index) => (
+                                            <li key={index} className="text-sm text-muted-foreground flex items-center justify-between gap-2 bg-background p-2 rounded-md border">
+                                                <div className="flex items-center gap-2 truncate">
+                                                    <Paperclip className="h-4 w-4 flex-shrink-0" />
+                                                    <span className="truncate">{file.name}</span>
+                                                </div>
+                                                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveNewFile(index)}>
+                                                    <X className="h-4 w-4 text-destructive" />
+                                                    <span className="sr-only">Remove file</span>
+                                                </Button>
+                                            </li>
+                                        ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </FormItem>
@@ -471,7 +540,7 @@ export default function SubmissionPage() {
                     )}
                 />
                  <div className="flex gap-4">
-                    <Button type="submit" disabled={isSubmitting || selectedFiles.length === 0}>
+                    <Button type="submit" disabled={isSubmitting}>
                         <Upload className="mr-2 h-4 w-4" />
                         {isSubmitting ? 'Submitting...' : (isEditing ? 'Update Submission' : 'Submit Work')}
                     </Button>
@@ -516,16 +585,30 @@ export default function SubmissionPage() {
 
                     {submission && !isEditing && (
                         <div className="space-y-6">
-                            <div>
+                             <div>
                                 <h3 className="font-semibold text-lg mb-4">Submission Details</h3>
                                 <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
-                                     <div>
-                                        <p className="text-sm font-medium">Tester Comments:</p>
-                                        <p className="text-muted-foreground">{submission.comments || 'No comments provided.'}</p>
+                                     <div className="flex items-center gap-3">
+                                        <Link href={`/users/${submission.testerId}`}>
+                                            <Avatar>
+                                                <AvatarImage src={submission.testerInfo?.profilePictureUrl} alt={submission.testerInfo?.fullName} />
+                                                <AvatarFallback>{getInitials(submission.testerInfo?.fullName)}</AvatarFallback>
+                                            </Avatar>
+                                        </Link>
+                                        <div>
+                                            <p className="text-sm font-medium text-muted-foreground">Submission from</p>
+                                            <Link href={`/users/${submission.testerId}`} className="font-semibold text-foreground hover:underline">
+                                                {submission.testerInfo?.fullName || 'Unknown Tester'}
+                                            </Link>
+                                        </div>
+                                    </div>
+                                    <div className="pt-4 border-t">
+                                        <p className="text-sm font-medium text-muted-foreground">Comments:</p>
+                                        <p className="text-foreground">{submission.comments || 'No comments provided.'}</p>
                                     </div>
                                     {submission.files && submission.files.length > 0 && (
-                                        <div>
-                                            <p className="text-sm font-medium mb-2">Submitted Files:</p>
+                                        <div className="pt-4 border-t">
+                                            <p className="text-sm font-medium text-muted-foreground mb-2">Submitted Files:</p>
                                             <div className="space-y-2">
                                                 {submission.files.map((file, index) => (
                                                      <Button asChild variant="outline" key={index} className="mr-2">
@@ -552,10 +635,10 @@ export default function SubmissionPage() {
                                 {submission.rewardedAmount ? (
                                     <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 flex items-center gap-3">
                                         <Check className="h-5 w-5" />
-                                        <p>You have rewarded this tester with <strong>${submission.rewardedAmount.toFixed(2)}</strong>.</p>
+                                        <p>You have rewarded this tester with <strong>${parseFloat(String(submission.rewardedAmount)).toFixed(2)}</strong>.</p>
                                      </div>
                                 ) : (
-                                    <h3 className="font-semibold text-lg mb-4">Feedback & Payment</h3>
+                                    <h3 className="font-semibold text-lg mb-4">Feedback &amp; Payment</h3>
                                 )}
 
                                 {submission.feedback && clientProfile && (
@@ -591,7 +674,7 @@ export default function SubmissionPage() {
                                                 <AlertTriangle className="h-4 w-4" />
                                                 <AlertTitle>Insufficient Funds</AlertTitle>
                                                 <AlertDescription>
-                                                    Your wallet balance is too low to pay the project compensation of ${projectCompensation.toFixed(2)}. 
+                                                    Your wallet balance is too low to pay the project compensation of ${parseFloat(String(project.compensation)).toFixed(2)}. 
                                                     Please <Link href="/wallet" className="font-bold underline">add funds</Link> to your wallet before providing feedback.
                                                 </AlertDescription>
                                             </Alert>
@@ -673,5 +756,3 @@ export default function SubmissionPage() {
     )
 
 }
-
-    
