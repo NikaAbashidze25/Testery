@@ -57,9 +57,9 @@ export default function MyApplicationsPage() {
               const appData = { id: appDoc.id, ...appDoc.data() } as Application;
               
               // Check for submission
-              const submissionDocRef = doc(db, 'submissions', appDoc.id);
-              const submissionDoc = await getDoc(submissionDocRef);
-              appData.hasSubmission = submissionDoc.exists();
+              const submissionsRef = collection(db, 'applications', appDoc.id, 'submissions');
+              const submissionSnapshot = await getDocs(query(submissionsRef));
+              appData.hasSubmission = !submissionSnapshot.empty;
 
               return appData;
           });
