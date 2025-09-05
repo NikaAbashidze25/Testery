@@ -66,12 +66,12 @@ export default function ProjectsPage() {
     const fetchProjectsAndApplications = async () => {
         setIsLoading(true);
         try {
+            let userApps = new Map<string, Application>();
             // Fetch applications if user is logged in
             if (user) {
                 const appsCollection = collection(db, 'applications');
                 const appsQuery = query(appsCollection, where('testerId', '==', user.uid));
                 const appsSnapshot = await getDocs(appsQuery);
-                const userApps = new Map<string, Application>();
                 appsSnapshot.forEach(doc => {
                     const appData = doc.data() as Application;
                     userApps.set(appData.projectId, appData);
@@ -87,9 +87,14 @@ export default function ProjectsPage() {
             let projectsData = querySnapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Project));
 
-            // Exclude user's own projects from the list
+            // Exclude user's own projects and projects they've been accepted to
             if (user) {
-                projectsData = projectsData.filter(p => p.authorId !== user.uid);
+                projectsData = projectsData.filter(p => {
+                    const isOwnProject = p.authorId === user.uid;
+                    const application = userApps.get(p.id);
+                    const isAccepted = application?.status === 'accepted';
+                    return !isOwnProject && !isAccepted;
+                });
             }
 
             setProjects(projectsData);
