@@ -192,15 +192,11 @@ export default function ProfilePage() {
     };
 
     const getDefaultTab = () => {
-        if (!userProfile) return 'reviews';
+        if (!userProfile) return 'client';
         if (userProfile.accountType === 'company') {
-            if (postedProjects.length > 0) return "client";
-            if (reviews.length > 0) return "reviews";
-        } else {
-            if (reviews.length > 0) return "reviews";
-            if (testedProjects.length > 0) return "tester";
+            return "client";
         }
-        return "client";
+        return "tester";
     };
 
     if (isLoading || isAuthLoading) {
@@ -218,8 +214,8 @@ export default function ProfilePage() {
     const hasAnyActivity = postedProjects.length > 0 || testedProjects.length > 0 || reviews.length > 0;
     
     const activeTabs = [
-        postedProjects.length > 0 ? 'client' : null,
-        testedProjects.length > 0 ? 'tester' : null,
+        userProfile.accountType === 'company' ? 'client' : null,
+        userProfile.accountType === 'individual' ? 'tester' : null,
         reviews.length > 0 ? 'reviews' : null
     ].filter(Boolean);
 
@@ -251,10 +247,10 @@ export default function ProfilePage() {
 
                     <Tabs defaultValue={getDefaultTab()} className="w-full">
                          <TabsList className={cn("grid w-full", gridClass)}>
-                            {postedProjects.length > 0 && userProfile.accountType === 'company' && (
+                            {userProfile.accountType === 'company' && (
                                 <TabsTrigger value="client">My Projects</TabsTrigger>
                             )}
-                            {testedProjects.length > 0 && userProfile.accountType === 'individual' && (
+                            {userProfile.accountType === 'individual' && (
                                 <TabsTrigger value="tester">My Work History</TabsTrigger>
                             )}
                             {reviews.length > 0 && (
@@ -286,7 +282,20 @@ export default function ProfilePage() {
                         </TabsContent>
                     </Tabs>
                     
-                    {!hasAnyActivity && <NoActivityCard />}
+                    {!hasAnyActivity && userProfile.accountType === 'company' && (
+                         <EmptyStateCard
+                            icon={<FileText className="h-12 w-12 text-muted-foreground" />}
+                            title="No Projects Posted"
+                            description="You haven't posted any projects yet."
+                        />
+                    )}
+                     {!hasAnyActivity && userProfile.accountType === 'individual' && (
+                         <EmptyStateCard
+                            icon={<CheckCircle className="h-12 w-12 text-muted-foreground" />}
+                            title="No Work History"
+                            description="You haven't completed any tests yet."
+                        />
+                    )}
                 </div>
             </div>
         </div>
@@ -498,9 +507,11 @@ const ReviewsSection = ({ reviews, formatDate, getInitials, renderStars }: { rev
 
 const EmptyStateCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
     <Card className="text-center py-12">
-        <div className="mx-auto mb-4">{icon}</div>
-        <CardTitle className="text-lg">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardHeader className='p-0'>
+            <div className="mx-auto mb-4">{icon}</div>
+            <CardTitle className="text-lg">{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+        </CardHeader>
     </Card>
 );
 
@@ -549,5 +560,7 @@ const ProfileStats = ({ postedProjects, testedProjects, reviews, isCompany }: {
         </div>
     )
 };
+
+    
 
     
