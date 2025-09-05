@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud, Check, DollarSign, AlertTriangle, MessageSquare, Edit, Send, Gift } from 'lucide-react';
+import { ArrowLeft, Download, Star, Upload, FileText, Paperclip, X, UploadCloud, Check, DollarSign, AlertTriangle, MessageSquare, Edit, Send, Gift, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { notifySubmissionReceived, notifySubmissionEdited, notifyFeedbackReceived } from '@/lib/notifications';
@@ -461,18 +461,31 @@ export default function SubmissionPage() {
                     )}
                     
                     {/* Display approval and payment status */}
-                     {application?.isApproved && (
+                    {application?.isApproved && (
                         <Alert variant="default" className="border-green-500 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300">
                             <Check className="h-4 w-4 !text-green-500" />
-                            <AlertTitle>Project Approved</AlertTitle>
-                            <AlertDescription>
-                                You approved this project and sent the reward to the tester.
-                                {application.reviewId && isClient && (
-                                    <Button asChild variant="link" className="p-0 h-auto ml-2"><Link href={`/profile`}>View your review</Link></Button>
-                                )}
-                            </AlertDescription>
+                            <AlertTitle>Project Approved!</AlertTitle>
+                            {isClient ? (
+                                <AlertDescription>
+                                    You approved this project and sent the reward to the tester.
+                                    {application.reviewId && (
+                                        <Button asChild variant="link" className="p-0 h-auto ml-2"><Link href={`/profile`}>View your review</Link></Button>
+                                    )}
+                                </AlertDescription>
+                            ) : (
+                                <AlertDescription>
+                                    Your submission was approved! The reward has been sent to your wallet.
+                                    <Button asChild variant="link" className="p-0 h-auto ml-2">
+                                        <Link href="/wallet">
+                                            <Wallet className="mr-1 h-3 w-3" />
+                                            View in Wallet
+                                        </Link>
+                                    </Button>
+                                </AlertDescription>
+                            )}
                         </Alert>
-                     )}
+                    )}
+
                      
                     {/* Submission History */}
                     <div className="space-y-6">
@@ -533,3 +546,5 @@ export default function SubmissionPage() {
         </div>
     );
 }
+
+    
