@@ -22,6 +22,7 @@ import {
   getDocs,
   DocumentData,
   writeBatch,
+  or,
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
@@ -311,15 +312,20 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
       setIsLoading(true);
       const fetchChats = async () => {
         try {
-          const isTesterQuery = query(collection(db, 'applications'), where('testerId', '==', user.uid), where('status', '==', 'accepted'));
-          const isOwnerQuery = query(collection(db, 'applications'), where('ownerId', '==', user.uid), where('status', '==', 'accepted'));
-          
-          const [testerSnapshot, ownerSnapshot] = await Promise.all([getDocs(isTesterQuery), getDocs(isOwnerQuery)]);
-          const applications = [...testerSnapshot.docs, ...ownerSnapshot.docs].map(doc => ({ id: doc.id, ...doc.data() } as ChatListItem));
-          const uniqueApplications = Array.from(new Map(applications.map(item => [item.id, item])).values());
+            const applicationsRef = collection(db, 'applications');
+            const q = query(applicationsRef, 
+                or(
+                    where('testerId', '==', user.uid),
+                    where('ownerId', '==', user.uid)
+                ),
+                where('status', '==', 'accepted')
+            );
+
+          const querySnapshot = await getDocs(q);
+          const applications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatListItem));
           
           const chatsWithDetails = await Promise.all(
-            uniqueApplications.map(async (app) => {
+            applications.map(async (app) => {
               const otherUserId = user.uid === app.ownerId ? app.testerId : app.ownerId;
               app.otherUserId = otherUserId;
               const userDocRef = doc(db, 'users', otherUserId);
