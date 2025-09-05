@@ -25,6 +25,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { formatDistanceToNow } from 'date-fns';
+
 
 const submissionSchema = z.object({
   comments: z.string().min(1, "Comments are required."),
@@ -134,22 +136,26 @@ export default function SubmissionPage() {
                 const appData = { id: appSnap.id, ...appSnap.data() } as ApplicationData;
                 setApplication(appData);
 
-                if (!testerProfile) {
-                    const testerDoc = await getDoc(doc(db, 'users', appData.testerId));
-                    if (testerDoc.exists()) {
-                        const data = testerDoc.data();
-                        setTesterProfile({
-                            uid: appData.testerId,
-                            name: data.fullName || 'Unknown Tester',
-                            avatarUrl: data.profilePictureUrl,
-                        });
+                const fetchProfilesAndWallet = async () => {
+                    if (!testerProfile) {
+                        const testerDoc = await getDoc(doc(db, 'users', appData.testerId));
+                        if (testerDoc.exists()) {
+                            const data = testerDoc.data();
+                            setTesterProfile({
+                                uid: appData.testerId,
+                                name: data.fullName || 'Unknown Tester',
+                                avatarUrl: data.profilePictureUrl,
+                            });
+                        }
                     }
-                }
 
-                if (user.uid === appData.ownerId && !clientWallet) {
-                    const walletDoc = await getDoc(doc(db, 'wallets', user.uid));
-                    setClientWallet(walletDoc.exists() ? walletDoc.data() as WalletData : { balance: 0, currency: 'USD' });
-                }
+                    if (user.uid === appData.ownerId && !clientWallet) {
+                        const walletDoc = await getDoc(doc(db, 'wallets', user.uid));
+                        setClientWallet(walletDoc.exists() ? walletDoc.data() as WalletData : { balance: 0, currency: 'USD' });
+                    }
+                };
+
+                fetchProfilesAndWallet();
 
                 if (user.uid !== appData.testerId && user.uid !== appData.ownerId) {
                     toast({ variant: 'destructive', title: 'Unauthorized' });
@@ -177,7 +183,7 @@ export default function SubmissionPage() {
             appUnsub();
             subsUnsub();
         };
-    }, [user, applicationId, projectId, router, toast, testerProfile, clientWallet]);
+    }, [user, applicationId, projectId, router, toast]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
@@ -214,7 +220,12 @@ export default function SubmissionPage() {
                 version: submissions.length + 1,
             });
 
-            await notifySubmissionReceived(application.ownerId, projectId, project.title, user.displayName || 'A tester', applicationId);
+            // Notify on both initial submission and edits
+            if(submissions.length > 0){
+                await notifySubmissionEdited(application.ownerId, projectId, project.title, user.displayName || 'A tester', applicationId);
+            } else {
+                await notifySubmissionReceived(application.ownerId, projectId, project.title, user.displayName || 'A tester', applicationId);
+            }
             toast({ title: 'Success', description: 'Your work has been submitted.' });
             setSelectedFiles([]);
             submissionForm.reset();
@@ -284,9 +295,21 @@ export default function SubmissionPage() {
     const isClient = user?.uid === application?.ownerId;
     const isTester = user?.uid === application?.testerId;
 
-    if (isLoading) return (
-      <div className="container py-12"><Skeleton className="h-10 w-32 mb-8" /><Card className="max-w-3xl mx-auto"><CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader><CardContent className="space-y-4"><Skeleton className="h-6 w-1/4" /><Skeleton className="h-20 w-full" /><Skeleton className="h-10 w-32" /></CardContent></Card></div>
-    );
+    if (isLoading || !application || !project || !testerProfile || (isClient && !clientWallet)) {
+        return (
+            <div className="container py-12">
+                <Skeleton className="h-10 w-32 mb-8" />
+                <Card className="max-w-3xl mx-auto">
+                    <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+                    <CardContent className="space-y-4">
+                        <Skeleton className="h-6 w-1/4" />
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-10 w-32" />
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="container py-12">
@@ -448,5 +471,3 @@ export default function SubmissionPage() {
         </div>
     );
 }
-
-    
