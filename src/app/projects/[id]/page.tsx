@@ -115,9 +115,9 @@ export default function ProjectDetailPage() {
 
             if(appData.status === 'accepted') {
                 // Check for submission only if application is accepted
-                const submissionDocRef = doc(db, 'submissions', appDoc.id);
-                const submissionDoc = await getDoc(submissionDocRef);
-                setHasSubmission(submissionDoc.exists());
+                const submissionsRef = collection(db, 'applications', appDoc.id, 'submissions');
+                const submissionSnapshot = await getDocs(query(submissionsRef));
+                setHasSubmission(!submissionSnapshot.empty);
             }
         }
 
