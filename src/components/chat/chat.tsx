@@ -132,6 +132,7 @@ const ChatListItemComponent = React.memo(({ chat, isActive, onClick }: { chat: C
                     <span className="font-semibold truncate text-sm">{chat.otherUserName}</span>
                     <span className="text-xs text-muted-foreground">{formatTimestamp(chat.lastMessageTimestamp)}</span>
                 </div>
+                <p className="text-xs text-muted-foreground font-medium truncate">{chat.projectTitle}</p>
                 <p className="text-sm text-muted-foreground truncate">{chat.lastMessage || '...'}</p>
             </div>
         </button>
@@ -317,11 +318,11 @@ export function Chat({ initialApplicationId }: { initialApplicationId?: string }
             const q = query(
               applicationsRef,
               and(
+                where('status', '==', 'accepted'),
                 or(
                   where('testerId', '==', user.uid),
                   where('ownerId', '==', user.uid)
-                ),
-                where('status', '==', 'accepted')
+                )
               )
             );
 
