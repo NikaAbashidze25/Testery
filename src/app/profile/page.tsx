@@ -347,16 +347,44 @@ const ProfileSidebar = ({ userProfile, getInitials }: { userProfile: UserProfile
                 <Mail className="h-4 w-4" /> {userProfile.email}
             </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6 text-sm">
-             {userProfile.accountType === 'company' && userProfile.website && (
-                    <div className="flex items-center gap-3">
-                        <Globe className="h-5 w-5 text-muted-foreground" />
-                        <p className="truncate"><strong>Website:</strong> <a href={userProfile.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">{userProfile.website} <ExternalLink className="h-4 w-4 flex-shrink-0" /></a></p>
-                    </div>
-            )}
-             {userProfile.skills && userProfile.skills.length > 0 && (
-                <div className="space-y-4">
-                    <h3 className="font-semibold text-lg flex items-center gap-3 text-muted-foreground">
+            <CardContent className="space-y-4 text-sm">
+             {userProfile.accountType === 'company' && (
+                <>
+                    {userProfile.contactPerson && (
+                        <div className="flex items-start gap-3">
+                            <UserIcon className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="font-semibold">Contact Person</h4>
+                                <p className="text-muted-foreground">{userProfile.contactPerson}</p>
+                            </div>
+                        </div>
+                    )}
+                    {userProfile.industry && (
+                        <div className="flex items-start gap-3">
+                            <Building className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="font-semibold">Industry</h4>
+                                <p className="text-muted-foreground">{userProfile.industry}</p>
+                            </div>
+                        </div>
+                    )}
+                    {userProfile.website && (
+                         <div className="flex items-start gap-3">
+                            <Globe className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="font-semibold">Website</h4>
+                                <a href={userProfile.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 break-all">
+                                    {userProfile.website}
+                                    <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                                </a>
+                            </div>
+                        </div>
+                    )}
+                </>
+             )}
+             {userProfile.accountType === 'individual' && userProfile.skills && userProfile.skills.length > 0 && (
+                <div className="space-y-3">
+                    <h3 className="font-semibold text-lg flex items-center gap-3">
                         <Briefcase className="h-5 w-5" />
                         Skills
                     </h3>
