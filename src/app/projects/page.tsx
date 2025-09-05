@@ -234,12 +234,15 @@ export default function ProjectsPage() {
                 <CardContent className="flex-grow space-y-4">
                   <p className="text-sm text-muted-foreground line-clamp-3">{project.description}</p>
                   
-                  <div className="text-sm font-semibold text-foreground">
-                    {project.rewardType === 'monetary'
-                        ? `Reward: ${formatCurrency(project.compensation as number)}`
-                        : `Reward: ${project.compensation}`
-                    }
-                  </div>
+                    <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                        {project.rewardType === 'monetary' ? <DollarSign className="h-5 w-5 flex-shrink-0" /> : <Gift className="h-5 w-5 flex-shrink-0" />}
+                        <span>
+                            {project.rewardType === 'monetary'
+                                ? formatCurrency(project.compensation as number)
+                                : project.compensation
+                            }
+                        </span>
+                    </div>
 
                   <div className="flex flex-wrap gap-2">
                     {project.skills.map(skill => (
