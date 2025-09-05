@@ -252,7 +252,7 @@ export default function UserProfilePage() {
                                     <TabsTrigger value="client">Posted Projects</TabsTrigger>
                                 )}
                                 {testedProjects.length > 0 && (
-                                    <TabsTrigger value="tester">Work History</TabsTrigger>
+                                    <TabsTrigger value="tester">Tested Projects</TabsTrigger>
                                 )}
                                 {reviews.length > 0 && (
                                     <TabsTrigger value="reviews">Reviews</TabsTrigger>
@@ -436,7 +436,7 @@ const TestedProjectsSection = ({ projects, userProfile, formatDate }: { projects
         ) : (
             <EmptyStateCard
                 icon={<CheckCircle className="h-12 w-12 text-muted-foreground" />}
-                title="No Work History"
+                title="No Tested Projects"
                 description="This user hasn't completed any tests yet."
             />
         )}
