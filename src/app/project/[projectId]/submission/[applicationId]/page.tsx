@@ -168,6 +168,7 @@ export default function SubmissionPage() {
                     setRating(subData.feedback.rating);
                 }
 
+                 if (!subData.clientId) return;
                 const clientDocRef = doc(db, 'users', subData.clientId);
                 const clientDocSnap = await getDoc(clientDocRef);
                 if (clientDocSnap.exists()) {
@@ -349,6 +350,8 @@ export default function SubmissionPage() {
          try {
             await batch.commit();
             toast({ title: 'Feedback & Payment Sent!', description: 'You have successfully submitted feedback and the payment has been sent.' });
+            // Manually update local state after successful transaction
+            setClientWallet(prev => prev ? { ...prev, balance: prev.balance - rewardAmount } : null);
          } catch(error: any) {
               toast({ variant: 'destructive', title: 'Failed to submit feedback', description: error.message });
          } finally {
@@ -358,7 +361,8 @@ export default function SubmissionPage() {
     
     const isClient = user?.uid === application?.ownerId;
     const isTester = user?.uid === application?.testerId;
-    const hasSufficientFunds = isClient && project && clientWallet ? clientWallet.balance >= project.compensation : false;
+    const projectCompensation = project ? parseFloat(project.compensation as any) : 0;
+    const hasSufficientFunds = isClient && project && clientWallet ? clientWallet.balance >= projectCompensation : false;
 
 
      if (isLoading) {
@@ -542,7 +546,7 @@ export default function SubmissionPage() {
                                                 <AlertTriangle className="h-4 w-4" />
                                                 <AlertTitle>Insufficient Funds</AlertTitle>
                                                 <AlertDescription>
-                                                    Your wallet balance is too low to pay the project compensation of ${project.compensation.toFixed(2)}. 
+                                                    Your wallet balance is too low to pay the project compensation of ${projectCompensation.toFixed(2)}. 
                                                     Please <Link href="/wallet" className="font-bold underline">add funds</Link> to your wallet before providing feedback.
                                                 </AlertDescription>
                                             </Alert>
@@ -594,7 +598,7 @@ export default function SubmissionPage() {
                                                     </Button>
                                                     {project && (
                                                         <p className="text-xs text-muted-foreground mt-2">
-                                                            Submitting feedback will automatically transfer ${project.compensation.toFixed(2)} to the tester.
+                                                            Submitting feedback will automatically transfer ${projectCompensation.toFixed(2)} to the tester.
                                                         </p>
                                                     )}
                                                 </div>
